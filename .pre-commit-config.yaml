@@ -19,11 +19,15 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
+  # mypy runs from the local (project) environment so it type-checks against
+  # the installed runtime dependencies (fastapi, pydantic-settings, sqlalchemy,
+  # …). Requires `pip install -e ".[dev]"` first. Config lives in pyproject.toml
+  # (packages = ["mylife"]), hence pass_filenames: false.
+  - repo: local
     hooks:
       - id: mypy
-        additional_dependencies:
-          - pydantic>=2.6
-        args: [--config-file=pyproject.toml]
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
         pass_filenames: false

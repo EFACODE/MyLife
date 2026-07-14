@@ -4,7 +4,9 @@ from mylife.core.config import Settings
 
 
 def test_settings_have_local_defaults() -> None:
-    settings = Settings()
+    # Disable .env loading so this asserts the in-code defaults even when a
+    # developer has copied .env.example to .env (per the Docker Compose flow).
+    settings = Settings(_env_file=None)
 
     assert settings.app_name == "My Life"
     assert settings.environment == "local"
