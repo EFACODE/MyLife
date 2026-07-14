@@ -46,6 +46,21 @@ Install the git hooks:
 pre-commit install
 ```
 
+## Local services (Docker Compose)
+
+The backing services (Postgres and Redis) run via Docker Compose. Copy the
+example environment file and start them:
+
+```bash
+cp .env.example .env
+docker compose up -d
+docker compose ps        # check that both services are healthy
+```
+
+Once `.env` exists, the application reads its `MYLIFE_`-prefixed variables and
+connects to the Postgres/Redis instances above. Stop the services with
+`docker compose down` (add `-v` to also remove the data volumes).
+
 ## Development commands
 
 | Task              | Command                          |
@@ -71,3 +86,4 @@ boots with zero configuration. Key variables:
 | `MYLIFE_ENVIRONMENT` | `local`                        | Deployment environment     |
 | `MYLIFE_DEBUG`       | `false`                        | FastAPI debug mode         |
 | `MYLIFE_DATABASE_URL`| `sqlite:///./mylife.sqlite3`   | SQLAlchemy database URL     |
+| `MYLIFE_REDIS_URL`   | `redis://localhost:6379/0`     | Redis connection URL       |
