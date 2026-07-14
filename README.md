@@ -1,5 +1,7 @@
 # My Life
 
+[![CI](https://github.com/EFACODE/MyLife/actions/workflows/ci.yml/badge.svg)](https://github.com/EFACODE/MyLife/actions/workflows/ci.yml)
+
 Event-sourced personal life platform. The organizing principle is simple:
 **everything is a Life Event**. Every domain (Finance, Health, Timeline, …)
 publishes immutable events into a shared kernel, and features are built by
