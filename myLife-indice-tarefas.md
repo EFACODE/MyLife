@@ -120,7 +120,7 @@ This phase delivers the **MVP value loop**: capture → understand → briefing.
 | **T1.2** | ✅ | Append-only event store | Yes | `events` table + repository with append + read-by-stream; **no update/delete** at the repo layer; migration. `specs/domain/timeline/event-store.md`. |
 | **T1.3** | ✅ | Event bus (Redis) + in-process dispatcher | Yes | Publish `LifeEventRecorded`; subscribers drive projections. Redis broker from `T0.2`/`T0.9`. `specs/domain/timeline/event-bus.md`. |
 | **T1.4** | ✅ | Raw ingestion store + provenance link | Yes | Separate `raw_records` table; normalized events reference `raw_record_id` + `source`. Keeps the external system authoritative. `specs/domain/timeline/raw-store.md`. |
-| **T1.5** | 🔜 | Event correction (`EventCorrected`) | Yes | Corrections are new events that reference the corrected one; history never mutates. |
+| **T1.5** | 📝 | Event correction (`EventCorrected`) | Yes | Corrections are new events that reference the corrected one; history never mutates. `specs/domain/timeline/event-correction.md` — **in review, awaiting approval.** |
 
 ### `T3` — Timeline domain, connectors & briefing
 
