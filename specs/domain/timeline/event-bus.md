@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/core/events/bus.py`, tests in `tests/test_event_bus.py`)
 - **Backlog task:** `T1.3` — [issue #16](https://github.com/EFACODE/MyLife/issues/16)
 - **Bounded context:** Timeline (shared kernel)
 - **Author / date:** Claude Code / 2026-07-18

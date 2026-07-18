@@ -6,6 +6,14 @@ reference event that demonstrates the contract, and the append-only event store
 these.
 """
 
+from mylife.core.events.bus import (
+    DEFAULT_STREAM,
+    EventBus,
+    EventDispatchError,
+    Handler,
+    InProcessEventBus,
+    RedisStreamPublisher,
+)
 from mylife.core.events.envelope import LifeEvent
 from mylife.core.events.life_event import LifeEventRecorded, LifeEventRecordedPayload
 from mylife.core.events.store import (
@@ -16,11 +24,17 @@ from mylife.core.events.store import (
 )
 
 __all__ = [
+    "DEFAULT_STREAM",
     "DuplicateEventError",
+    "EventBus",
+    "EventDispatchError",
     "EventRow",
     "EventStore",
+    "Handler",
+    "InProcessEventBus",
     "LifeEvent",
     "LifeEventRecorded",
     "LifeEventRecordedPayload",
+    "RedisStreamPublisher",
     "StoredEvent",
 ]
