@@ -40,3 +40,8 @@ jobs:
 
       - name: Tests (pytest)
         run: pytest
+
+      - name: Migrations in sync (alembic)
+        run: |
+          alembic upgrade head
+          alembic check

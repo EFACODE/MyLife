@@ -1,0 +1,16 @@
+Alembic migrations for My Life.
+
+The database URL and target metadata are provided by migrations/env.py from the
+application settings (MYLIFE_DATABASE_URL; local default = SQLite). Domain models
+register on mylife.db.base.Base and must be importable from env.py so autogenerate
+and `alembic check` see them.
+
+Common commands (run from the repository root):
+
+  alembic upgrade head                    # apply all migrations
+  alembic revision -m "add X" --autogenerate
+  alembic downgrade -1                     # roll back one revision
+  alembic check                           # fail if models drift from migrations
+
+CI runs `alembic upgrade head` followed by `alembic check` to guarantee the
+migrations stay in sync with the models.
