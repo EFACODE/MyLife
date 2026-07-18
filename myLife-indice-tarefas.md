@@ -72,7 +72,7 @@ test plan, and open decisions/risks.
 - History is immutable — **corrections create new events**, never mutations.
 - AI claims are traceable to evidence and always represent uncertainty.
 
-**Legend:** ✅ done · 🔜 next · ⬜ planned · 🧭 epic (broken down when its phase begins).
+**Legend:** ✅ done · 📝 spec in review · 🔜 next · ⬜ planned · 🧭 epic (broken down when its phase begins).
 
 ---
 
@@ -116,7 +116,7 @@ This phase delivers the **MVP value loop**: capture → understand → briefing.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T1.1** | 🔜 | Life Event envelope | **Yes** | Typed Pydantic envelope enforcing the invariants above; `specs/domain/timeline/event-envelope.md`. The canonical shape every domain event extends. **Spec required — next up.** |
+| **T1.1** | 📝 | Life Event envelope | **Yes** | Typed Pydantic envelope enforcing the invariants above; `specs/domain/timeline/event-envelope.md`. The canonical shape every domain event extends. **Spec written — in review, awaiting approval.** |
 | **T1.2** | ⬜ | Append-only event store | Yes | `events` table + repository with append + read-by-stream; **no update/delete** at the repo layer; migration. |
 | **T1.3** | ⬜ | Event bus (Redis) + in-process dispatcher | Yes | Publish `LifeEventRecorded`; subscribers drive projections. Redis broker from `T0.2`/`T0.9`. |
 | **T1.4** | ⬜ | Raw ingestion store + provenance link | Yes | Separate `raw_records` table; normalized events reference `raw_record_id` + `source`. Keeps the external system authoritative. |
