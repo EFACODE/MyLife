@@ -62,6 +62,7 @@ class EventRow(Base):
     schema_version: Mapped[int] = mapped_column()
     source: Mapped[str] = mapped_column(String)
     correlation_id: Mapped[str] = mapped_column(String)
+    raw_record_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     payload: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
@@ -79,6 +80,7 @@ class StoredEvent(BaseModel):
     schema_version: int
     source: str
     correlation_id: str
+    raw_record_id: uuid.UUID | None
     payload: Mapping[str, object]
 
     def rehydrate(self, model_type: type[ModelT]) -> ModelT:
@@ -93,6 +95,7 @@ class StoredEvent(BaseModel):
                 "schema_version": self.schema_version,
                 "source": self.source,
                 "correlation_id": self.correlation_id,
+                "raw_record_id": self.raw_record_id,
                 "payload": self.payload,
             }
         )
@@ -109,6 +112,7 @@ def _to_stored(row: EventRow) -> StoredEvent:
         schema_version=row.schema_version,
         source=row.source,
         correlation_id=row.correlation_id,
+        raw_record_id=row.raw_record_id,
         payload=row.payload,
     )
 
@@ -138,6 +142,7 @@ class EventStore:
             schema_version=event.schema_version,
             source=event.source,
             correlation_id=event.correlation_id,
+            raw_record_id=event.raw_record_id,
             payload=event.payload.model_dump(mode="json"),
         )
         try:

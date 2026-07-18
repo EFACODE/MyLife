@@ -113,6 +113,34 @@ def test_store_is_append_only() -> None:
     assert not hasattr(EventStore, "delete")
 
 
+def test_provenance_raw_record_id_round_trips(session: Session) -> None:
+    store = EventStore(session)
+    user = uuid.uuid4()
+    raw_id = uuid.uuid4()
+    event = LifeEventRecorded(
+        user_id=user,
+        occurred_at=datetime(2026, 7, 18, 12, 0, tzinfo=UTC),
+        source="calendar",
+        correlation_id="corr-1",
+        raw_record_id=raw_id,
+        payload=LifeEventRecordedPayload(title="Imported", category="calendar"),
+    )
+    store.append(event)
+
+    (stored,) = store.read_stream(user)
+    assert stored.raw_record_id == raw_id
+    assert stored.rehydrate(LifeEventRecorded).raw_record_id == raw_id
+
+
+def test_manual_event_has_no_provenance(session: Session) -> None:
+    store = EventStore(session)
+    user = uuid.uuid4()
+    store.append(_event(user))
+
+    (stored,) = store.read_stream(user)
+    assert stored.raw_record_id is None
+
+
 def test_rehydrate_to_typed_event(session: Session) -> None:
     store = EventStore(session)
     user = uuid.uuid4()

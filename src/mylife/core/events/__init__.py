@@ -16,6 +16,14 @@ from mylife.core.events.bus import (
 )
 from mylife.core.events.envelope import LifeEvent
 from mylife.core.events.life_event import LifeEventRecorded, LifeEventRecordedPayload
+from mylife.core.events.raw_store import (
+    DuplicateRawRecordError,
+    RawRecord,
+    RawRecordRow,
+    RawRecordStore,
+    StoredRawRecord,
+    checksum_of,
+)
 from mylife.core.events.store import (
     DuplicateEventError,
     EventRow,
@@ -26,6 +34,7 @@ from mylife.core.events.store import (
 __all__ = [
     "DEFAULT_STREAM",
     "DuplicateEventError",
+    "DuplicateRawRecordError",
     "EventBus",
     "EventDispatchError",
     "EventRow",
@@ -35,6 +44,11 @@ __all__ = [
     "LifeEvent",
     "LifeEventRecorded",
     "LifeEventRecordedPayload",
+    "RawRecord",
+    "RawRecordRow",
+    "RawRecordStore",
     "RedisStreamPublisher",
     "StoredEvent",
+    "StoredRawRecord",
+    "checksum_of",
 ]

@@ -47,6 +47,9 @@ class LifeEvent(BaseModel, Generic[PayloadT]):
     schema_version: int = Field(ge=1)
     source: str = Field(min_length=1)
     correlation_id: str = Field(min_length=1)
+    # Provenance (T1.4): the raw record this event was derived from, if any.
+    # Manually-entered events have no raw record and leave this ``None``.
+    raw_record_id: uuid.UUID | None = None
     payload: PayloadT
 
     @field_validator("occurred_at", "recorded_at")
