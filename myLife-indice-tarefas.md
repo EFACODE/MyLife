@@ -126,7 +126,7 @@ This phase delivers the **MVP value loop**: capture → understand → briefing.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T3.1** | ⬜ | Timeline query API | **Yes** | Filter Life Events by user/time/type/source, paginated, provenance included; `specs/domain/timeline/timeline-api.md`. |
+| **T3.1** | 📝 | Timeline query API | **Yes** | Filter Life Events by user/time/type/source, paginated, provenance included; `specs/domain/timeline/timeline-api.md` — **in review, awaiting approval.** |
 | **T3.2** | ⬜ | Manual event capture API | Yes | Users record Life Events by hand → `LifeEventRecorded`. Proves the loop with zero connectors. |
 | **T3.3** | ⬜ | Entities & relationships projection | Yes | Governed entity registry + relations derived from events — the knowledge-graph seed (a projection, not a data substitute). |
 | **T3.4** | ⬜ | Connector framework & contract | **Yes** | Ports/adapters + idempotent sync job (via `T0.9` worker): pull → raw store → normalized events. The reusable ingestion spine. |
