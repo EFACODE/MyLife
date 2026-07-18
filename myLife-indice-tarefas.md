@@ -88,8 +88,8 @@ brief places in Phase 0).
 | **T0.1** | ✅ | Bootstrap repo & tooling | No | FastAPI shell, `ruff`/`mypy`/`pytest`/`pre-commit`, health endpoint. |
 | **T0.2** | ✅ | Local env via Docker Compose | No | Postgres + Redis with healthchecks; `.env.example`. |
 | **T0.3** | ✅ | Minimal CI | No | GitHub Actions: lint, format-check, types, tests. |
-| **T0.4** | 🔜 | `CLAUDE.md` operating contract | No | Root behavioral contract for coding agents (brief §10): mission, non-negotiables, delivery checklist, working sequence. Stays short and stable. |
-| **T0.5** | ⬜ | SDD scaffolding | No | `specs/TEMPLATE.md` (required-spec sections), `docs/` layout, `docs/adr/TEMPLATE.md`, `docs/glossary.md` stub. Wires the SDD process. |
+| **T0.4** | ✅ | `CLAUDE.md` operating contract | No | Root behavioral contract for coding agents (brief §10): mission, non-negotiables, delivery checklist, working sequence. Stays short and stable. |
+| **T0.5** | 🔜 | SDD scaffolding | No | `specs/TEMPLATE.md` (required-spec sections), `docs/` layout, `docs/adr/TEMPLATE.md`, `docs/glossary.md` stub. Wires the SDD process. |
 | **T0.6** | ⬜ | ADR-0001 architecture baseline + context map | ADR | Records modular monolith, the 7 bounded contexts, event-sourcing, and the raw/normalized/derived split → `docs/adr/0001-architecture-baseline.md`, `docs/context-map.md`. |
 | **T0.7** | ⬜ | Postgres + Alembic migrations | No | Add `alembic`; env wiring; initial empty migration; migration-drift check in CI; default runtime DB → Postgres. |
 | **T0.8** | ⬜ | Correlation-id middleware + structured logging | Light | Request-scoped context propagating `correlation_id` (feeds the envelope) and JSON structured logs. |
