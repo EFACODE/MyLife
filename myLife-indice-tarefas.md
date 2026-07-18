@@ -92,8 +92,8 @@ brief places in Phase 0).
 | **T0.5** | ✅ | SDD scaffolding | No | `specs/TEMPLATE.md` (required-spec sections), `docs/` layout, `docs/adr/TEMPLATE.md`, `docs/glossary.md` stub. Wires the SDD process. |
 | **T0.6** | ✅ | ADR-0001 architecture baseline + context map | ADR | Records modular monolith, the 7 bounded contexts, event-sourcing, and the raw/normalized/derived split → `docs/adr/0001-architecture-baseline.md`, `docs/context-map.md`. |
 | **T0.7** | ✅ | Postgres + Alembic migrations | No | Add `alembic`; env wiring; initial empty migration; migration-drift check in CI; default runtime DB → Postgres. |
-| **T0.8** | 🔜 | Correlation-id middleware + structured logging | Light | Request-scoped context propagating `correlation_id` (feeds the envelope) and JSON structured logs. |
-| **T0.9** | ⬜ | Worker scaffolding (Celery + Redis broker) | No | Async job-runner shell for connectors/ingestion — wiring + a no-op task + test; no business jobs yet. |
+| **T0.8** | ✅ | Correlation-id middleware + structured logging | Light | Request-scoped context propagating `correlation_id` (feeds the envelope) and JSON structured logs. |
+| **T0.9** | 🔜 | Worker scaffolding (Celery + Redis broker) | No | Async job-runner shell for connectors/ingestion — wiring + a no-op task + test; no business jobs yet. |
 
 ### `T2` — Identity, consent & audit
 
