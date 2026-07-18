@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/timeline/entities.py`, migration `0005`, tests in `tests/test_entity_projection.py`)
 - **Backlog task:** `T3.3` — [issue #21](https://github.com/EFACODE/MyLife/issues/21)
 - **Bounded context:** Timeline
 - **Author / date:** Claude Code / 2026-07-18

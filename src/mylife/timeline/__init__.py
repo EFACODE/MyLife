@@ -6,6 +6,12 @@ follow.
 """
 
 from mylife.timeline.capture import RecordLifeEventCommand, TimelineWriter
+from mylife.timeline.entities import (
+    EntityProjection,
+    EntityProjectionSubscriber,
+    EntityRecord,
+    RelationshipRecord,
+)
 from mylife.timeline.query import (
     TimelineEvent,
     TimelinePage,
@@ -14,7 +20,11 @@ from mylife.timeline.query import (
 )
 
 __all__ = [
+    "EntityProjection",
+    "EntityProjectionSubscriber",
+    "EntityRecord",
     "RecordLifeEventCommand",
+    "RelationshipRecord",
     "TimelineEvent",
     "TimelinePage",
     "TimelineQueryFilter",
