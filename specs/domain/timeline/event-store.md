@@ -3,7 +3,7 @@
 > Spec-Driven Development artifact. **Approve before implementation.**
 
 - **Status:** Approved — implemented (`src/mylife/core/events/store.py`, migration `0002`, tests in `tests/test_event_store.py`)
-- **Evolution:** `T1.4` added a nullable `raw_record_id` column (migration `0003`) carried through `append`/reads/`StoredEvent`/`rehydrate`.
+- **Evolution:** `T1.4` added a nullable `raw_record_id` column (migration `0003`); `T1.5` added a nullable `corrects_event_id` column + index and `read_corrections` (migration `0004`). All carried through `append`/reads/`StoredEvent`/`rehydrate`.
 - **Backlog task:** `T1.2` — [issue #15](https://github.com/EFACODE/MyLife/issues/15)
 - **Bounded context:** Timeline (shared kernel)
 - **Author / date:** Claude Code / 2026-07-18

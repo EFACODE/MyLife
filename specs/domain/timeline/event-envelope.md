@@ -3,7 +3,7 @@
 > Spec-Driven Development artifact. **Approve before implementation.**
 
 - **Status:** Approved — implemented (`src/mylife/core/events/`, tests in `tests/test_event_envelope.py`)
-- **Evolution:** `T1.4` added an optional provenance field `raw_record_id: UUID | None` (additive, backward-compatible).
+- **Evolution:** `T1.4` added an optional provenance field `raw_record_id: UUID | None`; `T1.5` added `corrects_event_id: UUID | None` (both additive, backward-compatible).
 - **Backlog task:** `T1.1` — [issue #14](https://github.com/EFACODE/MyLife/issues/14)
 - **Bounded context:** Timeline (shared kernel)
 - **Author / date:** Claude Code / 2026-07-18

@@ -50,6 +50,9 @@ class LifeEvent(BaseModel, Generic[PayloadT]):
     # Provenance (T1.4): the raw record this event was derived from, if any.
     # Manually-entered events have no raw record and leave this ``None``.
     raw_record_id: uuid.UUID | None = None
+    # Correction (T1.5): the prior event this one supersedes, if any. History is
+    # never mutated — a correction is a new event referencing the corrected one.
+    corrects_event_id: uuid.UUID | None = None
     payload: PayloadT
 
     @field_validator("occurred_at", "recorded_at")

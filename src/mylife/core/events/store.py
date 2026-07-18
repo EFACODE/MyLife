@@ -45,7 +45,10 @@ class EventRow(Base):
     """One row per Life Event. Append-only — never updated or deleted."""
 
     __tablename__ = "events"
-    __table_args__ = (Index("ix_events_user_seq", "user_id", "global_seq"),)
+    __table_args__ = (
+        Index("ix_events_user_seq", "user_id", "global_seq"),
+        Index("ix_events_corrects_event_id", "corrects_event_id"),
+    )
 
     # Database-assigned monotonic order (INTEGER on SQLite so it autoincrements
     # as a rowid alias; BIGINT elsewhere).
@@ -63,6 +66,7 @@ class EventRow(Base):
     source: Mapped[str] = mapped_column(String)
     correlation_id: Mapped[str] = mapped_column(String)
     raw_record_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    corrects_event_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     payload: Mapped[dict[str, object]] = mapped_column(JSON)
 
 
@@ -81,6 +85,7 @@ class StoredEvent(BaseModel):
     source: str
     correlation_id: str
     raw_record_id: uuid.UUID | None
+    corrects_event_id: uuid.UUID | None
     payload: Mapping[str, object]
 
     def rehydrate(self, model_type: type[ModelT]) -> ModelT:
@@ -96,6 +101,7 @@ class StoredEvent(BaseModel):
                 "source": self.source,
                 "correlation_id": self.correlation_id,
                 "raw_record_id": self.raw_record_id,
+                "corrects_event_id": self.corrects_event_id,
                 "payload": self.payload,
             }
         )
@@ -113,6 +119,7 @@ def _to_stored(row: EventRow) -> StoredEvent:
         source=row.source,
         correlation_id=row.correlation_id,
         raw_record_id=row.raw_record_id,
+        corrects_event_id=row.corrects_event_id,
         payload=row.payload,
     )
 
@@ -143,6 +150,7 @@ class EventStore:
             source=event.source,
             correlation_id=event.correlation_id,
             raw_record_id=event.raw_record_id,
+            corrects_event_id=event.corrects_event_id,
             payload=event.payload.model_dump(mode="json"),
         )
         try:
@@ -166,6 +174,16 @@ class EventStore:
     def read_all(self, *, limit: int = 100, after_seq: int | None = None) -> list[StoredEvent]:
         """Return events across all users in ascending ``global_seq`` order."""
         stmt = select(EventRow)
+        if after_seq is not None:
+            stmt = stmt.where(EventRow.global_seq > after_seq)
+        stmt = stmt.order_by(EventRow.global_seq).limit(limit)
+        return [_to_stored(row) for row in self._session.scalars(stmt)]
+
+    def read_corrections(
+        self, event_id: uuid.UUID, *, limit: int = 100, after_seq: int | None = None
+    ) -> list[StoredEvent]:
+        """Return the events that correct ``event_id``, in ``global_seq`` order."""
+        stmt = select(EventRow).where(EventRow.corrects_event_id == event_id)
         if after_seq is not None:
             stmt = stmt.where(EventRow.global_seq > after_seq)
         stmt = stmt.order_by(EventRow.global_seq).limit(limit)

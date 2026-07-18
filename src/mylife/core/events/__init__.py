@@ -14,6 +14,11 @@ from mylife.core.events.bus import (
     InProcessEventBus,
     RedisStreamPublisher,
 )
+from mylife.core.events.correction import (
+    EventCorrected,
+    EventCorrectionPayload,
+    correct_event,
+)
 from mylife.core.events.envelope import LifeEvent
 from mylife.core.events.life_event import LifeEventRecorded, LifeEventRecordedPayload
 from mylife.core.events.raw_store import (
@@ -36,6 +41,8 @@ __all__ = [
     "DuplicateEventError",
     "DuplicateRawRecordError",
     "EventBus",
+    "EventCorrected",
+    "EventCorrectionPayload",
     "EventDispatchError",
     "EventRow",
     "EventStore",
@@ -51,4 +58,5 @@ __all__ = [
     "StoredEvent",
     "StoredRawRecord",
     "checksum_of",
+    "correct_event",
 ]
