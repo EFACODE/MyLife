@@ -12,6 +12,11 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from mylife.core.config import get_settings
+
+# Import modules that define ORM models so they register on ``Base.metadata``
+# and autogenerate / ``alembic check`` can see them. Add new model modules here
+# as bounded contexts are introduced.
+from mylife.core.events import store as _events_store  # noqa: F401
 from mylife.db.base import Base
 
 # Alembic Config object (values from alembic.ini).
