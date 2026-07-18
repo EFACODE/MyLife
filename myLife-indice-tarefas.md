@@ -93,7 +93,7 @@ brief places in Phase 0).
 | **T0.6** | ✅ | ADR-0001 architecture baseline + context map | ADR | Records modular monolith, the 7 bounded contexts, event-sourcing, and the raw/normalized/derived split → `docs/adr/0001-architecture-baseline.md`, `docs/context-map.md`. |
 | **T0.7** | ✅ | Postgres + Alembic migrations | No | Add `alembic`; env wiring; initial empty migration; migration-drift check in CI; default runtime DB → Postgres. |
 | **T0.8** | ✅ | Correlation-id middleware + structured logging | Light | Request-scoped context propagating `correlation_id` (feeds the envelope) and JSON structured logs. |
-| **T0.9** | 🔜 | Worker scaffolding (Celery + Redis broker) | No | Async job-runner shell for connectors/ingestion — wiring + a no-op task + test; no business jobs yet. |
+| **T0.9** | ✅ | Worker scaffolding (Celery + Redis broker) | No | Async job-runner shell for connectors/ingestion — wiring + a no-op task + test; no business jobs yet. |
 
 ### `T2` — Identity, consent & audit
 
@@ -116,7 +116,7 @@ This phase delivers the **MVP value loop**: capture → understand → briefing.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T1.1** | ⬜ | Life Event envelope | **Yes** | Typed Pydantic envelope enforcing the invariants above; `specs/domain/timeline/event-envelope.md`. The canonical shape every domain event extends. |
+| **T1.1** | 🔜 | Life Event envelope | **Yes** | Typed Pydantic envelope enforcing the invariants above; `specs/domain/timeline/event-envelope.md`. The canonical shape every domain event extends. **Spec required — next up.** |
 | **T1.2** | ⬜ | Append-only event store | Yes | `events` table + repository with append + read-by-stream; **no update/delete** at the repo layer; migration. |
 | **T1.3** | ⬜ | Event bus (Redis) + in-process dispatcher | Yes | Publish `LifeEventRecorded`; subscribers drive projections. Redis broker from `T0.2`/`T0.9`. |
 | **T1.4** | ⬜ | Raw ingestion store + provenance link | Yes | Separate `raw_records` table; normalized events reference `raw_record_id` + `source`. Keeps the external system authoritative. |
@@ -211,7 +211,7 @@ them.
 
 | Phase | Group(s) | Done | Total (detailed) |
 | ----- | -------- | ---- | ---------------- |
-| 0 | `T0`, `T2` | 3 | 14 |
+| 0 | `T0`, `T2` | 9 | 14 |
 | 1 | `T1`, `T3` | 0 | 11 |
 | 2 | `T4`, `T5` | 0 | 9 |
 | 3 | `T6` | 0 | 4 |

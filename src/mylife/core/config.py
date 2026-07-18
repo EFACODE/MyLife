@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     # local docker-compose Redis instance.
     redis_url: str = "redis://localhost:6379/0"
 
+    # Celery (T0.9). Both the broker and the result backend default to Redis
+    # (``redis_url``); override either independently through the environment.
+    celery_broker_url: str | None = None
+    celery_result_backend: str | None = None
+
+    @property
+    def broker_url(self) -> str:
+        """Effective Celery broker URL (falls back to ``redis_url``)."""
+        return self.celery_broker_url or self.redis_url
+
+    @property
+    def result_backend(self) -> str:
+        """Effective Celery result backend URL (falls back to ``redis_url``)."""
+        return self.celery_result_backend or self.redis_url
+
 
 @lru_cache
 def get_settings() -> Settings:
