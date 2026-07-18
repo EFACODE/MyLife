@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/timeline/capture.py`, `POST` in `src/mylife/api/timeline.py`, tests in `tests/test_timeline_capture.py` + `tests/test_timeline_api.py`)
 - **Backlog task:** `T3.2` — [issue #20](https://github.com/EFACODE/MyLife/issues/20)
 - **Bounded context:** Timeline
 - **Author / date:** Claude Code / 2026-07-18

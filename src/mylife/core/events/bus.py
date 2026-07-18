@@ -16,9 +16,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
-
-from pydantic import BaseModel
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from mylife.core.events.envelope import LifeEvent
 
@@ -29,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_STREAM = "mylife:events"
 
-Handler = Callable[[LifeEvent[BaseModel]], None]
+Handler = Callable[[LifeEvent[Any]], None]
 
 
 class EventDispatchError(Exception):
@@ -48,7 +46,7 @@ class EventDispatchError(Exception):
 class EventBus(Protocol):
     """Anything that can publish a Life Event."""
 
-    def publish(self, event: LifeEvent[BaseModel]) -> None: ...
+    def publish(self, event: LifeEvent[Any]) -> None: ...
 
 
 class InProcessEventBus:
@@ -65,7 +63,7 @@ class InProcessEventBus:
         """Register ``handler``; ``event_type=None`` subscribes to all events."""
         self._subscriptions.append((event_type, handler))
 
-    def publish(self, event: LifeEvent[BaseModel]) -> None:
+    def publish(self, event: LifeEvent[Any]) -> None:
         """Invoke every matching handler; aggregate and raise any failures."""
         errors: list[Exception] = []
         for event_type, handler in self._subscriptions:
@@ -93,6 +91,6 @@ class RedisStreamPublisher:
         self._client = client
         self._stream = stream
 
-    def publish(self, event: LifeEvent[BaseModel]) -> None:
+    def publish(self, event: LifeEvent[Any]) -> None:
         """Append the event's envelope JSON as one entry on the stream."""
         self._client.xadd(self._stream, {"data": event.model_dump_json()})

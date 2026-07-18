@@ -89,3 +89,45 @@ def test_naive_datetime_is_422(client: TestClient) -> None:
         params={"user_id": str(USER), "occurred_from": "2026-07-18T12:00:00"},
     )
     assert response.status_code == 422
+
+
+def test_post_records_event_and_is_readable(client: TestClient) -> None:
+    new_user = str(uuid.uuid4())
+    payload = {
+        "user_id": new_user,
+        "occurred_at": "2026-07-18T09:30:00+00:00",
+        "title": "Yoga",
+        "category": "health",
+    }
+
+    created = client.post("/timeline/events", json=payload)
+
+    assert created.status_code == 201
+    body = created.json()
+    assert body["event_id"]
+    assert body["source"] == "manual"
+    assert body["payload"] == {"title": "Yoga", "category": "health", "note": None}
+
+    listed = client.get("/timeline/events", params={"user_id": new_user})
+    assert [i["event_id"] for i in listed.json()["items"]] == [body["event_id"]]
+
+
+def test_post_naive_datetime_is_422(client: TestClient) -> None:
+    response = client.post(
+        "/timeline/events",
+        json={
+            "user_id": str(uuid.uuid4()),
+            "occurred_at": "2026-07-18T09:30:00",
+            "title": "Yoga",
+            "category": "health",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_post_missing_field_is_422(client: TestClient) -> None:
+    response = client.post(
+        "/timeline/events",
+        json={"user_id": str(uuid.uuid4()), "occurred_at": "2026-07-18T09:30:00+00:00"},
+    )
+    assert response.status_code == 422

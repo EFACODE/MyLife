@@ -15,8 +15,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from mylife.api.deps import get_event_bus
+from mylife.core.context import get_correlation_id, new_correlation_id
+from mylife.core.events import EventBus
 from mylife.db.base import get_session
-from mylife.timeline.query import TimelinePage, TimelineQueryFilter, TimelineQueryService
+from mylife.timeline.capture import RecordLifeEventCommand, TimelineWriter
+from mylife.timeline.query import (
+    TimelineEvent,
+    TimelinePage,
+    TimelineQueryFilter,
+    TimelineQueryService,
+    _to_timeline_event,
+)
 
 router = APIRouter(prefix="/timeline", tags=["timeline"])
 
@@ -51,3 +61,15 @@ def query_timeline(
         offset=offset,
     )
     return TimelineQueryService(session).query(query_filter)
+
+
+@router.post("/events", response_model=TimelineEvent, status_code=201)
+def record_event(
+    command: RecordLifeEventCommand,
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> TimelineEvent:
+    """Record a Life Event by hand; append it and publish it."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    stored = TimelineWriter(session, bus).record(command, correlation_id=correlation_id)
+    return _to_timeline_event(stored)

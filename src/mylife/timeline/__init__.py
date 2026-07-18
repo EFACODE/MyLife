@@ -5,6 +5,7 @@ Phase 1 starts with the query API (T3.1); capture, projections and the briefing
 follow.
 """
 
+from mylife.timeline.capture import RecordLifeEventCommand, TimelineWriter
 from mylife.timeline.query import (
     TimelineEvent,
     TimelinePage,
@@ -13,8 +14,10 @@ from mylife.timeline.query import (
 )
 
 __all__ = [
+    "RecordLifeEventCommand",
     "TimelineEvent",
     "TimelinePage",
     "TimelineQueryFilter",
     "TimelineQueryService",
+    "TimelineWriter",
 ]

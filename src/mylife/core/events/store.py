@@ -8,7 +8,7 @@ history can only grow. See ``specs/domain/timeline/event-store.md`` (T1.2).
 import uuid
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, DateTime, Index, Integer, String, select
@@ -134,7 +134,7 @@ class EventStore:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def append(self, event: LifeEvent[BaseModel]) -> StoredEvent:
+    def append(self, event: LifeEvent[Any]) -> StoredEvent:
         """Persist ``event`` and return it with its assigned ``global_seq``.
 
         Raises :class:`DuplicateEventError` if the ``event_id`` already exists;
