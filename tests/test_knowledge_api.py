@@ -86,6 +86,36 @@ def test_foreign_document_is_404(client: TestClient) -> None:
     assert client.get(f"/documents/{document_id}/content", headers=intruder_auth).status_code == 404
 
 
+def test_extract_and_get_text(client: TestClient) -> None:
+    auth = _auth(client)
+    response = client.post(
+        "/documents",
+        files={"file": ("note.txt", b"searchable text", "text/plain")},
+        headers=auth,
+    )
+    document_id = str(response.json()["document_id"])
+
+    extracted = client.post(f"/documents/{document_id}/extract", headers=auth)
+    assert extracted.status_code == 200
+    assert extracted.json()["method"] == "plaintext-utf8"
+
+    text = client.get(f"/documents/{document_id}/text", headers=auth)
+    assert text.status_code == 200
+    assert text.json()["text"] == "searchable text"
+
+
+def test_get_text_before_extract_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    document_id = _upload(client, auth)
+    assert client.get(f"/documents/{document_id}/text", headers=auth).status_code == 404
+
+
+def test_extract_unsupported_type_is_422(client: TestClient) -> None:
+    auth = _auth(client)
+    document_id = _upload(client, auth)  # uploaded as application/pdf
+    assert client.post(f"/documents/{document_id}/extract", headers=auth).status_code == 422
+
+
 def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/documents").status_code == 401
     assert (
