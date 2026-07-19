@@ -156,7 +156,7 @@ signature narrative.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T5.1** | ⬜ | Goals context: `GoalCreated` / `GoalMilestoneReached` | **Yes** | Outcomes, targets, plans + API. |
+| **T5.1** | ✅ | Goals context: `GoalCreated` / `GoalMilestoneReached` | **Yes** | Goals registry + milestone events + authenticated `/goals` endpoints; migration 0012; erasure includes `goals`. `specs/domain/goals/goal-tracking.md`. |
 | **T5.2** | ⬜ | Goal-progress projection | Yes | Link finance/health events to goals to compute progress. |
 | **T5.3** | ⬜ | Goals in the briefing | Yes | Surface goal progress and risks in the daily briefing. |
 
@@ -213,7 +213,7 @@ them.
 | ----- | -------- | ---- | ---------------- |
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
-| 2 | `T4`, `T5` | 6 | 9 |
+| 2 | `T4`, `T5` | 7 | 9 |
 | 3 | `T6` | 0 | 4 |
 | 4–5 + platform | `T7`–`T9` | — | epics |
 

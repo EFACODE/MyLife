@@ -19,6 +19,7 @@ from mylife.core import events as _events  # noqa: F401
 from mylife.core.config import get_settings
 from mylife.db.base import Base
 from mylife.finance import models as _finance_models  # noqa: F401
+from mylife.goals import models as _goals_models  # noqa: F401
 from mylife.identity import audit as _identity_audit  # noqa: F401
 from mylife.identity import consent as _identity_consent  # noqa: F401
 from mylife.identity import models as _identity_models  # noqa: F401

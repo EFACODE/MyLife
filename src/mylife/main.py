@@ -15,6 +15,7 @@ from mylife.api import (
     consent,
     data_subject,
     finance,
+    goals,
     health,
     health_tracking,
     identity,
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(timeline.router)
     app.include_router(finance.router)
     app.include_router(health_tracking.router)
+    app.include_router(goals.router)
     app.include_router(briefing.router)
     return app
 
