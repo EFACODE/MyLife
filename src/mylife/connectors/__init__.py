@@ -8,6 +8,8 @@ themselves.
 from mylife.connectors.base import (
     Connector,
     ConnectorRunner,
+    ConsentGate,
+    ConsentRequiredError,
     FetchContext,
     ProvenanceMismatchError,
     RawPayload,
@@ -22,6 +24,8 @@ __all__ = [
     "Connector",
     "ConnectorRegistry",
     "ConnectorRunner",
+    "ConsentGate",
+    "ConsentRequiredError",
     "FetchContext",
     "ProvenanceMismatchError",
     "RawPayload",

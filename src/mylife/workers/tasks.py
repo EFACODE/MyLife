@@ -26,15 +26,19 @@ def sync_connector(source: str, user_id: str) -> dict[str, object]:
     from mylife.core.context import new_correlation_id
     from mylife.core.events import RedisStreamPublisher
     from mylife.db.base import get_session_factory
+    from mylife.identity.consent import ConsentService
 
     connector = registry.get(source)
     client = redis.from_url(get_settings().redis_url)  # type: ignore[no-untyped-call]
     bus = RedisStreamPublisher(client)
     factory = get_session_factory()
     with factory() as session:
+        # Enforce consent: the worker fails closed if the user has not consented
+        # to this source.
         result = ConnectorRunner(session, bus).sync(
             connector,
             FetchContext(user_id=uuid.UUID(user_id), correlation_id=new_correlation_id()),
+            consent=ConsentService(session, bus),
         )
     return {
         "source": result.source,

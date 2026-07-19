@@ -79,6 +79,21 @@ class ProvenanceMismatchError(Exception):
         self.actual = actual
 
 
+class ConsentGate(Protocol):
+    """Decides whether a user has consented to a scope (e.g. a connector source)."""
+
+    def is_granted(self, user_id: uuid.UUID, scope: str) -> bool: ...
+
+
+class ConsentRequiredError(Exception):
+    """Raised when ingesting a source the user has not consented to."""
+
+    def __init__(self, user_id: uuid.UUID, scope: str) -> None:
+        super().__init__(f"user {user_id} has not consented to {scope!r}")
+        self.user_id = user_id
+        self.scope = scope
+
+
 @dataclass(frozen=True)
 class SyncResult:
     """The outcome of a connector sync."""
@@ -96,8 +111,18 @@ class ConnectorRunner:
         self._session = session
         self._bus = bus
 
-    def sync(self, connector: Connector, context: FetchContext) -> SyncResult:
-        """Ingest from ``connector`` idempotently and return the counts."""
+    def sync(
+        self, connector: Connector, context: FetchContext, *, consent: ConsentGate | None = None
+    ) -> SyncResult:
+        """Ingest from ``connector`` idempotently and return the counts.
+
+        When ``consent`` is provided, ingestion **fails closed**: it raises
+        :class:`ConsentRequiredError` unless the user has consented to the
+        connector's source. When ``consent`` is ``None`` no gate is applied.
+        """
+        if consent is not None and not consent.is_granted(context.user_id, connector.source):
+            raise ConsentRequiredError(context.user_id, connector.source)
+
         raw_store = RawRecordStore(self._session)
         event_store = EventStore(self._session)
         raw_ingested = 0
