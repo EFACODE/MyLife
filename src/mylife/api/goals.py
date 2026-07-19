@@ -18,7 +18,14 @@ from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
 from mylife.core.events.envelope import utcnow
 from mylife.db.base import get_session
-from mylife.goals import Goal, GoalsService, Milestone, UnknownGoalError
+from mylife.goals import (
+    Goal,
+    GoalProgress,
+    GoalProgressService,
+    GoalsService,
+    Milestone,
+    UnknownGoalError,
+)
 from mylife.identity import User
 
 router = APIRouter(tags=["goals"])
@@ -72,6 +79,29 @@ def list_goals(
 ) -> list[Goal]:
     """List the authenticated user's goals."""
     return GoalsService(session, bus).list_goals(current_user.user_id)
+
+
+@router.get("/goals/progress", response_model=list[GoalProgress])
+def list_progress(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> list[GoalProgress]:
+    """Return progress for all of the authenticated user's goals."""
+    return GoalProgressService(session).progress_all(current_user.user_id)
+
+
+@router.get("/goals/{goal_id}/progress", response_model=GoalProgress)
+def get_progress(
+    goal_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> GoalProgress:
+    """Return progress for one of the authenticated user's goals."""
+    goal = GoalsService(session, bus).get_goal(current_user.user_id, goal_id)
+    if goal is None:
+        raise HTTPException(status_code=404, detail="goal not found")
+    return GoalProgressService(session).progress(current_user.user_id, goal)
 
 
 @router.get("/goals/{goal_id}", response_model=Goal)

@@ -14,6 +14,7 @@ from mylife.goals.models import (
     GoalRow,
     Milestone,
 )
+from mylife.goals.progress import GoalProgress, GoalProgressService
 from mylife.goals.service import GoalsService, UnknownGoalError
 
 __all__ = [
@@ -22,6 +23,8 @@ __all__ = [
     "Goal",
     "GoalCreated",
     "GoalMilestoneReached",
+    "GoalProgress",
+    "GoalProgressService",
     "GoalRow",
     "GoalsService",
     "Milestone",

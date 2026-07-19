@@ -90,8 +90,31 @@ def test_foreign_goal_is_404(client: TestClient) -> None:
     )
 
 
+def test_progress_endpoints(client: TestClient) -> None:
+    auth = _auth(client)
+    goal_id = _goal(client, auth)  # net_worth goal, target 1,000,000, no data yet
+
+    single = client.get(f"/goals/{goal_id}/progress", headers=auth)
+    assert single.status_code == 200
+    body = single.json()
+    assert body["current_value"] == 0
+    assert body["achieved"] is False
+
+    listed = client.get("/goals/progress", headers=auth)
+    assert listed.status_code == 200
+    assert [p["goal_id"] for p in listed.json()] == [goal_id]
+
+
+def test_progress_foreign_goal_is_404(client: TestClient) -> None:
+    owner_auth = _auth(client, "owner@example.com")
+    goal_id = _goal(client, owner_auth)
+    intruder_auth = _auth(client, "intruder@example.com")
+    assert client.get(f"/goals/{goal_id}/progress", headers=intruder_auth).status_code == 404
+
+
 def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/goals").status_code == 401
+    assert client.get("/goals/progress").status_code == 401
     assert (
         client.post(
             "/goals",
