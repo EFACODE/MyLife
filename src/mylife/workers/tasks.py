@@ -78,3 +78,25 @@ def extract_document_text(user_id: str, document_id: str) -> dict[str, object]:
         "extractor_version": result.extractor_version,
         "char_count": result.char_count,
     }
+
+
+@celery_app.task(name="mylife.run_weekly_insights")  # type: ignore[untyped-decorator]  # Celery decorator is untyped
+def run_weekly_insights(user_id: str) -> dict[str, object]:
+    """Evaluate the governed alert rules for a user (T7.3)."""
+    import redis
+
+    from mylife.assistant.alerts import AlertsService
+    from mylife.core.config import get_settings
+    from mylife.core.context import new_correlation_id
+    from mylife.core.events import RedisStreamPublisher
+    from mylife.core.events.envelope import utcnow
+    from mylife.db.base import get_session_factory
+
+    client = redis.from_url(get_settings().redis_url)  # type: ignore[no-untyped-call]
+    bus = RedisStreamPublisher(client)
+    factory = get_session_factory()
+    with factory() as session:
+        insights = AlertsService(session, bus).run(
+            uuid.UUID(user_id), now=utcnow(), correlation_id=new_correlation_id()
+        )
+    return {"alerts": len(insights)}
