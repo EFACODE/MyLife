@@ -1,0 +1,33 @@
+# Pre-commit hooks for the My Life repository.
+# Install with: pre-commit install
+# Run on all files: pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # mypy runs from the local (project) environment so it type-checks against
+  # the installed runtime dependencies (fastapi, pydantic-settings, sqlalchemy,
+  # …). Requires `pip install -e ".[dev]"` first. Config lives in pyproject.toml
+  # (packages = ["mylife"]), hence pass_filenames: false.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        pass_filenames: false

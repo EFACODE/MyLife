@@ -1,0 +1,48 @@
+# Local development environment for My Life (T0.2).
+#
+# Spins up the backing services the application depends on — Postgres and
+# Redis — for local development. Configuration is read from a local `.env`
+# file (copy it from `.env.example`).
+#
+#   cp .env.example .env
+#   docker compose up -d
+#   docker compose ps        # check health
+#   docker compose down      # stop (add -v to also drop the volumes)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mylife-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mylife}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mylife}
+      POSTGRES_DB: ${POSTGRES_DB:-mylife}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mylife} -d ${POSTGRES_DB:-mylife}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mylife-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
