@@ -1,5 +1,9 @@
 import type {
+  AuditEntry,
   Briefing,
+  Consent,
+  ErasureResult,
+  ExportBundle,
   LoginResponse,
   TimelinePage,
   TimelineQuery,
@@ -104,6 +108,32 @@ export class ApiClient {
       method: "POST",
       body: { user_id: userId, window_hours: windowHours },
     });
+  }
+
+  // --- Privacy & governance (T10.2) ---
+
+  listConsents(): Promise<Consent[]> {
+    return this.request<Consent[]>("/consents");
+  }
+
+  grantConsent(scope: string): Promise<Consent> {
+    return this.request<Consent>("/consents", { method: "POST", body: { scope } });
+  }
+
+  revokeConsent(scope: string): Promise<void> {
+    return this.request<void>(`/consents/${encodeURIComponent(scope)}`, { method: "DELETE" });
+  }
+
+  getAudit(): Promise<AuditEntry[]> {
+    return this.request<AuditEntry[]>("/audit");
+  }
+
+  exportMe(): Promise<ExportBundle> {
+    return this.request<ExportBundle>("/me/export");
+  }
+
+  deleteMe(): Promise<ErasureResult> {
+    return this.request<ErasureResult>("/me", { method: "DELETE" });
   }
 }
 

@@ -53,3 +53,39 @@ export interface TimelineQuery {
   limit?: number;
   offset?: number;
 }
+
+// --- Privacy & governance (T10.2) ---
+
+export interface Consent {
+  scope: string;
+  granted: boolean;
+  updated_at: string;
+}
+
+export interface AuditEntry {
+  audit_id: string;
+  action: string;
+  actor_user_id: string | null;
+  subject_user_id: string | null;
+  resource: string | null;
+  correlation_id: string;
+  occurred_at: string;
+  recorded_at: string;
+}
+
+export interface ErasureResult {
+  deleted: Record<string, number>;
+}
+
+export interface ExportBundle {
+  user: User;
+  consents: Consent[];
+  audit: AuditEntry[];
+  events: unknown[];
+  raw_records: unknown[];
+  entities: unknown[];
+  relationships: unknown[];
+  accounts: unknown[];
+  goals: unknown[];
+  documents: unknown[];
+}

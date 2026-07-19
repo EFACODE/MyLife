@@ -3,8 +3,11 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
+import { AuditPage } from "./pages/audit/AuditPage";
+import { ConsentPage } from "./pages/consent/ConsentPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { PrivacyPage } from "./pages/privacy/PrivacyPage";
 
 export function App() {
   return (
@@ -20,7 +23,10 @@ export function App() {
             }
           >
             <Route path="/" element={<HomePage />} />
-            {/* Feature routes (T10.2–T10.9) are added here. */}
+            <Route path="/consent" element={<ConsentPage />} />
+            <Route path="/audit" element={<AuditPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            {/* Feature routes (T10.3–T10.9) are added here. */}
           </Route>
         </Routes>
       </BrowserRouter>
