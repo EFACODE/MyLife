@@ -34,7 +34,7 @@ may start before an earlier one finishes when there is no dependency.
 | `T5`  | Goals domain |
 | `T6`  | Knowledge layer |
 | `T7`  | Assistant (evidence-led AI) — *epic, detailed later* |
-| `T8`  | Forecast & scenarios — *epic, detailed later* |
+| `T8`  | Forecast & scenarios |
 | `T9`  | Platform: observability, web, mobile, IaC — *epics, detailed later* |
 
 **Roadmap phases** (from the brief) map onto the groups like this:
@@ -175,7 +175,30 @@ signature narrative.
 
 ---
 
-## Phases 4–5 & platform tracks · *epics, broken into PRs when their phase begins*
+## Phase 5 — Forecast + scenarios · *transparent decision support*
+
+Group `T8`. Turns the digital twin from *understanding the past* into *reasoning
+about the future* — **without false precision**. Every projection is a structured
+`ForecastGenerated` that **names its assumptions** the same way an insight cites
+its evidence: a forecast with no stated assumptions is refused. Forecasts are
+**rule-based / no-LLM** (moving-average / trend extrapolation over the user's own
+events), carry explicit uncertainty (confidence intervals that widen with the
+horizon), and are re-usable behind a scenario simulator and an outcome/calibration
+loop. This makes the brief's Phase 5 promise — *transparent decision support* —
+concrete and auditable.
+
+### `T8` — Forecast + scenarios
+
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T8.1** | ✅ | Forecast contract + assumptions registry: `ForecastGenerated` | **Yes** | Typed `Forecast` (metric, horizon, projected points with lower/upper bounds, **required named `Assumption`s**, method/version, evidence event ids) + `ForecastService` refusing an assumption-free or foreign-evidence forecast + `forecasts` store + authenticated `/forecasts` API; migration 0017; erasure includes `forecasts`. Rule-based. `specs/domain/forecast/forecast-contract.md`. |
+| **T8.2** | ⬜ | Forecasting models (cash-flow / goal-completion) | Yes | Governed rule-based `Forecaster`s projecting from finance/goals events → `Forecast` via the contract (cash-flow moving-average over the horizon; goal-completion date from the progress trend), each naming its assumptions + citing evidence; `POST /forecasts/run`. No LLM/migration. `specs/domain/forecast/forecasting-models.md`. |
+| **T8.3** | ⬜ | "What-if" scenario simulation API | Yes | Apply user-supplied **assumption overrides** to a base forecast → a simulated `Forecast` that is transparent about which assumptions changed and **widens** uncertainty (no false precision); `POST /forecasts/{id}/simulate`. No LLM/migration. `specs/domain/forecast/scenario-simulation.md`. |
+| **T8.4** | ⬜ | Feedback / outcome loops | Yes | Record the **actual outcome** against a past forecast → `ForecastOutcomeRecorded` (evidence-linked) + read-time accuracy/calibration (error vs. stated interval); `POST /forecasts/{id}/outcome`, `GET /forecasts/calibration`. Answers *did the decision improve the outcome?* `specs/domain/forecast/outcome-loops.md`. |
+
+---
+
+## Platform track · *epic, broken into PRs when the phase begins*
 
 These are intentionally coarse now (per the backend/MVP focus) and will be
 decomposed into `T<group>.<n>` rows following the same rules when work reaches
@@ -200,13 +223,6 @@ the same guarantees.
 | **T7.3** | ✅ | Alerts & weekly insights | Yes | Governed `Rule`s (overspend / at-risk goal / short-sleep) → evidence-linked `InsightGenerated` via `InsightService`; `AlertsService.run`, `POST /assistant/alerts/run`, Celery `run_weekly_insights`. No LLM/migration. `specs/domain/assistant/alerts.md`. |
 | **T7.4** | ✅ | AI-safety evaluation harness | **Yes** | Pure `SafetyEvaluator` (evidence present, uncertainty represented, no unsupported medical/financial conclusions, grounding/refusal consistency) + an eval battery driving the real assistant as a CI gate. No dependency/migration. `specs/domain/assistant/safety-harness.md`. |
 
-### `T8` — 🧭 Forecast + scenarios *(Phase 5 — transparent decision support)*
-- **Forecasting models + assumptions registry** — every projection names its
-  assumptions.
-- **"What-if" scenario simulation API** — transparent assumptions, no false
-  precision.
-- **Feedback / outcome loops** — did the decision improve the outcome?
-
 ### `T9` — 🧭 Platform
 - **Observability** — OpenTelemetry traces, Prometheus metrics, Grafana
   dashboards (import → insight traceability).
@@ -226,6 +242,7 @@ the same guarantees.
 | 2 | `T4`, `T5` | 9 | 9 |
 | 3 | `T6` | 4 | 4 |
 | 4 | `T7` | 4 | 4 |
-| 5 + platform | `T8`–`T9` | — | epics |
+| 5 | `T8` | 1 | 4 |
+| platform | `T9` | — | epic |
 
 _Update the **Status** column and this snapshot as each PR merges._
