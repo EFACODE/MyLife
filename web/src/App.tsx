@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
+import { AssistantPage } from "./pages/assistant/AssistantPage";
 import { AuditPage } from "./pages/audit/AuditPage";
 import { ConsentPage } from "./pages/consent/ConsentPage";
 import { FinancePage } from "./pages/finance/FinancePage";
@@ -33,6 +34,7 @@ export function App() {
             <Route path="/health" element={<HealthPage />} />
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/knowledge" element={<KnowledgePage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
             <Route path="/consent" element={<ConsentPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

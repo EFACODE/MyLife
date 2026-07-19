@@ -1,9 +1,12 @@
 import type {
   Account,
+  Answer,
   AuditEntry,
   Balance,
   BankImportResult,
   Briefing,
+  Insight,
+  InsightInput,
   CaptureEventInput,
   CashFlow,
   Consent,
@@ -307,6 +310,24 @@ export class ApiClient {
 
   listRelationships(): Promise<RelationshipRecord[]> {
     return this.request<RelationshipRecord[]>("/knowledge-graph/relationships");
+  }
+
+  // --- Assistant (T10.8) ---
+
+  assistantQuery(question: string): Promise<Answer> {
+    return this.request<Answer>("/assistant/query", { method: "POST", body: { question } });
+  }
+
+  runAlerts(): Promise<Insight[]> {
+    return this.request<Insight[]>("/assistant/alerts/run", { method: "POST" });
+  }
+
+  listInsights(): Promise<Insight[]> {
+    return this.request<Insight[]>("/insights");
+  }
+
+  recordInsight(input: InsightInput): Promise<Insight> {
+    return this.request<Insight>("/insights", { method: "POST", body: input });
   }
 }
 

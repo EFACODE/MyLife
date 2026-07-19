@@ -54,6 +54,37 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Assistant (T10.8) ---
+
+export interface Insight {
+  insight_id: string;
+  claim: string;
+  rationale: string;
+  confidence: number;
+  limitations: string;
+  next_safe_action: string | null;
+  generator: string;
+  evidence: string[];
+  generated_at: string;
+}
+
+export interface Answer {
+  grounded: boolean;
+  answer: string;
+  insight: Insight | null;
+  tools_used: string[];
+  evidence_count: number;
+}
+
+export interface InsightInput {
+  claim: string;
+  rationale: string;
+  evidence: string[];
+  confidence: number;
+  limitations: string;
+  next_safe_action?: string | null;
+}
+
 // --- Knowledge (T10.7) ---
 
 export interface Document {
