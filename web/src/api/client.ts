@@ -29,7 +29,13 @@ export class ApiClient {
   constructor(
     private readonly baseUrl: string,
     private readonly getToken: () => string | null,
+    private readonly onUnauthorized?: () => void,
   ) {}
+
+  private fail(status: number, message: string): never {
+    if (status === 401) this.onUnauthorized?.();
+    throw new ApiError(status, message);
+  }
 
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { method = "GET", body, auth = true } = options;
@@ -44,10 +50,24 @@ export class ApiClient {
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!response.ok) {
-      throw new ApiError(response.status, `${method} ${path} -> ${response.status}`);
-    }
+    if (!response.ok) this.fail(response.status, `${method} ${path} -> ${response.status}`);
     if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
+  }
+
+  /** Upload a file as multipart/form-data (field name "file"). */
+  async upload<T>(path: string, file: File): Promise<T> {
+    const form = new FormData();
+    form.append("file", file);
+    const headers: Record<string, string> = {};
+    const token = this.getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    if (!response.ok) this.fail(response.status, `POST ${path} -> ${response.status}`);
     return (await response.json()) as T;
   }
 
