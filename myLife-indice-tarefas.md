@@ -235,7 +235,7 @@ when their work begins.
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
 | **T9.1** | ✅ | Prometheus metrics foundation + HTTP instrumentation | **Yes** | Dependency-free metrics registry (`Counter`/`Histogram`/`Gauge`, Prometheus text exposition) + `MetricsMiddleware` (`http_requests_total`, `http_request_duration_seconds`, `http_requests_in_flight`, labelled by method/**route template**/status — no ids/PII) + unauthenticated `GET /metrics`. No new dependency/migration. `specs/domain/platform/metrics.md`. |
-| **T9.2** | ⬜ | Domain instrumentation + readiness probe | Yes | Instrument the event store (`mylife_events_appended_total` by `event_type`) and insight/forecast generation via the registry; a `GET /health/ready` readiness probe checking DB connectivity (liveness `/health` stays). No new dependency/migration. `specs/domain/platform/domain-metrics.md`. |
+| **T9.2** | ✅ | Domain instrumentation + readiness probe | Yes | Instrument the event store (`mylife_events_appended_total` by `event_type`) and insight/forecast generation via the registry; a `GET /health/ready` readiness probe checking DB connectivity (liveness `/health` stays). No new dependency/migration. `specs/domain/platform/domain-metrics.md`. |
 
 #### Remaining platform epics *(🧭 coarse — decomposed when their work begins)*
 
@@ -258,7 +258,7 @@ when their work begins.
 | 3 | `T6` | 4 | 4 |
 | 4 | `T7` | 4 | 4 |
 | 5 | `T8` | 4 | 4 |
-| platform · observability | `T9.1`–`T9.2` | 1 | 2 |
+| platform · observability | `T9.1`–`T9.2` | 2 | 2 |
 | platform · web/mobile/infra | `T9` | — | epics |
 
 _Update the **Status** column and this snapshot as each PR merges._

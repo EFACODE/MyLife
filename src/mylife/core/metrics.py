@@ -114,6 +114,10 @@ class Counter(_Metric):
             raise ValueError(f"{self.name} is labelled; use .labels(...).inc()")
         self._add((), amount)
 
+    def value(self, *labelvalues: str) -> float:
+        """Return the current value for a label set (mainly for tests)."""
+        return self._values.get(self._labelkey(labelvalues), 0.0)
+
     def _add(self, key: tuple[str, ...], amount: float) -> None:
         if amount < 0:
             raise ValueError("counters cannot decrease")
@@ -306,6 +310,12 @@ REQUEST_DURATION: Final = Histogram(
     ("method", "route", "status"),
 )
 REQUESTS_IN_FLIGHT: Final = Gauge("http_requests_in_flight", "In-flight HTTP requests.")
+
+# Domain metric: every context flows through the event store, so one counter here
+# observes the whole import → normalize → insight → forecast pipeline by type.
+EVENTS_APPENDED: Final = Counter(
+    "mylife_events_appended_total", "Life Events appended, by event type.", ("event_type",)
+)
 
 
 def render_latest() -> str:
