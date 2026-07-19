@@ -54,6 +54,81 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Finance (T10.4) ---
+
+export interface Account {
+  account_id: string;
+  name: string;
+  currency: string;
+  created_at: string;
+}
+
+export interface Transaction {
+  event_id: string;
+  kind: string;
+  account_id: string;
+  amount_minor: number;
+  currency: string;
+  description: string;
+  category: string | null;
+  occurred_at: string;
+}
+
+export interface Balance {
+  account_id: string;
+  currency: string;
+  balance_minor: number;
+  as_of: string | null;
+}
+
+export interface CurrencyTotal {
+  currency: string;
+  total_minor: number;
+}
+
+export interface CurrencyFlow {
+  currency: string;
+  inflow_minor: number;
+  outflow_minor: number;
+  net_minor: number;
+}
+
+export interface NetWorth {
+  currencies: CurrencyTotal[];
+  accounts: Balance[];
+}
+
+export interface CashFlow {
+  occurred_from: string;
+  occurred_to: string;
+  flows: CurrencyFlow[];
+}
+
+export interface BankImportResult {
+  source: string;
+  raw_ingested: number;
+  events_created: number;
+  skipped_duplicates: number;
+}
+
+export interface ExpenseInput {
+  account_id: string;
+  amount_minor: number;
+  currency: string;
+  description: string;
+  category?: string | null;
+}
+
+export interface TransactionInput extends ExpenseInput {
+  external_id?: string | null;
+}
+
+export interface PositionInput {
+  account_id: string;
+  value_minor: number;
+  currency: string;
+}
+
 // --- Timeline capture (T10.3) ---
 
 export interface CaptureEventInput {

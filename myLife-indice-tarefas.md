@@ -271,7 +271,7 @@ shared architecture the feature tasks plug into. `specs/domain/platform/web-cons
 | **T10.1** | ✅ | Console foundation | **Yes** | Sidebar `Layout`/`Outlet` + `NAV` registry, `MeProvider`/`useMe`, `useAsync` hook, UI primitives, `ApiClient` `onUnauthorized` (401 → logout) + multipart `upload`, committed Vite dev proxy + `.env.example` + `web/README.md`. |
 | **T10.2** | ✅ | Privacy & governance pages | No | Consent grant/revoke/list, audit log, data-subject export + erase (confirm). |
 | **T10.3** | ✅ | Timeline capture page | No | Manual event capture (`POST /timeline/events`) + timeline under the console. |
-| **T10.4** | ⬜ | Finance pages | No | Accounts, expenses/transactions, positions, balances, net-worth, cash-flow, bank CSV import. |
+| **T10.4** | ✅ | Finance pages | No | Accounts, expenses/transactions, positions, balances, net-worth, cash-flow, bank CSV import. |
 | **T10.5** | ⬜ | Health pages | No | Sleep + workouts (create/list), health CSV import. |
 | **T10.6** | ⬜ | Goals pages | No | Goals + milestones + progress. |
 | **T10.7** | ⬜ | Knowledge pages | No | Documents (upload/extract/index), memory search, knowledge-graph. |
@@ -293,6 +293,6 @@ shared architecture the feature tasks plug into. `specs/domain/platform/web-cons
 | platform · observability | `T9.1`–`T9.2` | 2 | 2 |
 | platform · tracing + web | `T9.3`–`T9.5` | 3 | 3 |
 | platform · mobile/infra/dashboards | `T9` | — | deferred |
-| platform · web console | `T10.1`–`T10.9` | 3 | 9 |
+| platform · web console | `T10.1`–`T10.9` | 4 | 9 |
 
 _Update the **Status** column and this snapshot as each PR merges._

@@ -1,14 +1,23 @@
 import type {
+  Account,
   AuditEntry,
+  Balance,
+  BankImportResult,
   Briefing,
   CaptureEventInput,
+  CashFlow,
   Consent,
   ErasureResult,
+  ExpenseInput,
   ExportBundle,
   LoginResponse,
+  NetWorth,
+  PositionInput,
   TimelineEvent,
   TimelinePage,
   TimelineQuery,
+  Transaction,
+  TransactionInput,
   User,
 } from "./types";
 
@@ -141,6 +150,56 @@ export class ApiClient {
 
   deleteMe(): Promise<ErasureResult> {
     return this.request<ErasureResult>("/me", { method: "DELETE" });
+  }
+
+  // --- Finance (T10.4) ---
+
+  listAccounts(): Promise<Account[]> {
+    return this.request<Account[]>("/accounts");
+  }
+
+  createAccount(name: string, currency: string): Promise<Account> {
+    return this.request<Account>("/accounts", { method: "POST", body: { name, currency } });
+  }
+
+  recordExpense(input: ExpenseInput): Promise<Transaction> {
+    return this.request<Transaction>("/finance/expenses", { method: "POST", body: input });
+  }
+
+  recordTransaction(input: TransactionInput): Promise<Transaction> {
+    return this.request<Transaction>("/finance/transactions", { method: "POST", body: input });
+  }
+
+  listTransactions(accountId?: string, limit?: number): Promise<Transaction[]> {
+    const params = new URLSearchParams();
+    if (accountId) params.set("account_id", accountId);
+    if (limit !== undefined) params.set("limit", String(limit));
+    const query = params.toString();
+    return this.request<Transaction[]>(`/finance/transactions${query ? `?${query}` : ""}`);
+  }
+
+  recordPosition(input: PositionInput): Promise<Balance> {
+    return this.request<Balance>("/finance/positions", { method: "POST", body: input });
+  }
+
+  accountBalance(accountId: string): Promise<Balance> {
+    return this.request<Balance>(`/finance/accounts/${accountId}/balance`);
+  }
+
+  netWorth(): Promise<NetWorth> {
+    return this.request<NetWorth>("/finance/net-worth");
+  }
+
+  cashFlow(occurredFrom: string, occurredTo: string): Promise<CashFlow> {
+    const params = new URLSearchParams({ occurred_from: occurredFrom, occurred_to: occurredTo });
+    return this.request<CashFlow>(`/finance/cash-flow?${params.toString()}`);
+  }
+
+  importBank(accountId: string, csv: string): Promise<BankImportResult> {
+    return this.request<BankImportResult>("/finance/connectors/bank/import", {
+      method: "POST",
+      body: { account_id: accountId, csv },
+    });
   }
 }
 
