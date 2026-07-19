@@ -8,6 +8,7 @@ import { ConsentPage } from "./pages/consent/ConsentPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrivacyPage } from "./pages/privacy/PrivacyPage";
+import { CapturePage } from "./pages/timeline/CapturePage";
 
 export function App() {
   return (
@@ -23,6 +24,7 @@ export function App() {
             }
           >
             <Route path="/" element={<HomePage />} />
+            <Route path="/capture" element={<CapturePage />} />
             <Route path="/consent" element={<ConsentPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

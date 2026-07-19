@@ -1,10 +1,12 @@
 import type {
   AuditEntry,
   Briefing,
+  CaptureEventInput,
   Consent,
   ErasureResult,
   ExportBundle,
   LoginResponse,
+  TimelineEvent,
   TimelinePage,
   TimelineQuery,
   User,
@@ -100,6 +102,11 @@ export class ApiClient {
     if (query.limit !== undefined) params.set("limit", String(query.limit));
     if (query.offset !== undefined) params.set("offset", String(query.offset));
     return this.request<TimelinePage>(`/timeline/events?${params.toString()}`);
+  }
+
+  /** Record a Life Event by hand. */
+  captureEvent(input: CaptureEventInput): Promise<TimelineEvent> {
+    return this.request<TimelineEvent>("/timeline/events", { method: "POST", body: input });
   }
 
   /** Deliver a rule-based, evidence-linked briefing for the user. */

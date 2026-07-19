@@ -54,6 +54,17 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Timeline capture (T10.3) ---
+
+export interface CaptureEventInput {
+  user_id: string;
+  occurred_at: string;
+  title: string;
+  category: string;
+  note?: string | null;
+  source?: string;
+}
+
 // --- Privacy & governance (T10.2) ---
 
 export interface Consent {

@@ -9,6 +9,7 @@ export interface NavItem {
  */
 export const NAV: NavItem[] = [
   { path: "/", label: "Dashboard" },
+  { path: "/capture", label: "Capture" },
   { path: "/consent", label: "Consent" },
   { path: "/audit", label: "Audit" },
   { path: "/privacy", label: "Privacy" },
