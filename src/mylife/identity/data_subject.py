@@ -21,6 +21,8 @@ from mylife.core.events.raw_store import RawRecordRow
 from mylife.core.events.raw_store import _to_stored as _raw_to_stored
 from mylife.core.events.store import EventRow
 from mylife.finance.models import Account, AccountRow
+from mylife.forecast.contract import ForecastRow
+from mylife.forecast.outcome import OutcomeRow
 from mylife.goals.models import Goal, GoalRow
 from mylife.goals.service import _to_goal
 from mylife.identity.audit import AuditEntry, AuditLogRow, AuditService
@@ -118,6 +120,11 @@ class DataSubjectService:
                 self._blobs.delete(row.storage_key)
         statements = [
             ("audit_log", delete(AuditLogRow).where(AuditLogRow.subject_user_id == user_id)),
+            (
+                "forecast_outcomes",
+                delete(OutcomeRow).where(OutcomeRow.user_id == user_id),
+            ),
+            ("forecasts", delete(ForecastRow).where(ForecastRow.user_id == user_id)),
             ("insights", delete(InsightRow).where(InsightRow.user_id == user_id)),
             ("relationships", delete(RelationshipRow).where(RelationshipRow.user_id == user_id)),
             ("entities", delete(EntityRow).where(EntityRow.user_id == user_id)),
