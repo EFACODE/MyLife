@@ -181,14 +181,24 @@ These are intentionally coarse now (per the backend/MVP focus) and will be
 decomposed into `T<group>.<n>` rows following the same rules when work reaches
 them.
 
-### `T7` — 🧭 Assistant *(Phase 4 — evidence-led conversations)*
-- **AI evidence contract** — structured `InsightGenerated` claim: *claim, why it
-  matters, source evidence, confidence, known limitations, next safe action*.
-- **Retrieval-grounded query API** — least-privilege tools; curated context;
-  structured claims requiring evidence.
-- **Alerts & weekly insights** — governed rules combined with evaluated AI.
-- **AI-safety evaluation harness** — no unsupported medical/financial
-  conclusions; calibrated fallback when evidence is insufficient.
+## Phase 4 — Assistant · *evidence-led conversations*
+
+Group `T7`. The AI-native layer: every claim is a structured, **evidence-linked**
+`InsightGenerated` with explicit confidence, limits and a safe next step — the
+brief's non-negotiable made concrete. Grounded strictly on the user's own data
+(retrieval `T6.3`, graph `T6.4`, timeline), with an evaluation harness enforcing
+the safety rules. Early increments are **rule-based / no-LLM** — they build the
+contract, storage, grounding and evaluation so a model can later slot in behind
+the same guarantees.
+
+### `T7` — Assistant (evidence-led AI)
+
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T7.1** | 📝 | AI evidence contract: `InsightGenerated` | **Yes** | The structured insight (claim, rationale, **required** evidence event ids, confidence, limitations, next safe action, generator version) + `InsightService` enforcing non-empty, user-owned evidence + `insights` store + authenticated API; migration; erasure. `specs/domain/assistant/insight-contract.md`. |
+| **T7.2** | ⬜ | Retrieval-grounded query API (least-privilege) | **Yes** | A Q&A endpoint answering only from the user's data (retrieval/graph/timeline), returning `InsightGenerated`s whose evidence are the grounding events; **refuses** (calibrated fallback) when evidence is insufficient. |
+| **T7.3** | ⬜ | Alerts & weekly insights | Yes | Governed rules generate evidence-linked insights/alerts (e.g. overspend, at-risk goal, short-sleep streak) surfaced to the user; scheduled via the worker. |
+| **T7.4** | ⬜ | AI-safety evaluation harness | **Yes** | An eval suite asserting every insight carries evidence + uncertainty, no unsupported medical/financial conclusions, and calibrated refusal when evidence is thin — a CI gate for the assistant. |
 
 ### `T8` — 🧭 Forecast + scenarios *(Phase 5 — transparent decision support)*
 - **Forecasting models + assumptions registry** — every projection names its
@@ -215,6 +225,7 @@ them.
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 9 | 9 |
 | 3 | `T6` | 4 | 4 |
-| 4–5 + platform | `T7`–`T9` | — | epics |
+| 4 | `T7` | 0 | 4 |
+| 5 + platform | `T8`–`T9` | — | epics |
 
 _Update the **Status** column and this snapshot as each PR merges._
