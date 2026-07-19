@@ -237,14 +237,26 @@ when their work begins.
 | **T9.1** | ✅ | Prometheus metrics foundation + HTTP instrumentation | **Yes** | Dependency-free metrics registry (`Counter`/`Histogram`/`Gauge`, Prometheus text exposition) + `MetricsMiddleware` (`http_requests_total`, `http_request_duration_seconds`, `http_requests_in_flight`, labelled by method/**route template**/status — no ids/PII) + unauthenticated `GET /metrics`. No new dependency/migration. `specs/domain/platform/metrics.md`. |
 | **T9.2** | ✅ | Domain instrumentation + readiness probe | Yes | Instrument the event store (`mylife_events_appended_total` by `event_type`) and insight/forecast generation via the registry; a `GET /health/ready` readiness probe checking DB connectivity (liveness `/health` stays). No new dependency/migration. `specs/domain/platform/domain-metrics.md`. |
 
-#### Remaining platform epics *(🧭 coarse — decomposed when their work begins)*
+#### Tracing
 
-- **T9.x Tracing** — OpenTelemetry spans across request → event → projection, and a
-  Grafana dashboard for the traceability loop.
-- **T9.x Web** — React / TypeScript / Tailwind / shadcn-ui timeline & briefing
-  surfaces.
-- **T9.x Mobile** — SwiftUI iPhone/iPad app.
-- **T9.x Infrastructure** — Terraform IaC + deployment pipeline & environments.
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T9.3** | ✅ | Distributed trace context (W3C traceparent) + trace-aware logging | **Yes** | Dependency-free trace context (`trace_id`/`span_id` in request scope, W3C `traceparent` parse/propagate, bounded in-process span recorder) + trace ids in the JSON logs, closing *request → event → projection* traceability. OpenTelemetry SDK/collector documented as the production adapter. No new dependency/migration. `specs/domain/platform/tracing.md`. |
+
+#### Web *(React / TypeScript / Tailwind — Node toolchain)*
+
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T9.4** | ⬜ | Web foundation: app shell + typed API client + auth | **Yes** | Vite + React + TypeScript + Tailwind `web/` subproject; typed API client, login flow (JWT from `POST /auth/login`), app shell/routing; `tsc`/eslint/vitest gates. `specs/domain/platform/web-foundation.md`. |
+| **T9.5** | ⬜ | Web surfaces: timeline + daily briefing | Yes | Timeline list (filter by type) and briefing views consuming the API, evidence links preserved; component tests (vitest + testing-library). `specs/domain/platform/web-surfaces.md`. |
+
+#### Deferred platform epics *(🧭 not buildable/verifiable in this environment)*
+
+- **Mobile** — SwiftUI iPhone/iPad app *(no Swift toolchain here — deferred).*
+- **Infrastructure** — Terraform IaC + deployment pipeline *(no Terraform binary
+  here — deferred).*
+- **Dashboards** — Grafana dashboards over the metrics/traces *(needs a running
+  Grafana/Prometheus — deferred).*
 
 ---
 
@@ -259,6 +271,7 @@ when their work begins.
 | 4 | `T7` | 4 | 4 |
 | 5 | `T8` | 4 | 4 |
 | platform · observability | `T9.1`–`T9.2` | 2 | 2 |
-| platform · web/mobile/infra | `T9` | — | epics |
+| platform · tracing + web | `T9.3`–`T9.5` | 1 | 3 |
+| platform · mobile/infra/dashboards | `T9` | — | deferred |
 
 _Update the **Status** column and this snapshot as each PR merges._

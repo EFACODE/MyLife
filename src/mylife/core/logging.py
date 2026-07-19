@@ -8,7 +8,7 @@ connector import through to a user-facing insight.
 import json
 import logging
 
-from mylife.core.context import get_correlation_id
+from mylife.core.context import get_correlation_id, get_span_id, get_trace_id
 
 
 class JsonFormatter(logging.Formatter):
@@ -21,6 +21,8 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
             "correlation_id": get_correlation_id(),
+            "trace_id": get_trace_id(),
+            "span_id": get_span_id(),
         }
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
