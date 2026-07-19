@@ -90,5 +90,26 @@ def test_refusal_query(client: TestClient) -> None:
     assert client.get("/insights", headers=auth).json() == []
 
 
+def test_alerts_run(client: TestClient) -> None:
+    auth = _auth(client)
+    # A goal that is overdue and unachieved fires the at-risk-goal alert.
+    client.post(
+        "/goals",
+        json={
+            "title": "Late goal",
+            "metric": "reading_pages",
+            "target_value": 100,
+            "unit": "pages",
+            "due_at": "2020-01-01T00:00:00+00:00",
+        },
+        headers=auth,
+    )
+    alerts = client.post("/assistant/alerts/run", headers=auth)
+    assert alerts.status_code == 200
+    assert len(alerts.json()) >= 1
+    assert alerts.json()[0]["generator"] == "alerts-v1"
+
+
 def test_query_requires_auth(client: TestClient) -> None:
     assert client.post("/assistant/query", json={"question": "x"}).status_code == 401
+    assert client.post("/assistant/alerts/run").status_code == 401

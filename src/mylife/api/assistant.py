@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from mylife.api.auth import get_current_user
 from mylife.api.deps import get_event_bus
+from mylife.assistant.alerts import AlertsService
+from mylife.assistant.insight import Insight
 from mylife.assistant.query import Answer, AssistantQueryService
 from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
@@ -40,4 +42,17 @@ def query_assistant(
     correlation_id = get_correlation_id() or new_correlation_id()
     return AssistantQueryService(session, bus).answer(
         current_user.user_id, request.question, now=utcnow(), correlation_id=correlation_id
+    )
+
+
+@router.post("/assistant/alerts/run", response_model=list[Insight])
+def run_alerts(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> list[Insight]:
+    """Evaluate the governed alert rules and record any fired alerts as insights."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    return AlertsService(session, bus).run(
+        current_user.user_id, now=utcnow(), correlation_id=correlation_id
     )
