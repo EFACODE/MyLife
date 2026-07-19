@@ -99,7 +99,7 @@ brief places in Phase 0).
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T2.1** | ⬜ | Identity context: User/Household + `UserRegistered` | **Yes** | Domain models, `UserRegistered` event, register/read API. Foundation for `user_id` on every event. |
+| **T2.1** | 📝 | Identity context: User/Household + `UserRegistered` | **Yes** | Domain models, `UserRegistered` event, register/read API. Foundation for `user_id` on every event. `specs/domain/identity/user-registration.md` — **in review, awaiting approval.** |
 | **T2.2** | ⬜ | Authentication (OAuth2/JWT, OIDC-ready) | Yes | Login, session protection, password hashing, least-privilege FastAPI dependencies. |
 | **T2.3** | ⬜ | Consent model + enforcement | **Yes** | `ConsentGranted`/`ConsentRevoked` events, granular per-integration consent, an enforcement dependency connectors must pass. |
 | **T2.4** | ⬜ | Audit log (append-only) | **Yes** | Record data access, connector actions, consent changes and the evidence behind AI recommendations. |
