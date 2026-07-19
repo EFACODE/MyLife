@@ -131,7 +131,7 @@ This phase delivers the **MVP value loop**: capture → understand → briefing.
 | **T3.3** | ✅ | Entities & relationships projection | Yes | Governed entity registry + relations derived from events — the knowledge-graph seed (a projection, not a data substitute). `specs/domain/timeline/entity-projection.md`. |
 | **T3.4** | ✅ | Connector framework & contract | **Yes** | Ports/adapters + idempotent sync job (via `T0.9` worker): pull → raw store → normalized events. The reusable ingestion spine. `specs/domain/timeline/connector-framework.md`. |
 | **T3.5** | ✅ | First connector (Calendar / ICS-CSV import) | Yes | One concrete connector proving the framework end-to-end into the timeline. `specs/domain/timeline/calendar-connector.md`. |
-| **T3.6** | 🔜 | Daily briefing v1 (rule-based, evidence-linked) | **Yes** | Aggregate recent events into a briefing where **every line links to its source events**; emits `BriefingDelivered`. Seeds the evidence contract. |
+| **T3.6** | 📝 | Daily briefing v1 (rule-based, evidence-linked) | **Yes** | Aggregate recent events into a briefing where **every line links to its source events**; emits `BriefingDelivered`. Seeds the evidence contract. `specs/domain/assistant/daily-briefing.md` — **in review, awaiting approval.** |
 
 ---
 
