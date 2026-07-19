@@ -145,20 +145,20 @@ signature narrative.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T4.1** | ⬜ | Finance context: `TransactionImported` / `ExpenseCreated` | **Yes** | Accounts + transactions models + API; first finance domain events. Spec `specs/finance/expense-tracking.md`. |
-| **T4.2** | ⬜ | Finance connector (bank CSV/OFX import) | Yes | Bank import via the `T3.4` framework → `TransactionImported`. |
-| **T4.3** | ⬜ | Net-worth / cash-flow projection (`PositionValued`) | Yes | Balances, cash flow and net worth over time from finance events. |
-| **T4.4** | ⬜ | Health context: `SleepRecorded` / `WorkoutCompleted` | **Yes** | Sleep/workout/metric models + API; first health domain events. Spec `specs/health/workout-tracking.md`. |
-| **T4.5** | ⬜ | Health connector (wearable / Apple Health export) | Yes | Health import via the `T3.4` framework → `WorkoutCompleted`/`SleepRecorded`. |
-| **T4.6** | ⬜ | Cross-domain briefing v2 | **Yes** | Correlate sleep, training, calendar load and spend — the brief's example — still fully evidence-linked. |
+| **T4.1** | ✅ | Finance context: `TransactionImported` / `ExpenseCreated` | **Yes** | Accounts + transactions models + authenticated API; first finance domain events (money = integer minor units). `specs/domain/finance/expense-tracking.md`. |
+| **T4.2** | ✅ | Finance connector (bank CSV import) | Yes | Bank CSV import via the `T3.4` framework → `TransactionImported`; first consent-gated (`"bank"`), HTTP-exposed connector (`POST /finance/connectors/bank/import`). `specs/domain/finance/bank-connector.md`. |
+| **T4.3** | ✅ | Net-worth / cash-flow (`PositionValued`) | Yes | `PositionValued` valuation event + read-time balances, net worth (per currency) and cash flow from finance events; authenticated endpoints. `specs/domain/finance/net-worth.md`. |
+| **T4.4** | ✅ | Health context: `SleepRecorded` / `WorkoutCompleted` | **Yes** | Sleep/workout events + `HealthService` + authenticated `/health/*` endpoints; integer units, events-not-a-table. `specs/domain/health/workout-tracking.md`. |
+| **T4.5** | ✅ | Health connector (wearable / Apple Health export) | Yes | Health CSV import via the `T3.4` framework → `SleepRecorded`/`WorkoutCompleted`; consent-gated (`"health"`), `POST /health/connectors/import`. `specs/domain/health/health-connector.md`. |
+| **T4.6** | ✅ | Cross-domain briefing v2 | **Yes** | Correlate sleep, training, calendar load and spend (with spend baseline + combined short-sleep/busy-day insight) — the brief's example — still fully evidence-linked, rule-based, same `/briefing` route. `specs/domain/assistant/cross-domain-briefing.md`. |
 
 ### `T5` — Goals
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T5.1** | ⬜ | Goals context: `GoalCreated` / `GoalMilestoneReached` | **Yes** | Outcomes, targets, plans + API. |
-| **T5.2** | ⬜ | Goal-progress projection | Yes | Link finance/health events to goals to compute progress. |
-| **T5.3** | ⬜ | Goals in the briefing | Yes | Surface goal progress and risks in the daily briefing. |
+| **T5.1** | ✅ | Goals context: `GoalCreated` / `GoalMilestoneReached` | **Yes** | Goals registry + milestone events + authenticated `/goals` endpoints; migration 0012; erasure includes `goals`. `specs/domain/goals/goal-tracking.md`. |
+| **T5.2** | ✅ | Goal-progress projection | Yes | Read-time `GoalProgressService` deriving progress from finance/health events by metric (net worth / workout minutes+distance / spend; milestone fallback), evidence-linked; `/goals/progress` endpoints. `specs/domain/goals/goal-progress.md`. |
+| **T5.3** | ✅ | Goals in the briefing | Yes | Per-goal progress lines + at-risk (overdue) insight in the cross-domain briefing, evidence-linked. `specs/domain/goals/goals-in-briefing.md`. |
 
 ---
 
@@ -213,7 +213,7 @@ them.
 | ----- | -------- | ---- | ---------------- |
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
-| 2 | `T4`, `T5` | 0 | 9 |
+| 2 | `T4`, `T5` | 9 | 9 |
 | 3 | `T6` | 0 | 4 |
 | 4–5 + platform | `T7`–`T9` | — | epics |
 
