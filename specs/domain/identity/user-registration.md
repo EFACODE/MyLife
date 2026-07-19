@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/identity/`, migration `0006`, tests in `tests/test_identity.py` + `tests/test_identity_api.py`)
 - **Backlog task:** `T2.1` — [issue #9](https://github.com/EFACODE/MyLife/issues/9)
 - **Bounded context:** Identity
 - **Author / date:** Claude Code / 2026-07-18
