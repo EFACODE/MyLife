@@ -8,18 +8,20 @@ Authenticated, user-scoped access to sleep sessions and workouts. Distinct from
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from mylife.api.auth import get_current_user
 from mylife.api.deps import get_event_bus
+from mylife.connectors import ConnectorRunner, ConsentRequiredError, FetchContext
 from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
-from mylife.core.events.envelope import ensure_utc
+from mylife.core.events.envelope import ensure_utc, utcnow
 from mylife.db.base import get_session
-from mylife.health import HealthService, SleepSession, Workout
+from mylife.health import HealthCsvConnector, HealthService, SleepSession, Workout
 from mylife.identity import User
+from mylife.identity.consent import ConsentService
 
 router = APIRouter(tags=["health-tracking"])
 
@@ -50,6 +52,21 @@ class WorkoutRequest(BaseModel):
     @classmethod
     def _require_utc(cls, value: datetime) -> datetime:
         return ensure_utc(value)
+
+
+class HealthImportRequest(BaseModel):
+    """Request to import a wearable / Apple Health export CSV."""
+
+    csv: str = Field(min_length=1)
+
+
+class HealthImportResult(BaseModel):
+    """The outcome of a health CSV import."""
+
+    source: str
+    raw_ingested: int
+    events_created: int
+    skipped_duplicates: int
 
 
 @router.post("/health/sleep", response_model=SleepSession, status_code=201)
@@ -108,3 +125,33 @@ def list_workouts(
 ) -> list[Workout]:
     """List the authenticated user's workouts, newest first."""
     return HealthService(session, bus).list_workouts(current_user.user_id)
+
+
+@router.post("/health/connectors/import", response_model=HealthImportResult, status_code=201)
+def import_health_csv(
+    request: HealthImportRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> HealthImportResult:
+    """Import a wearable / Apple Health export CSV.
+
+    Consent-gated on scope ``"health"`` (fail-closed): without consent → ``403``.
+    Each row becomes a ``SleepRecorded`` or ``WorkoutCompleted``.
+    """
+    correlation_id = get_correlation_id() or new_correlation_id()
+    connector = HealthCsvConnector(request.csv, fetched_at=utcnow())
+    try:
+        result = ConnectorRunner(session, bus).sync(
+            connector,
+            FetchContext(user_id=current_user.user_id, correlation_id=correlation_id),
+            consent=ConsentService(session, bus),
+        )
+    except ConsentRequiredError as exc:
+        raise HTTPException(status_code=403, detail="consent required for 'health'") from exc
+    return HealthImportResult(
+        source=result.source,
+        raw_ingested=result.raw_ingested,
+        events_created=result.events_created,
+        skipped_duplicates=result.skipped_duplicates,
+    )

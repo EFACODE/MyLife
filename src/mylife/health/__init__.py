@@ -6,7 +6,9 @@ and workouts. Measures are integers in fixed units. The wearable connector
 ``specs/domain/health/workout-tracking.md`` (T4.4).
 """
 
+from mylife.health.health_csv import HealthCsvConnector
 from mylife.health.models import (
+    HEALTH_SOURCE,
     SLEEP_RECORDED,
     WORKOUT_COMPLETED,
     SleepPayload,
@@ -19,8 +21,10 @@ from mylife.health.models import (
 from mylife.health.service import HealthService
 
 __all__ = [
+    "HEALTH_SOURCE",
     "SLEEP_RECORDED",
     "WORKOUT_COMPLETED",
+    "HealthCsvConnector",
     "HealthService",
     "SleepPayload",
     "SleepRecorded",

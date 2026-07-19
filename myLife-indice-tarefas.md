@@ -149,7 +149,7 @@ signature narrative.
 | **T4.2** | ✅ | Finance connector (bank CSV import) | Yes | Bank CSV import via the `T3.4` framework → `TransactionImported`; first consent-gated (`"bank"`), HTTP-exposed connector (`POST /finance/connectors/bank/import`). `specs/domain/finance/bank-connector.md`. |
 | **T4.3** | ✅ | Net-worth / cash-flow (`PositionValued`) | Yes | `PositionValued` valuation event + read-time balances, net worth (per currency) and cash flow from finance events; authenticated endpoints. `specs/domain/finance/net-worth.md`. |
 | **T4.4** | ✅ | Health context: `SleepRecorded` / `WorkoutCompleted` | **Yes** | Sleep/workout events + `HealthService` + authenticated `/health/*` endpoints; integer units, events-not-a-table. `specs/domain/health/workout-tracking.md`. |
-| **T4.5** | ⬜ | Health connector (wearable / Apple Health export) | Yes | Health import via the `T3.4` framework → `WorkoutCompleted`/`SleepRecorded`. |
+| **T4.5** | ✅ | Health connector (wearable / Apple Health export) | Yes | Health CSV import via the `T3.4` framework → `SleepRecorded`/`WorkoutCompleted`; consent-gated (`"health"`), `POST /health/connectors/import`. `specs/domain/health/health-connector.md`. |
 | **T4.6** | ⬜ | Cross-domain briefing v2 | **Yes** | Correlate sleep, training, calendar load and spend — the brief's example — still fully evidence-linked. |
 
 ### `T5` — Goals
@@ -213,7 +213,7 @@ them.
 | ----- | -------- | ---- | ---------------- |
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
-| 2 | `T4`, `T5` | 3 | 9 |
+| 2 | `T4`, `T5` | 5 | 9 |
 | 3 | `T6` | 0 | 4 |
 | 4–5 + platform | `T7`–`T9` | — | epics |
 
