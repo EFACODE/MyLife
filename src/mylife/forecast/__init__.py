@@ -25,12 +25,14 @@ from mylife.forecast.models import (
     ForecastingService,
     GoalCompletionForecaster,
 )
+from mylife.forecast.scenario import EmptyScenarioError, ScenarioService
 
 __all__ = [
     "Assumption",
     "CashFlowForecaster",
     "EmptyEvidenceError",
     "EmptyForecastError",
+    "EmptyScenarioError",
     "Forecast",
     "ForecastDetail",
     "ForecastDraft",
@@ -42,6 +44,7 @@ __all__ = [
     "GoalCompletionForecaster",
     "InvalidIntervalError",
     "MissingAssumptionsError",
+    "ScenarioService",
     "UnknownEvidenceError",
     "UnknownForecastError",
 ]

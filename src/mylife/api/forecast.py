@@ -30,8 +30,10 @@ from mylife.forecast.contract import (
     InvalidIntervalError,
     MissingAssumptionsError,
     UnknownEvidenceError,
+    UnknownForecastError,
 )
 from mylife.forecast.models import ForecastingService
+from mylife.forecast.scenario import EmptyScenarioError, ScenarioService
 from mylife.identity import User
 
 router = APIRouter(tags=["forecast"])
@@ -43,6 +45,14 @@ class ForecastRunRequest(BaseModel):
     """Optional parameters for a forecasting run."""
 
     horizon_days: int = Field(default=30, ge=1)
+
+
+class ScenarioRequest(BaseModel):
+    """A what-if over a base forecast (must change the scale or an assumption)."""
+
+    scale: float = Field(default=1.0, gt=0.0)
+    overrides: list[Assumption] = Field(default_factory=list)
+    label: str | None = None
 
 
 class ForecastRequest(BaseModel):
@@ -126,6 +136,34 @@ def list_forecasts(
 ) -> list[Forecast]:
     """List the authenticated user's forecasts, newest first."""
     return ForecastService(session, bus).list_forecasts(current_user.user_id)
+
+
+@router.post("/forecasts/{forecast_id}/simulate", response_model=Forecast, status_code=201)
+def simulate_forecast(
+    forecast_id: uuid.UUID,
+    request: ScenarioRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Forecast:
+    """Record a what-if scenario over the user's base forecast."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        return ScenarioService(session, bus).simulate(
+            current_user.user_id,
+            forecast_id,
+            scale=request.scale,
+            overrides=request.overrides,
+            label=request.label,
+            now=utcnow(),
+            correlation_id=correlation_id,
+        )
+    except EmptyScenarioError as exc:
+        raise HTTPException(
+            status_code=422, detail="a scenario must change the scale or an assumption"
+        ) from exc
+    except UnknownForecastError as exc:
+        raise HTTPException(status_code=404, detail="forecast not found") from exc
 
 
 @router.get("/forecasts/{forecast_id}", response_model=ForecastDetail)

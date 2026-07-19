@@ -178,7 +178,46 @@ def test_run_forecasts_no_data_is_empty(client: TestClient) -> None:
     assert run.json() == []
 
 
+def _create_base_forecast(client: TestClient, auth: dict[str, str]) -> str:
+    event_id = _capture_event(client, auth)
+    created = client.post("/forecasts", json=_forecast_body(event_id), headers=auth)
+    assert created.status_code == 201, created.text
+    return created.json()["forecast_id"]
+
+
+def test_simulate_records_scenario(client: TestClient) -> None:
+    auth = _auth(client)
+    forecast_id = _create_base_forecast(client, auth)
+
+    sim = client.post(
+        f"/forecasts/{forecast_id}/simulate",
+        json={"scale": 1.5, "label": "optimistic"},
+        headers=auth,
+    )
+    assert sim.status_code == 201, sim.text
+    body = sim.json()
+    assert body["points"][0]["value"] == round(-120000 * 1.5)
+    assert any(a["name"] == "scenario" for a in body["assumptions"])
+    # Base + scenario both present.
+    assert len(client.get("/forecasts", headers=auth).json()) == 2
+
+
+def test_simulate_no_op_is_422(client: TestClient) -> None:
+    auth = _auth(client)
+    forecast_id = _create_base_forecast(client, auth)
+    sim = client.post(f"/forecasts/{forecast_id}/simulate", json={"scale": 1.0}, headers=auth)
+    assert sim.status_code == 422
+
+
+def test_simulate_unknown_base_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    missing = "00000000-0000-0000-0000-000000000000"
+    sim = client.post(f"/forecasts/{missing}/simulate", json={"scale": 1.5}, headers=auth)
+    assert sim.status_code == 404
+
+
 def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/forecasts").status_code == 401
     assert client.post("/forecasts", json=_forecast_body("x")).status_code == 401
     assert client.post("/forecasts/run").status_code == 401
+    assert client.post("/forecasts/x/simulate", json={"scale": 1.5}).status_code == 401
