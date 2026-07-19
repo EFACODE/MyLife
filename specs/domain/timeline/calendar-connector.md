@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/connectors/calendar_csv.py`, tests in `tests/test_calendar_connector.py`)
 - **Backlog task:** `T3.5` — [issue #23](https://github.com/EFACODE/MyLife/issues/23)
 - **Bounded context:** Timeline (ingestion)
 - **Author / date:** Claude Code / 2026-07-18

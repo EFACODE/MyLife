@@ -13,9 +13,12 @@ from mylife.connectors.base import (
     RawPayload,
     SyncResult,
 )
+from mylife.connectors.calendar_csv import CALENDAR_SOURCE, CalendarCsvConnector
 from mylife.connectors.registry import ConnectorRegistry, UnknownConnectorError, registry
 
 __all__ = [
+    "CALENDAR_SOURCE",
+    "CalendarCsvConnector",
     "Connector",
     "ConnectorRegistry",
     "ConnectorRunner",
