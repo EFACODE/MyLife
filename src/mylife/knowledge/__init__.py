@@ -23,6 +23,11 @@ from mylife.knowledge.extraction import (
     TextExtractor,
     UnsupportedContentTypeError,
 )
+from mylife.knowledge.graph import (
+    ConsolidationResult,
+    KnowledgeGraphService,
+    consolidated_extract,
+)
 from mylife.knowledge.models import (
     DOCUMENT_INGESTED,
     Document,
@@ -48,6 +53,7 @@ __all__ = [
     "MEMORY_INDEXED",
     "BlobNotFoundError",
     "BlobStore",
+    "ConsolidationResult",
     "Document",
     "DocumentIngested",
     "DocumentNotExtractedError",
@@ -61,6 +67,7 @@ __all__ = [
     "FilesystemBlobStore",
     "HashingEmbedder",
     "InMemoryBlobStore",
+    "KnowledgeGraphService",
     "KnowledgeService",
     "Memory",
     "MemoryIndexed",
@@ -71,4 +78,5 @@ __all__ = [
     "TextExtractor",
     "UnknownDocumentError",
     "UnsupportedContentTypeError",
+    "consolidated_extract",
 ]
