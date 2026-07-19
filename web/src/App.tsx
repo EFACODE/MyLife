@@ -6,6 +6,7 @@ import { RequireAuth } from "./components/RequireAuth";
 import { AuditPage } from "./pages/audit/AuditPage";
 import { ConsentPage } from "./pages/consent/ConsentPage";
 import { FinancePage } from "./pages/finance/FinancePage";
+import { HealthPage } from "./pages/health/HealthPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrivacyPage } from "./pages/privacy/PrivacyPage";
@@ -27,6 +28,7 @@ export function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/capture" element={<CapturePage />} />
             <Route path="/finance" element={<FinancePage />} />
+            <Route path="/health" element={<HealthPage />} />
             <Route path="/consent" element={<ConsentPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

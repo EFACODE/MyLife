@@ -10,15 +10,20 @@ import type {
   ErasureResult,
   ExpenseInput,
   ExportBundle,
+  HealthImportResult,
   LoginResponse,
   NetWorth,
   PositionInput,
+  SleepInput,
+  SleepSession,
   TimelineEvent,
   TimelinePage,
   TimelineQuery,
   Transaction,
   TransactionInput,
   User,
+  Workout,
+  WorkoutInput,
 } from "./types";
 
 /** Raised when the API returns a non-2xx response. */
@@ -199,6 +204,31 @@ export class ApiClient {
     return this.request<BankImportResult>("/finance/connectors/bank/import", {
       method: "POST",
       body: { account_id: accountId, csv },
+    });
+  }
+
+  // --- Health (T10.5) ---
+
+  listSleep(): Promise<SleepSession[]> {
+    return this.request<SleepSession[]>("/health/sleep");
+  }
+
+  recordSleep(input: SleepInput): Promise<SleepSession> {
+    return this.request<SleepSession>("/health/sleep", { method: "POST", body: input });
+  }
+
+  listWorkouts(): Promise<Workout[]> {
+    return this.request<Workout[]>("/health/workouts");
+  }
+
+  recordWorkout(input: WorkoutInput): Promise<Workout> {
+    return this.request<Workout>("/health/workouts", { method: "POST", body: input });
+  }
+
+  importHealth(csv: string): Promise<HealthImportResult> {
+    return this.request<HealthImportResult>("/health/connectors/import", {
+      method: "POST",
+      body: { csv },
     });
   }
 }

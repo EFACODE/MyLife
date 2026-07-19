@@ -54,6 +54,45 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Health (T10.5) ---
+
+export interface SleepSession {
+  event_id: string;
+  occurred_at: string;
+  duration_minutes: number;
+  quality: string | null;
+}
+
+export interface Workout {
+  event_id: string;
+  occurred_at: string;
+  activity: string;
+  duration_minutes: number;
+  distance_meters: number | null;
+  energy_kcal: number | null;
+}
+
+export interface HealthImportResult {
+  source: string;
+  raw_ingested: number;
+  events_created: number;
+  skipped_duplicates: number;
+}
+
+export interface SleepInput {
+  occurred_at: string;
+  duration_minutes: number;
+  quality?: string | null;
+}
+
+export interface WorkoutInput {
+  occurred_at: string;
+  activity: string;
+  duration_minutes: number;
+  distance_meters?: number | null;
+  energy_kcal?: number | null;
+}
+
 // --- Finance (T10.4) ---
 
 export interface Account {
