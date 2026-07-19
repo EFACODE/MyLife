@@ -37,3 +37,6 @@ coverage.xml
 # Databases (local dev)
 *.sqlite3
 *.db
+
+# Local document blob storage (T6.1)
+/var/

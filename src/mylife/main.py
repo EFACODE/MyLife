@@ -19,6 +19,7 @@ from mylife.api import (
     health,
     health_tracking,
     identity,
+    knowledge,
     timeline,
 )
 from mylife.core.config import get_settings
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(finance.router)
     app.include_router(health_tracking.router)
     app.include_router(goals.router)
+    app.include_router(knowledge.router)
     app.include_router(briefing.router)
     return app
 

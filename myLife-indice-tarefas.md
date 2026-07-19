@@ -168,7 +168,7 @@ signature narrative.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T6.1** | ⬜ | Knowledge context: `DocumentIngested` + object-storage upload | **Yes** | Upload with sensitive-document controls; raw docs to object storage; `DocumentIngested`. |
+| **T6.1** | ✅ | Knowledge context: `DocumentIngested` + object-storage upload | **Yes** | `BlobStore` port (filesystem adapter) for document bytes + `documents` registry + `DocumentIngested`; authenticated `/documents` upload/list/download; migration 0013; erasure removes rows + blobs. `specs/domain/knowledge/document-ingest.md`. |
 | **T6.2** | ⬜ | OCR + text-extraction worker | Yes | Async extraction of text from ingested documents. |
 | **T6.3** | ⬜ | Semantic retrieval (pgvector) | Yes | Embeddings + `MemoryIndexed` + retrieval API for grounded context. |
 | **T6.4** | ⬜ | Knowledge-graph projection consolidation | Yes | Consolidate entities + relations across all domains into the graph projection. |
@@ -214,7 +214,7 @@ them.
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 9 | 9 |
-| 3 | `T6` | 0 | 4 |
+| 3 | `T6` | 1 | 4 |
 | 4–5 + platform | `T7`–`T9` | — | epics |
 
 _Update the **Status** column and this snapshot as each PR merges._
