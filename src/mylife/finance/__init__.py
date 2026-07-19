@@ -7,6 +7,7 @@ and net-worth/cash-flow (T4.3) build on this. See
 ``specs/domain/finance/expense-tracking.md`` (T4.1).
 """
 
+from mylife.finance.bank_csv import BANK_SOURCE, BankCsvConnector
 from mylife.finance.models import (
     EXPENSE_CREATED,
     TRANSACTION_IMPORTED,
@@ -20,10 +21,12 @@ from mylife.finance.models import (
 from mylife.finance.service import FinanceService, UnknownAccountError
 
 __all__ = [
+    "BANK_SOURCE",
     "EXPENSE_CREATED",
     "TRANSACTION_IMPORTED",
     "Account",
     "AccountRow",
+    "BankCsvConnector",
     "ExpenseCreated",
     "FinancePayload",
     "FinanceService",

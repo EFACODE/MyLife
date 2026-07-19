@@ -146,7 +146,7 @@ signature narrative.
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
 | **T4.1** | ✅ | Finance context: `TransactionImported` / `ExpenseCreated` | **Yes** | Accounts + transactions models + authenticated API; first finance domain events (money = integer minor units). `specs/domain/finance/expense-tracking.md`. |
-| **T4.2** | ⬜ | Finance connector (bank CSV/OFX import) | Yes | Bank import via the `T3.4` framework → `TransactionImported`. |
+| **T4.2** | ✅ | Finance connector (bank CSV import) | Yes | Bank CSV import via the `T3.4` framework → `TransactionImported`; first consent-gated (`"bank"`), HTTP-exposed connector (`POST /finance/connectors/bank/import`). `specs/domain/finance/bank-connector.md`. |
 | **T4.3** | ⬜ | Net-worth / cash-flow projection (`PositionValued`) | Yes | Balances, cash flow and net worth over time from finance events. |
 | **T4.4** | ⬜ | Health context: `SleepRecorded` / `WorkoutCompleted` | **Yes** | Sleep/workout/metric models + API; first health domain events. Spec `specs/health/workout-tracking.md`. |
 | **T4.5** | ⬜ | Health connector (wearable / Apple Health export) | Yes | Health import via the `T3.4` framework → `WorkoutCompleted`/`SleepRecorded`. |
@@ -213,7 +213,7 @@ them.
 | ----- | -------- | ---- | ---------------- |
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
-| 2 | `T4`, `T5` | 1 | 9 |
+| 2 | `T4`, `T5` | 2 | 9 |
 | 3 | `T6` | 0 | 4 |
 | 4–5 + platform | `T7`–`T9` | — | epics |
 

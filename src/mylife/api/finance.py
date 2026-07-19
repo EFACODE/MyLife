@@ -14,12 +14,15 @@ from sqlalchemy.orm import Session
 
 from mylife.api.auth import get_current_user
 from mylife.api.deps import get_event_bus
+from mylife.connectors import ConnectorRunner, ConsentRequiredError, FetchContext
 from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
 from mylife.core.events.envelope import utcnow
 from mylife.db.base import get_session
 from mylife.finance import Account, FinanceService, Transaction, UnknownAccountError
+from mylife.finance.bank_csv import BankCsvConnector
 from mylife.identity import User
+from mylife.identity.consent import ConsentService
 
 router = APIRouter(tags=["finance"])
 
@@ -50,6 +53,22 @@ class TransactionRequest(BaseModel):
     description: str = Field(min_length=1)
     category: str | None = None
     external_id: str | None = None
+
+
+class BankImportRequest(BaseModel):
+    """Request to import a bank statement CSV into an account."""
+
+    account_id: uuid.UUID
+    csv: str = Field(min_length=1)
+
+
+class BankImportResult(BaseModel):
+    """The outcome of a bank CSV import."""
+
+    source: str
+    raw_ingested: int
+    events_created: int
+    skipped_duplicates: int
 
 
 @router.post("/accounts", response_model=Account, status_code=201)
@@ -135,4 +154,42 @@ def list_transactions(
     """List the authenticated user's transactions, newest first."""
     return FinanceService(session, bus).list_transactions(
         current_user.user_id, account_id=account_id, limit=limit
+    )
+
+
+@router.post("/finance/connectors/bank/import", response_model=BankImportResult, status_code=201)
+def import_bank_csv(
+    request: BankImportRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> BankImportResult:
+    """Import a bank statement CSV into one of the user's accounts.
+
+    Consent-gated on scope ``"bank"`` (fail-closed): without consent → ``403``;
+    a foreign/unknown account → ``404``. Each row becomes a ``TransactionImported``.
+    """
+    account = FinanceService(session, bus).get_account(current_user.user_id, request.account_id)
+    if account is None:
+        raise HTTPException(status_code=404, detail="account not found")
+    correlation_id = get_correlation_id() or new_correlation_id()
+    connector = BankCsvConnector(
+        request.csv,
+        account_id=account.account_id,
+        account_currency=account.currency,
+        fetched_at=utcnow(),
+    )
+    try:
+        result = ConnectorRunner(session, bus).sync(
+            connector,
+            FetchContext(user_id=current_user.user_id, correlation_id=correlation_id),
+            consent=ConsentService(session, bus),
+        )
+    except ConsentRequiredError as exc:
+        raise HTTPException(status_code=403, detail="consent required for 'bank'") from exc
+    return BankImportResult(
+        source=result.source,
+        raw_ingested=result.raw_ingested,
+        events_created=result.events_created,
+        skipped_duplicates=result.skipped_duplicates,
     )

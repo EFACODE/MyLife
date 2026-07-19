@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved
 - **Backlog task:** `T4.2` — [issue #26](https://github.com/EFACODE/MyLife/issues/26)
 - **Bounded context:** Finance (ingestion)
 - **Author / date:** Claude Code / 2026-07-19
@@ -138,6 +138,14 @@ amount_minor,occurred_at,description,currency,category,external_id
     through the runner's `consent=` gate.
   - *Currency.* → row `currency` optional, **defaults to the account's**; a
     mismatch fails the row (multi-currency is future work).
+  - *Registry (FR-7 revised).* → **not registered.** The connector registry
+    (`T3.4`) maps a source to a **pre-constructed connector instance** invoked by
+    a worker with only `(source, user_id)` (see `workers/tasks.py`). A CSV-upload
+    connector needs the uploaded file + target account per request, so — like the
+    calendar connector (`T3.5`) — it is **constructed per request in the
+    endpoint**, not held in the registry. `BANK_SOURCE` is exported for
+    discoverability. Registering *pull* connectors (live bank APIs) fits the
+    registry and comes with a later task.
 - **Risks:**
   - *Large statements in one transaction* — acceptable for first import;
     batching/streaming is future work.
@@ -151,7 +159,7 @@ amount_minor,occurred_at,description,currency,category,external_id
 - [ ] Spec approved and implementation traceable to it.
 - [ ] Tests (per §8) pass; `ruff`, `mypy --strict`, `pytest` green (no migration;
       `alembic check` unaffected).
-- [ ] Endpoint authenticated + consent-gated in OpenAPI; connector registered;
-      backlog + spec status updated.
+- [ ] Endpoint authenticated + consent-gated in OpenAPI; connector constructed
+      per-request (registry deferred, see §9); backlog + spec status updated.
 - [ ] End-to-end proven (CSV → `TransactionImported` queryable, provenance-linked);
       money is integer minor units; raw text not logged.
