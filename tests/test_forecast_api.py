@@ -157,6 +157,28 @@ def test_unknown_forecast_is_404(client: TestClient) -> None:
     assert client.get(f"/forecasts/{missing}", headers=auth).status_code == 404
 
 
+def test_run_forecasts_records_and_lists(client: TestClient) -> None:
+    auth = _auth(client)
+    _capture_event(client, auth)  # a transaction gives the cash-flow model data
+
+    run = client.post("/forecasts/run", json={"horizon_days": 30}, headers=auth)
+    assert run.status_code == 201, run.text
+    body = run.json()
+    assert len(body) >= 1
+    assert body[0]["metric"] == "cash_flow"
+    assert body[0]["assumptions"] and body[0]["evidence"]
+    # The run's forecasts show up in the user's list.
+    assert len(client.get("/forecasts", headers=auth).json()) == len(body)
+
+
+def test_run_forecasts_no_data_is_empty(client: TestClient) -> None:
+    auth = _auth(client)
+    run = client.post("/forecasts/run", headers=auth)
+    assert run.status_code == 201
+    assert run.json() == []
+
+
 def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/forecasts").status_code == 401
     assert client.post("/forecasts", json=_forecast_body("x")).status_code == 401
+    assert client.post("/forecasts/run").status_code == 401

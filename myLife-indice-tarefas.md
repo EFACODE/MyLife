@@ -192,7 +192,7 @@ concrete and auditable.
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
 | **T8.1** | ✅ | Forecast contract + assumptions registry: `ForecastGenerated` | **Yes** | Typed `Forecast` (metric, horizon, projected points with lower/upper bounds, **required named `Assumption`s**, method/version, evidence event ids) + `ForecastService` refusing an assumption-free or foreign-evidence forecast + `forecasts` store + authenticated `/forecasts` API; migration 0017; erasure includes `forecasts`. Rule-based. `specs/domain/forecast/forecast-contract.md`. |
-| **T8.2** | ⬜ | Forecasting models (cash-flow / goal-completion) | Yes | Governed rule-based `Forecaster`s projecting from finance/goals events → `Forecast` via the contract (cash-flow moving-average over the horizon; goal-completion date from the progress trend), each naming its assumptions + citing evidence; `POST /forecasts/run`. No LLM/migration. `specs/domain/forecast/forecasting-models.md`. |
+| **T8.2** | ✅ | Forecasting models (cash-flow / goal-completion) | Yes | Governed rule-based `Forecaster`s projecting from finance/goals events → `Forecast` via the contract (cash-flow moving-average over the horizon; goal-completion date from the progress trend), each naming its assumptions + citing evidence; `POST /forecasts/run`. No LLM/migration. `specs/domain/forecast/forecasting-models.md`. |
 | **T8.3** | ⬜ | "What-if" scenario simulation API | Yes | Apply user-supplied **assumption overrides** to a base forecast → a simulated `Forecast` that is transparent about which assumptions changed and **widens** uncertainty (no false precision); `POST /forecasts/{id}/simulate`. No LLM/migration. `specs/domain/forecast/scenario-simulation.md`. |
 | **T8.4** | ⬜ | Feedback / outcome loops | Yes | Record the **actual outcome** against a past forecast → `ForecastOutcomeRecorded` (evidence-linked) + read-time accuracy/calibration (error vs. stated interval); `POST /forecasts/{id}/outcome`, `GET /forecasts/calibration`. Answers *did the decision improve the outcome?* `specs/domain/forecast/outcome-loops.md`. |
 
@@ -242,7 +242,7 @@ the same guarantees.
 | 2 | `T4`, `T5` | 9 | 9 |
 | 3 | `T6` | 4 | 4 |
 | 4 | `T7` | 4 | 4 |
-| 5 | `T8` | 1 | 4 |
+| 5 | `T8` | 2 | 4 |
 | platform | `T9` | — | epic |
 
 _Update the **Status** column and this snapshot as each PR merges._

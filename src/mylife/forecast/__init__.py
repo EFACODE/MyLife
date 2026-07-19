@@ -18,16 +18,28 @@ from mylife.forecast.contract import (
     UnknownEvidenceError,
     UnknownForecastError,
 )
+from mylife.forecast.models import (
+    CashFlowForecaster,
+    ForecastDraft,
+    Forecaster,
+    ForecastingService,
+    GoalCompletionForecaster,
+)
 
 __all__ = [
     "Assumption",
+    "CashFlowForecaster",
     "EmptyEvidenceError",
     "EmptyForecastError",
     "Forecast",
     "ForecastDetail",
+    "ForecastDraft",
     "ForecastGenerated",
     "ForecastPoint",
     "ForecastService",
+    "Forecaster",
+    "ForecastingService",
+    "GoalCompletionForecaster",
     "InvalidIntervalError",
     "MissingAssumptionsError",
     "UnknownEvidenceError",

@@ -31,11 +31,18 @@ from mylife.forecast.contract import (
     MissingAssumptionsError,
     UnknownEvidenceError,
 )
+from mylife.forecast.models import ForecastingService
 from mylife.identity import User
 
 router = APIRouter(tags=["forecast"])
 
 _METHOD = "manual-v1"
+
+
+class ForecastRunRequest(BaseModel):
+    """Optional parameters for a forecasting run."""
+
+    horizon_days: int = Field(default=30, ge=1)
 
 
 class ForecastRequest(BaseModel):
@@ -91,6 +98,24 @@ def create_forecast(
         raise HTTPException(
             status_code=422, detail="evidence must be one of your own events"
         ) from exc
+
+
+@router.post("/forecasts/run", response_model=list[Forecast], status_code=201)
+def run_forecasts(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+    request: ForecastRunRequest | None = None,
+) -> list[Forecast]:
+    """Run the governed forecasting models for the user; record + return forecasts."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    horizon_days = (request or ForecastRunRequest()).horizon_days
+    return ForecastingService(session, bus).run(
+        current_user.user_id,
+        now=utcnow(),
+        correlation_id=correlation_id,
+        horizon_days=horizon_days,
+    )
 
 
 @router.get("/forecasts", response_model=list[Forecast])
