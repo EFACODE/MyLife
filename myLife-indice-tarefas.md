@@ -145,7 +145,7 @@ signature narrative.
 
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
-| **T4.1** | ⬜ | Finance context: `TransactionImported` / `ExpenseCreated` | **Yes** | Accounts + transactions models + API; first finance domain events. Spec `specs/finance/expense-tracking.md`. |
+| **T4.1** | 📝 | Finance context: `TransactionImported` / `ExpenseCreated` | **Yes** | Accounts + transactions models + API; first finance domain events. `specs/domain/finance/expense-tracking.md` — **in review, awaiting approval.** |
 | **T4.2** | ⬜ | Finance connector (bank CSV/OFX import) | Yes | Bank import via the `T3.4` framework → `TransactionImported`. |
 | **T4.3** | ⬜ | Net-worth / cash-flow projection (`PositionValued`) | Yes | Balances, cash flow and net worth over time from finance events. |
 | **T4.4** | ⬜ | Health context: `SleepRecorded` / `WorkoutCompleted` | **Yes** | Sleep/workout/metric models + API; first health domain events. Spec `specs/health/workout-tracking.md`. |
