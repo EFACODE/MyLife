@@ -7,6 +7,7 @@ import { AssistantPage } from "./pages/assistant/AssistantPage";
 import { AuditPage } from "./pages/audit/AuditPage";
 import { ConsentPage } from "./pages/consent/ConsentPage";
 import { FinancePage } from "./pages/finance/FinancePage";
+import { ForecastPage } from "./pages/forecast/ForecastPage";
 import { GoalsPage } from "./pages/goals/GoalsPage";
 import { HealthPage } from "./pages/health/HealthPage";
 import { HomePage } from "./pages/HomePage";
@@ -35,6 +36,7 @@ export function App() {
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/knowledge" element={<KnowledgePage />} />
             <Route path="/assistant" element={<AssistantPage />} />
+            <Route path="/forecast" element={<ForecastPage />} />
             <Route path="/consent" element={<ConsentPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

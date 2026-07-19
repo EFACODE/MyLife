@@ -15,6 +15,7 @@ export const NAV: NavItem[] = [
   { path: "/goals", label: "Goals" },
   { path: "/knowledge", label: "Knowledge" },
   { path: "/assistant", label: "Assistant" },
+  { path: "/forecast", label: "Forecast" },
   { path: "/consent", label: "Consent" },
   { path: "/audit", label: "Audit" },
   { path: "/privacy", label: "Privacy" },

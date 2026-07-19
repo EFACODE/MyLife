@@ -54,6 +54,62 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Forecast (T10.9) ---
+
+export interface Assumption {
+  name: string;
+  value: string;
+  basis: string;
+}
+
+export interface ForecastPoint {
+  at: string;
+  value: number;
+  lower: number;
+  upper: number;
+}
+
+export interface Forecast {
+  forecast_id: string;
+  metric: string;
+  unit: string;
+  horizon_days: number;
+  points: ForecastPoint[];
+  assumptions: Assumption[];
+  confidence: number;
+  limitations: string;
+  method: string;
+  evidence: string[];
+  generated_at: string;
+}
+
+export interface Outcome {
+  outcome_id: string;
+  forecast_id: string;
+  observed_value: number;
+  observed_at: string;
+  note: string | null;
+  recorded_at: string;
+}
+
+export interface CalibrationRecord {
+  forecast_id: string;
+  metric: string;
+  observed_value: number;
+  predicted_value: number;
+  error: number;
+  within_interval: boolean;
+  observed_at: string;
+}
+
+export interface Calibration {
+  total: number;
+  within_interval: number;
+  hit_rate: number;
+  mean_abs_error: number;
+  records: CalibrationRecord[];
+}
+
 // --- Assistant (T10.8) ---
 
 export interface Insight {

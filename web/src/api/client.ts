@@ -5,8 +5,11 @@ import type {
   Balance,
   BankImportResult,
   Briefing,
+  Calibration,
+  Forecast,
   Insight,
   InsightInput,
+  Outcome,
   CaptureEventInput,
   CashFlow,
   Consent,
@@ -328,6 +331,42 @@ export class ApiClient {
 
   recordInsight(input: InsightInput): Promise<Insight> {
     return this.request<Insight>("/insights", { method: "POST", body: input });
+  }
+
+  // --- Forecast (T10.9) ---
+
+  listForecasts(): Promise<Forecast[]> {
+    return this.request<Forecast[]>("/forecasts");
+  }
+
+  runForecasts(horizonDays = 30): Promise<Forecast[]> {
+    return this.request<Forecast[]>("/forecasts/run", {
+      method: "POST",
+      body: { horizon_days: horizonDays },
+    });
+  }
+
+  simulateForecast(forecastId: string, scale: number, label?: string): Promise<Forecast> {
+    return this.request<Forecast>(`/forecasts/${forecastId}/simulate`, {
+      method: "POST",
+      body: { scale, label: label ?? null },
+    });
+  }
+
+  recordOutcome(
+    forecastId: string,
+    observedValue: number,
+    observedAt: string,
+    note?: string | null,
+  ): Promise<Outcome> {
+    return this.request<Outcome>(`/forecasts/${forecastId}/outcome`, {
+      method: "POST",
+      body: { observed_value: observedValue, observed_at: observedAt, note: note ?? null },
+    });
+  }
+
+  calibration(): Promise<Calibration> {
+    return this.request<Calibration>("/forecasts/calibration");
   }
 }
 
