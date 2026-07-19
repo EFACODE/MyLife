@@ -198,7 +198,7 @@ the same guarantees.
 | **T7.1** | ✅ | AI evidence contract: `InsightGenerated` | **Yes** | Typed `Insight` (claim, rationale, **required** user-owned evidence, confidence 0–1, limitations, next safe action, generator) + `InsightService` refusing evidence-free/foreign-evidence claims + `insights` store + `/insights` API (evidence resolved on read); migration 0016; erasure. `specs/domain/assistant/insight-contract.md`. |
 | **T7.2** | ✅ | Retrieval-grounded query API (least-privilege) | **Yes** | Read-only `Tool`s (timeline keyword + document memory) surface user-owned evidence; `AssistantQueryService.answer` grounds → `InsightGenerated` (calibrated confidence) or **refuses** (no fabrication); `POST /assistant/query`. No LLM/migration. `specs/domain/assistant/grounded-query.md`. |
 | **T7.3** | ✅ | Alerts & weekly insights | Yes | Governed `Rule`s (overspend / at-risk goal / short-sleep) → evidence-linked `InsightGenerated` via `InsightService`; `AlertsService.run`, `POST /assistant/alerts/run`, Celery `run_weekly_insights`. No LLM/migration. `specs/domain/assistant/alerts.md`. |
-| **T7.4** | ⬜ | AI-safety evaluation harness | **Yes** | An eval suite asserting every insight carries evidence + uncertainty, no unsupported medical/financial conclusions, and calibrated refusal when evidence is thin — a CI gate for the assistant. |
+| **T7.4** | ✅ | AI-safety evaluation harness | **Yes** | Pure `SafetyEvaluator` (evidence present, uncertainty represented, no unsupported medical/financial conclusions, grounding/refusal consistency) + an eval battery driving the real assistant as a CI gate. No dependency/migration. `specs/domain/assistant/safety-harness.md`. |
 
 ### `T8` — 🧭 Forecast + scenarios *(Phase 5 — transparent decision support)*
 - **Forecasting models + assumptions registry** — every projection names its
@@ -225,7 +225,7 @@ the same guarantees.
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 9 | 9 |
 | 3 | `T6` | 4 | 4 |
-| 4 | `T7` | 3 | 4 |
+| 4 | `T7` | 4 | 4 |
 | 5 + platform | `T8`–`T9` | — | epics |
 
 _Update the **Status** column and this snapshot as each PR merges._
