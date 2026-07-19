@@ -8,14 +8,22 @@ import type {
   CashFlow,
   Consent,
   ErasureResult,
+  ConsolidationResult,
   CreateGoalInput,
+  Document,
+  DocumentText,
+  EntityRecord,
   ExpenseInput,
   ExportBundle,
+  ExtractedText,
   Goal,
   GoalProgress,
   HealthImportResult,
   LoginResponse,
+  Memory,
   Milestone,
+  RelationshipRecord,
+  SearchHit,
   NetWorth,
   PositionInput,
   SleepInput,
@@ -259,6 +267,46 @@ export class ApiClient {
 
   listMilestones(goalId: string): Promise<Milestone[]> {
     return this.request<Milestone[]>(`/goals/${goalId}/milestones`);
+  }
+
+  // --- Knowledge (T10.7) ---
+
+  uploadDocument(file: File): Promise<Document> {
+    return this.upload<Document>("/documents", file);
+  }
+
+  listDocuments(): Promise<Document[]> {
+    return this.request<Document[]>("/documents");
+  }
+
+  extractDocument(documentId: string): Promise<ExtractedText> {
+    return this.request<ExtractedText>(`/documents/${documentId}/extract`, { method: "POST" });
+  }
+
+  getDocumentText(documentId: string): Promise<DocumentText> {
+    return this.request<DocumentText>(`/documents/${documentId}/text`);
+  }
+
+  indexDocument(documentId: string): Promise<Memory> {
+    return this.request<Memory>(`/documents/${documentId}/index`, { method: "POST" });
+  }
+
+  memorySearch(query: string, limit?: number): Promise<SearchHit[]> {
+    const params = new URLSearchParams({ q: query });
+    if (limit !== undefined) params.set("limit", String(limit));
+    return this.request<SearchHit[]>(`/memory/search?${params.toString()}`);
+  }
+
+  consolidateGraph(): Promise<ConsolidationResult> {
+    return this.request<ConsolidationResult>("/knowledge-graph/consolidate", { method: "POST" });
+  }
+
+  listEntities(): Promise<EntityRecord[]> {
+    return this.request<EntityRecord[]>("/knowledge-graph/entities");
+  }
+
+  listRelationships(): Promise<RelationshipRecord[]> {
+    return this.request<RelationshipRecord[]>("/knowledge-graph/relationships");
   }
 }
 

@@ -54,6 +54,69 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Knowledge (T10.7) ---
+
+export interface Document {
+  document_id: string;
+  filename: string;
+  content_type: string;
+  byte_size: number;
+  checksum: string;
+  created_at: string;
+}
+
+export interface ExtractedText {
+  document_id: string;
+  method: string;
+  extractor_version: string;
+  char_count: number;
+}
+
+export interface DocumentText {
+  document_id: string;
+  text: string;
+}
+
+export interface Memory {
+  memory_id: string;
+  document_id: string;
+  embedder: string;
+  dimension: number;
+  indexed_at: string;
+}
+
+export interface SearchHit {
+  document_id: string;
+  score: number;
+  preview: string;
+}
+
+export interface ConsolidationResult {
+  entities: number;
+  relationships: number;
+}
+
+export interface EntityRecord {
+  entity_id: string;
+  user_id: string;
+  entity_type: string;
+  entity_key: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  occurrences: number;
+}
+
+export interface RelationshipRecord {
+  relationship_id: string;
+  user_id: string;
+  source_entity_id: string;
+  target_entity_id: string;
+  rel_type: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  occurrences: number;
+}
+
 // --- Goals (T10.6) ---
 
 export interface Goal {
