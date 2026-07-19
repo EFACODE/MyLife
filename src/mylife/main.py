@@ -24,11 +24,14 @@ from mylife.api import (
     insight,
     knowledge,
     knowledge_graph,
+    metrics,
     timeline,
 )
 from mylife.core.config import get_settings
 from mylife.core.logging import configure_logging
+from mylife.core.metrics_middleware import MetricsMiddleware
 from mylife.core.middleware import CorrelationIdMiddleware
+from mylife.core.tracing import TracingMiddleware
 
 
 def create_app() -> FastAPI:
@@ -41,7 +44,10 @@ def create_app() -> FastAPI:
         debug=settings.debug,
     )
     app.add_middleware(CorrelationIdMiddleware)
+    app.add_middleware(TracingMiddleware)
+    app.add_middleware(MetricsMiddleware)
     app.include_router(health.router)
+    app.include_router(metrics.router)
     app.include_router(auth.router)
     app.include_router(identity.router)
     app.include_router(consent.router)

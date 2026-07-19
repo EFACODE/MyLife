@@ -17,6 +17,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import JSON
 
 from mylife.core.events.envelope import LifeEvent
+from mylife.core.metrics import EVENTS_APPENDED
 from mylife.db.base import Base
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -159,6 +160,7 @@ class EventStore:
                 self._session.flush()
         except IntegrityError as exc:
             raise DuplicateEventError(event.event_id) from exc
+        EVENTS_APPENDED.labels(event_type=event.event_type).inc()
         return _to_stored(row)
 
     def read_stream(
