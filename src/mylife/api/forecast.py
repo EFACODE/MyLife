@@ -7,6 +7,7 @@ uncertainty interval on every point (enforced by ``ForecastService``). See
 """
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -33,6 +34,7 @@ from mylife.forecast.contract import (
     UnknownForecastError,
 )
 from mylife.forecast.models import ForecastingService
+from mylife.forecast.outcome import Calibration, Outcome, OutcomeService
 from mylife.forecast.scenario import EmptyScenarioError, ScenarioService
 from mylife.identity import User
 
@@ -53,6 +55,14 @@ class ScenarioRequest(BaseModel):
     scale: float = Field(default=1.0, gt=0.0)
     overrides: list[Assumption] = Field(default_factory=list)
     label: str | None = None
+
+
+class OutcomeRequest(BaseModel):
+    """An actual observed value recorded against a forecast."""
+
+    observed_value: int
+    observed_at: datetime
+    note: str | None = None
 
 
 class ForecastRequest(BaseModel):
@@ -162,6 +172,40 @@ def simulate_forecast(
         raise HTTPException(
             status_code=422, detail="a scenario must change the scale or an assumption"
         ) from exc
+    except UnknownForecastError as exc:
+        raise HTTPException(status_code=404, detail="forecast not found") from exc
+
+
+@router.get("/forecasts/calibration", response_model=Calibration)
+def get_calibration(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Calibration:
+    """Report how the user's forecasts held up against recorded outcomes."""
+    return OutcomeService(session, bus).calibrate(current_user.user_id)
+
+
+@router.post("/forecasts/{forecast_id}/outcome", response_model=Outcome, status_code=201)
+def record_outcome(
+    forecast_id: uuid.UUID,
+    request: OutcomeRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Outcome:
+    """Record an actual outcome against one of the user's forecasts."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        return OutcomeService(session, bus).record(
+            current_user.user_id,
+            forecast_id,
+            request.observed_value,
+            request.observed_at,
+            note=request.note,
+            now=utcnow(),
+            correlation_id=correlation_id,
+        )
     except UnknownForecastError as exc:
         raise HTTPException(status_code=404, detail="forecast not found") from exc
 

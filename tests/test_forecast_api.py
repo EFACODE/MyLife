@@ -216,8 +216,51 @@ def test_simulate_unknown_base_is_404(client: TestClient) -> None:
     assert sim.status_code == 404
 
 
+def test_record_outcome_and_calibration(client: TestClient) -> None:
+    auth = _auth(client)
+    forecast_id = _create_base_forecast(client, auth)
+
+    # The base forecast projects value -120000 in [-180000, -60000] at 2026-08-18.
+    outcome = client.post(
+        f"/forecasts/{forecast_id}/outcome",
+        json={"observed_value": -100000, "observed_at": "2026-08-18T00:00:00+00:00"},
+        headers=auth,
+    )
+    assert outcome.status_code == 201, outcome.text
+
+    calibration = client.get("/forecasts/calibration", headers=auth).json()
+    assert calibration["total"] == 1
+    assert calibration["within_interval"] == 1
+    assert calibration["hit_rate"] == 1.0
+    assert calibration["records"][0]["predicted_value"] == -120000
+
+
+def test_outcome_unknown_forecast_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    missing = "00000000-0000-0000-0000-000000000000"
+    response = client.post(
+        f"/forecasts/{missing}/outcome",
+        json={"observed_value": 1, "observed_at": "2026-08-18T00:00:00+00:00"},
+        headers=auth,
+    )
+    assert response.status_code == 404
+
+
+def test_calibration_empty(client: TestClient) -> None:
+    auth = _auth(client)
+    calibration = client.get("/forecasts/calibration", headers=auth).json()
+    assert calibration == {
+        "total": 0,
+        "within_interval": 0,
+        "hit_rate": 0.0,
+        "mean_abs_error": 0,
+        "records": [],
+    }
+
+
 def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/forecasts").status_code == 401
     assert client.post("/forecasts", json=_forecast_body("x")).status_code == 401
     assert client.post("/forecasts/run").status_code == 401
     assert client.post("/forecasts/x/simulate", json={"scale": 1.5}).status_code == 401
+    assert client.get("/forecasts/calibration").status_code == 401

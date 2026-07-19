@@ -25,10 +25,19 @@ from mylife.forecast.models import (
     ForecastingService,
     GoalCompletionForecaster,
 )
+from mylife.forecast.outcome import (
+    Calibration,
+    CalibrationRecord,
+    ForecastOutcomeRecorded,
+    Outcome,
+    OutcomeService,
+)
 from mylife.forecast.scenario import EmptyScenarioError, ScenarioService
 
 __all__ = [
     "Assumption",
+    "Calibration",
+    "CalibrationRecord",
     "CashFlowForecaster",
     "EmptyEvidenceError",
     "EmptyForecastError",
@@ -37,6 +46,7 @@ __all__ = [
     "ForecastDetail",
     "ForecastDraft",
     "ForecastGenerated",
+    "ForecastOutcomeRecorded",
     "ForecastPoint",
     "ForecastService",
     "Forecaster",
@@ -44,6 +54,8 @@ __all__ = [
     "GoalCompletionForecaster",
     "InvalidIntervalError",
     "MissingAssumptionsError",
+    "Outcome",
+    "OutcomeService",
     "ScenarioService",
     "UnknownEvidenceError",
     "UnknownForecastError",
