@@ -46,3 +46,35 @@ def sync_connector(source: str, user_id: str) -> dict[str, object]:
         "events_created": result.events_created,
         "skipped_duplicates": result.skipped_duplicates,
     }
+
+
+@celery_app.task(name="mylife.extract_document_text")  # type: ignore[untyped-decorator]  # Celery decorator is untyped
+def extract_document_text(user_id: str, document_id: str) -> dict[str, object]:
+    """Extract a document's text into the derived store (T6.2)."""
+    import redis
+
+    from mylife.core.config import get_settings
+    from mylife.core.context import new_correlation_id
+    from mylife.core.events import RedisStreamPublisher
+    from mylife.core.events.envelope import utcnow
+    from mylife.db.base import get_session_factory
+    from mylife.knowledge import ExtractionService, FilesystemBlobStore
+
+    settings = get_settings()
+    client = redis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
+    bus = RedisStreamPublisher(client)
+    blob_store = FilesystemBlobStore(settings.blob_store_path)
+    factory = get_session_factory()
+    with factory() as session:
+        result = ExtractionService(session, bus, blob_store).extract_document(
+            uuid.UUID(user_id),
+            uuid.UUID(document_id),
+            now=utcnow(),
+            correlation_id=new_correlation_id(),
+        )
+    return {
+        "document_id": str(result.document_id),
+        "method": result.method,
+        "extractor_version": result.extractor_version,
+        "char_count": result.char_count,
+    }

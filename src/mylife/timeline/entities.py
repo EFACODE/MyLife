@@ -7,12 +7,12 @@ data — mutable and distinct from the append-only ``events``/``raw_records``. S
 """
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import Any, NamedTuple
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint, delete, select
+from sqlalchemy import DateTime, Integer, String, UniqueConstraint, delete, or_, select
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from mylife.core.events import InProcessEventBus, LifeEvent
@@ -102,6 +102,23 @@ class _Extraction(NamedTuple):
     relationships: list[tuple[_Entity, _Entity, str]]
 
 
+# Public aliases so other contexts (e.g. the Knowledge consolidated extractor,
+# T6.4) can build extractions and inject their own extractor into the projection.
+Entity = _Entity
+Extraction = _Extraction
+Extractor = Callable[[LifeEvent[Any]], _Extraction]
+
+
+class Neighborhood(BaseModel):
+    """An entity with its one-hop neighbors and the connecting edges."""
+
+    model_config = ConfigDict(frozen=True)
+
+    entity: EntityRecord
+    neighbors: list[EntityRecord]
+    edges: list[RelationshipRecord]
+
+
 def _extract(event: LifeEvent[Any]) -> _Extraction:
     """Derive entities/relationships from an event (deliberately minimal, T3.3)."""
     source = _Entity("source", event.source)
@@ -145,15 +162,21 @@ def _to_relationship_record(row: RelationshipRow) -> RelationshipRecord:
 
 
 class EntityProjection:
-    """Applies events to, and reads from, the entities/relationships registry."""
+    """Applies events to, and reads from, the entities/relationships registry.
 
-    def __init__(self, session: Session) -> None:
+    The extractor is injectable so a richer, cross-domain extractor (Knowledge,
+    T6.4) can reuse the same upsert machinery; it defaults to the generic
+    timeline extractor (T3.3).
+    """
+
+    def __init__(self, session: Session, extract: "Extractor" = _extract) -> None:
         self._session = session
+        self._extract = extract
 
     def apply(self, event: LifeEvent[Any]) -> None:
         """Upsert the entities and relationships derived from ``event``."""
         occurred_at = event.occurred_at
-        extraction = _extract(event)
+        extraction = self._extract(event)
         ids: dict[_Entity, uuid.UUID] = {}
         for entity in extraction.entities:
             ids[entity] = self._upsert_entity(event.user_id, entity, occurred_at)
@@ -248,6 +271,53 @@ class EntityProjection:
         self._session.flush()
         for event in events:
             self.apply(event)
+
+    def rebuild_for_user(self, user_id: uuid.UUID, events: Iterable[LifeEvent[Any]]) -> None:
+        """Clear and recompute only ``user_id``'s subgraph from their ``events``."""
+        self._session.execute(delete(RelationshipRow).where(RelationshipRow.user_id == user_id))
+        self._session.execute(delete(EntityRow).where(EntityRow.user_id == user_id))
+        self._session.flush()
+        for event in events:
+            self.apply(event)
+
+    def neighbors(self, user_id: uuid.UUID, entity_id: uuid.UUID) -> Neighborhood | None:
+        """Return the entity, its one-hop neighbors and connecting edges."""
+        entity = self._session.scalars(
+            select(EntityRow).where(EntityRow.entity_id == entity_id, EntityRow.user_id == user_id)
+        ).one_or_none()
+        if entity is None:
+            return None
+        edges = list(
+            self._session.scalars(
+                select(RelationshipRow).where(
+                    RelationshipRow.user_id == user_id,
+                    or_(
+                        RelationshipRow.source_entity_id == entity_id,
+                        RelationshipRow.target_entity_id == entity_id,
+                    ),
+                )
+            )
+        )
+        neighbor_ids = {
+            edge.target_entity_id if edge.source_entity_id == entity_id else edge.source_entity_id
+            for edge in edges
+        }
+        neighbor_rows = (
+            list(
+                self._session.scalars(
+                    select(EntityRow).where(
+                        EntityRow.user_id == user_id, EntityRow.entity_id.in_(neighbor_ids)
+                    )
+                )
+            )
+            if neighbor_ids
+            else []
+        )
+        return Neighborhood(
+            entity=_to_entity_record(entity),
+            neighbors=[_to_entity_record(row) for row in neighbor_rows],
+            edges=[_to_relationship_record(edge) for edge in edges],
+        )
 
 
 class EntityProjectionSubscriber:

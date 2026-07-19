@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     access_token_ttl_seconds: int = 3600
     jwt_issuer: str = "mylife"
 
+    # Knowledge document storage (T6.1). Document bytes are stored in object
+    # storage; locally that is a directory tree. Production overrides this (or a
+    # future S3/GCS adapter) through the environment.
+    blob_store_path: str = "./var/blobs"
+
     @property
     def broker_url(self) -> str:
         """Effective Celery broker URL (falls back to ``redis_url``)."""

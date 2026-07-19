@@ -5,6 +5,7 @@ Erasure is the sanctioned path that overrides append-only immutability. See
 ``specs/domain/identity/data-subject-rights.md`` (T2.5).
 """
 
+import contextlib
 import uuid
 from typing import Any, cast
 
@@ -13,6 +14,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
+from mylife.core.config import get_settings
 from mylife.core.events import EventStore, InProcessEventBus, StoredEvent, StoredRawRecord
 from mylife.core.events.raw_store import RawRecordRow
 from mylife.core.events.raw_store import _to_stored as _raw_to_stored
@@ -24,6 +26,11 @@ from mylife.identity.audit import AuditEntry, AuditLogRow, AuditService
 from mylife.identity.consent import Consent, ConsentRow, ConsentService
 from mylife.identity.models import CredentialRow, User, UserRow
 from mylife.identity.service import _to_user
+from mylife.knowledge.blob_store import BlobNotFoundError, BlobStore, FilesystemBlobStore
+from mylife.knowledge.extraction import DocumentTextRow
+from mylife.knowledge.models import Document, DocumentRow
+from mylife.knowledge.retrieval import MemoryRow
+from mylife.knowledge.service import _to_document
 from mylife.timeline import EntityProjection
 from mylife.timeline.entities import EntityRecord, EntityRow, RelationshipRecord, RelationshipRow
 
@@ -44,6 +51,7 @@ class ExportBundle(BaseModel):
     relationships: list[RelationshipRecord]
     accounts: list[Account]
     goals: list[Goal]
+    documents: list[Document]
 
 
 class ErasureResult(BaseModel):
@@ -57,8 +65,9 @@ class ErasureResult(BaseModel):
 class DataSubjectService:
     """Exports and erases a user's data across every store."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, blob_store: BlobStore | None = None) -> None:
         self._session = session
+        self._blobs = blob_store or FilesystemBlobStore(get_settings().blob_store_path)
 
     def export(self, user_id: uuid.UUID) -> ExportBundle:
         """Gather all of the user's data into an export bundle."""
@@ -72,6 +81,11 @@ class DataSubjectService:
         )
         goal_rows = self._session.scalars(
             select(GoalRow).where(GoalRow.user_id == user_id).order_by(GoalRow.created_at)
+        )
+        document_rows = self._session.scalars(
+            select(DocumentRow)
+            .where(DocumentRow.user_id == user_id)
+            .order_by(DocumentRow.created_at)
         )
         return ExportBundle(
             user=_to_user(user_row) if user_row is not None else None,
@@ -91,14 +105,23 @@ class DataSubjectService:
                 for row in account_rows
             ],
             goals=[_to_goal(row) for row in goal_rows],
+            documents=[_to_document(row) for row in document_rows],
         )
 
     def erase(self, user_id: uuid.UUID) -> ErasureResult:
         """Hard-delete all of the user's rows across every table."""
+        # Documents keep their bytes in the blob store — delete those first, then
+        # let the bulk row-delete below remove the metadata (and count it).
+        for row in self._session.scalars(select(DocumentRow).where(DocumentRow.user_id == user_id)):
+            with contextlib.suppress(BlobNotFoundError):
+                self._blobs.delete(row.storage_key)
         statements = [
             ("audit_log", delete(AuditLogRow).where(AuditLogRow.subject_user_id == user_id)),
             ("relationships", delete(RelationshipRow).where(RelationshipRow.user_id == user_id)),
             ("entities", delete(EntityRow).where(EntityRow.user_id == user_id)),
+            ("memory_index", delete(MemoryRow).where(MemoryRow.user_id == user_id)),
+            ("document_texts", delete(DocumentTextRow).where(DocumentTextRow.user_id == user_id)),
+            ("documents", delete(DocumentRow).where(DocumentRow.user_id == user_id)),
             ("goals", delete(GoalRow).where(GoalRow.user_id == user_id)),
             ("accounts", delete(AccountRow).where(AccountRow.user_id == user_id)),
             ("consents", delete(ConsentRow).where(ConsentRow.user_id == user_id)),

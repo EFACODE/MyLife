@@ -7,9 +7,13 @@ follow.
 
 from mylife.timeline.capture import RecordLifeEventCommand, TimelineWriter
 from mylife.timeline.entities import (
+    Entity,
     EntityProjection,
     EntityProjectionSubscriber,
     EntityRecord,
+    Extraction,
+    Extractor,
+    Neighborhood,
     RelationshipRecord,
 )
 from mylife.timeline.query import (
@@ -20,9 +24,13 @@ from mylife.timeline.query import (
 )
 
 __all__ = [
+    "Entity",
     "EntityProjection",
     "EntityProjectionSubscriber",
     "EntityRecord",
+    "Extraction",
+    "Extractor",
+    "Neighborhood",
     "RecordLifeEventCommand",
     "RelationshipRecord",
     "TimelineEvent",
