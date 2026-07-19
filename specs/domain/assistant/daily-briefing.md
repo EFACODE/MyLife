@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/assistant/briefing.py`, `src/mylife/api/briefing.py`, tests in `tests/test_briefing.py` + `tests/test_briefing_api.py`)
 - **Backlog task:** `T3.6` — [issue #24](https://github.com/EFACODE/MyLife/issues/24)
 - **Bounded context:** Assistant
 - **Author / date:** Claude Code / 2026-07-18
