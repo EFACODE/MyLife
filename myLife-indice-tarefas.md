@@ -223,13 +223,28 @@ the same guarantees.
 | **T7.3** | ✅ | Alerts & weekly insights | Yes | Governed `Rule`s (overspend / at-risk goal / short-sleep) → evidence-linked `InsightGenerated` via `InsightService`; `AlertsService.run`, `POST /assistant/alerts/run`, Celery `run_weekly_insights`. No LLM/migration. `specs/domain/assistant/alerts.md`. |
 | **T7.4** | ✅ | AI-safety evaluation harness | **Yes** | Pure `SafetyEvaluator` (evidence present, uncertainty represented, no unsupported medical/financial conclusions, grounding/refusal consistency) + an eval battery driving the real assistant as a CI gate. No dependency/migration. `specs/domain/assistant/safety-harness.md`. |
 
-### `T9` — 🧭 Platform
-- **Observability** — OpenTelemetry traces, Prometheus metrics, Grafana
-  dashboards (import → insight traceability).
-- **Web** — React / TypeScript / Tailwind / shadcn-ui timeline & briefing
+### `T9` — Platform
+
+The cross-cutting platform track. **Observability** is decomposed first (it stays
+in the existing Python stack and closes the *import → insight → forecast*
+traceability loop); Web, Mobile and Infrastructure remain coarse epics, broken down
+when their work begins.
+
+#### Observability
+
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T9.1** | 📝 | Prometheus metrics foundation + HTTP instrumentation | **Yes** | Dependency-free metrics registry (`Counter`/`Histogram`/`Gauge`, Prometheus text exposition) + `MetricsMiddleware` (`http_requests_total`, `http_request_duration_seconds`, `http_requests_in_flight`, labelled by method/**route template**/status — no ids/PII) + unauthenticated `GET /metrics`. No new dependency/migration. `specs/domain/platform/metrics.md`. |
+| **T9.2** | ⬜ | Domain instrumentation + readiness probe | Yes | Instrument the event store (`mylife_events_appended_total` by `event_type`) and insight/forecast generation via the registry; a `GET /health/ready` readiness probe checking DB connectivity (liveness `/health` stays). No new dependency/migration. `specs/domain/platform/domain-metrics.md`. |
+
+#### Remaining platform epics *(🧭 coarse — decomposed when their work begins)*
+
+- **T9.x Tracing** — OpenTelemetry spans across request → event → projection, and a
+  Grafana dashboard for the traceability loop.
+- **T9.x Web** — React / TypeScript / Tailwind / shadcn-ui timeline & briefing
   surfaces.
-- **Mobile** — SwiftUI iPhone/iPad app.
-- **Infrastructure** — Terraform IaC + deployment pipeline & environments.
+- **T9.x Mobile** — SwiftUI iPhone/iPad app.
+- **T9.x Infrastructure** — Terraform IaC + deployment pipeline & environments.
 
 ---
 
@@ -243,6 +258,7 @@ the same guarantees.
 | 3 | `T6` | 4 | 4 |
 | 4 | `T7` | 4 | 4 |
 | 5 | `T8` | 4 | 4 |
-| platform | `T9` | — | epic |
+| platform · observability | `T9.1`–`T9.2` | 0 | 2 |
+| platform · web/mobile/infra | `T9` | — | epics |
 
 _Update the **Status** column and this snapshot as each PR merges._
