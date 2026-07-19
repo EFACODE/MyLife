@@ -248,7 +248,7 @@ when their work begins.
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
 | **T9.4** | ✅ | Web foundation: app shell + typed API client + auth | **Yes** | Vite + React + TypeScript + Tailwind `web/` subproject; typed API client, login flow (JWT from `POST /auth/login`), app shell/routing; `tsc`/eslint/vitest gates. `specs/domain/platform/web-foundation.md`. |
-| **T9.5** | ⬜ | Web surfaces: timeline + daily briefing | Yes | Timeline list (filter by type) and briefing views consuming the API, evidence links preserved; component tests (vitest + testing-library). `specs/domain/platform/web-surfaces.md`. |
+| **T9.5** | ✅ | Web surfaces: timeline + daily briefing | Yes | Timeline list (filter by type) and briefing views consuming the API, evidence links preserved; component tests (vitest + testing-library). `specs/domain/platform/web-surfaces.md`. |
 
 #### Deferred platform epics *(🧭 not buildable/verifiable in this environment)*
 
@@ -271,7 +271,7 @@ when their work begins.
 | 4 | `T7` | 4 | 4 |
 | 5 | `T8` | 4 | 4 |
 | platform · observability | `T9.1`–`T9.2` | 2 | 2 |
-| platform · tracing + web | `T9.3`–`T9.5` | 2 | 3 |
+| platform · tracing + web | `T9.3`–`T9.5` | 3 | 3 |
 | platform · mobile/infra/dashboards | `T9` | — | deferred |
 
 _Update the **Status** column and this snapshot as each PR merges._

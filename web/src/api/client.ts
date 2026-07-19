@@ -1,4 +1,10 @@
-import type { LoginResponse } from "./types";
+import type {
+  Briefing,
+  LoginResponse,
+  TimelinePage,
+  TimelineQuery,
+  User,
+} from "./types";
 
 /** Raised when the API returns a non-2xx response. */
 export class ApiError extends Error {
@@ -56,6 +62,28 @@ export class ApiClient {
     if (!response.ok) throw new ApiError(response.status, "login failed");
     const data = (await response.json()) as LoginResponse;
     return data.access_token;
+  }
+
+  /** The signed-in user. */
+  me(): Promise<User> {
+    return this.request<User>("/auth/me");
+  }
+
+  /** A page of the user's timeline events, optionally filtered by type. */
+  getTimeline(userId: string, query: TimelineQuery = {}): Promise<TimelinePage> {
+    const params = new URLSearchParams({ user_id: userId });
+    if (query.eventType) params.set("event_type", query.eventType);
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    if (query.offset !== undefined) params.set("offset", String(query.offset));
+    return this.request<TimelinePage>(`/timeline/events?${params.toString()}`);
+  }
+
+  /** Deliver a rule-based, evidence-linked briefing for the user. */
+  deliverBriefing(userId: string, windowHours = 24): Promise<Briefing> {
+    return this.request<Briefing>("/briefing", {
+      method: "POST",
+      body: { user_id: userId, window_hours: windowHours },
+    });
   }
 }
 
