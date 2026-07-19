@@ -15,6 +15,7 @@ from sqlalchemy import engine_from_config, pool
 # and autogenerate / ``alembic check`` can see them. Importing the events
 # package pulls in every kernel model (event store, raw store). Add new model
 # modules here as bounded contexts are introduced.
+from mylife.assistant import insight as _assistant_insight  # noqa: F401
 from mylife.core import events as _events  # noqa: F401
 from mylife.core.config import get_settings
 from mylife.db.base import Base

@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved
 - **Backlog task:** `T7.1` — [issue #38](https://github.com/EFACODE/MyLife/issues/38)
 - **Bounded context:** Assistant
 - **Author / date:** Claude Code / 2026-07-19

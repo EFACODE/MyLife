@@ -14,6 +14,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
 
+from mylife.assistant.insight import InsightRow
 from mylife.core.config import get_settings
 from mylife.core.events import EventStore, InProcessEventBus, StoredEvent, StoredRawRecord
 from mylife.core.events.raw_store import RawRecordRow
@@ -117,6 +118,7 @@ class DataSubjectService:
                 self._blobs.delete(row.storage_key)
         statements = [
             ("audit_log", delete(AuditLogRow).where(AuditLogRow.subject_user_id == user_id)),
+            ("insights", delete(InsightRow).where(InsightRow.user_id == user_id)),
             ("relationships", delete(RelationshipRow).where(RelationshipRow.user_id == user_id)),
             ("entities", delete(EntityRow).where(EntityRow.user_id == user_id)),
             ("memory_index", delete(MemoryRow).where(MemoryRow.user_id == user_id)),
