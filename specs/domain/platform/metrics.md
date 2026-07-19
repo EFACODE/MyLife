@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** Draft — awaiting approval
+- **Status:** Approved
 - **Backlog task:** `T9.1` — [issue #40](https://github.com/EFACODE/MyLife/issues/40) (T9 epic)
 - **Bounded context:** Platform (cross-cutting)
 - **Author / date:** Claude Code / 2026-07-19
