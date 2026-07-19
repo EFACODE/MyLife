@@ -102,7 +102,7 @@ brief places in Phase 0).
 | **T2.1** | ✅ | Identity context: User/Household + `UserRegistered` | **Yes** | Domain models, `UserRegistered` event, register/read API. Foundation for `user_id` on every event. `specs/domain/identity/user-registration.md`. |
 | **T2.2** | ✅ | Authentication (OAuth2/JWT, OIDC-ready) | Yes | Login, session protection, password hashing, least-privilege FastAPI dependencies. `specs/domain/identity/authentication.md`. |
 | **T2.3** | ✅ | Consent model + enforcement | **Yes** | `ConsentGranted`/`ConsentRevoked` events, granular per-integration consent, an enforcement dependency connectors must pass. `specs/domain/identity/consent.md`. |
-| **T2.4** | 🔜 | Audit log (append-only) | **Yes** | Record data access, connector actions, consent changes and the evidence behind AI recommendations. |
+| **T2.4** | ✅ | Audit log (append-only) | **Yes** | Record data access, connector actions, consent changes and the evidence behind AI recommendations. `specs/domain/identity/audit-log.md`. |
 | **T2.5** | ⬜ | Data-subject rights: export + deletion | **Yes** | LGPD/GDPR export and deletion pathways with source visibility and revocation. |
 
 ---
@@ -211,7 +211,7 @@ them.
 
 | Phase | Group(s) | Done | Total (detailed) |
 | ----- | -------- | ---- | ---------------- |
-| 0 | `T0`, `T2` | 12 | 14 |
+| 0 | `T0`, `T2` | 13 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 0 | 9 |
 | 3 | `T6` | 0 | 4 |

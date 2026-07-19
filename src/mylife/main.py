@@ -8,7 +8,7 @@ Run locally with::
 from fastapi import FastAPI
 
 from mylife import __version__
-from mylife.api import auth, briefing, consent, health, identity, timeline
+from mylife.api import audit, auth, briefing, consent, health, identity, timeline
 from mylife.core.config import get_settings
 from mylife.core.logging import configure_logging
 from mylife.core.middleware import CorrelationIdMiddleware
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(identity.router)
     app.include_router(consent.router)
+    app.include_router(audit.router)
     app.include_router(timeline.router)
     app.include_router(briefing.router)
     return app

@@ -14,10 +14,12 @@ from sqlalchemy.orm import Session
 
 from mylife.api.deps import get_event_bus
 from mylife.core.config import get_settings
+from mylife.core.context import get_correlation_id
 from mylife.core.events import EventBus
 from mylife.core.events.envelope import utcnow
 from mylife.db.base import get_session
 from mylife.identity import IdentityService, User
+from mylife.identity.audit import AuditService
 from mylife.identity.security import TokenError, create_access_token, decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -45,7 +47,15 @@ def login(
     user = IdentityService(session, bus).authenticate(form.username, form.password)
     if user is None:
         raise HTTPException(status_code=401, detail="invalid credentials", headers=_UNAUTHENTICATED)
-    token = create_access_token(user.user_id, now=utcnow())
+    now = utcnow()
+    AuditService(session).record(
+        "auth.login",
+        now=now,
+        actor_user_id=user.user_id,
+        subject_user_id=user.user_id,
+        correlation_id=get_correlation_id(),
+    )
+    token = create_access_token(user.user_id, now=now)
     return TokenResponse(access_token=token, expires_in=get_settings().access_token_ttl_seconds)
 
 
