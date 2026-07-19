@@ -8,7 +8,7 @@ live in the blob store; metadata in the ``documents`` registry. See
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -23,9 +23,13 @@ from mylife.identity import User
 from mylife.knowledge import (
     BlobStore,
     Document,
+    DocumentNotExtractedError,
     ExtractedText,
     ExtractionService,
     KnowledgeService,
+    Memory,
+    RetrievalService,
+    SearchHit,
     UnknownDocumentError,
     UnsupportedContentTypeError,
 )
@@ -141,3 +145,34 @@ def get_document_text(
     if text is None:
         raise HTTPException(status_code=404, detail="document text not found")
     return DocumentText(document_id=document_id, text=text)
+
+
+@router.post("/documents/{document_id}/index", response_model=Memory)
+def index_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Memory:
+    """Index one of the authenticated user's documents for semantic search."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        return RetrievalService(session, bus).index_document(
+            current_user.user_id, document_id, now=utcnow(), correlation_id=correlation_id
+        )
+    except UnknownDocumentError as exc:
+        raise HTTPException(status_code=404, detail="document not found") from exc
+    except DocumentNotExtractedError as exc:
+        raise HTTPException(status_code=409, detail="document has no extracted text") from exc
+
+
+@router.get("/memory/search", response_model=list[SearchHit])
+def search_memory(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+    q: Annotated[str, Query(min_length=1)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 5,
+) -> list[SearchHit]:
+    """Search the authenticated user's indexed documents by meaning."""
+    return RetrievalService(session, bus).search(current_user.user_id, q, limit=limit)

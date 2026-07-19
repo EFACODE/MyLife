@@ -170,7 +170,7 @@ signature narrative.
 | -- | ------ | ----- | ---- | ------------------ |
 | **T6.1** | ✅ | Knowledge context: `DocumentIngested` + object-storage upload | **Yes** | `BlobStore` port (filesystem adapter) for document bytes + `documents` registry + `DocumentIngested`; authenticated `/documents` upload/list/download; migration 0013; erasure removes rows + blobs. `specs/domain/knowledge/document-ingest.md`. |
 | **T6.2** | ✅ | OCR + text-extraction worker | Yes | Pluggable `TextExtractor` registry (plain-text; OCR/PDF adapters later) → `document_texts` derived store + `DocumentTextExtracted`; `ExtractionService`, Celery task, `POST /documents/{id}/extract` + `GET …/text`; migration 0014; erasure includes `document_texts`. `specs/domain/knowledge/text-extraction.md`. |
-| **T6.3** | ⬜ | Semantic retrieval (pgvector) | Yes | Embeddings + `MemoryIndexed` + retrieval API for grounded context. |
+| **T6.3** | ✅ | Semantic retrieval (`MemoryIndexed`, retrieval API) | Yes | `Embedder` port (dependency-free `HashingEmbedder`; pgvector/model as production adapters) + `memory_index` (JSON vectors + cosine) + `MemoryIndexed`; `RetrievalService`, `POST /documents/{id}/index` + `GET /memory/search`; migration 0015; erasure includes `memory_index`. `specs/domain/knowledge/semantic-retrieval.md`. |
 | **T6.4** | ⬜ | Knowledge-graph projection consolidation | Yes | Consolidate entities + relations across all domains into the graph projection. |
 
 ---
@@ -214,7 +214,7 @@ them.
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 9 | 9 |
-| 3 | `T6` | 2 | 4 |
+| 3 | `T6` | 3 | 4 |
 | 4–5 + platform | `T7`–`T9` | — | epics |
 
 _Update the **Status** column and this snapshot as each PR merges._

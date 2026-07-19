@@ -29,6 +29,7 @@ from mylife.identity.service import _to_user
 from mylife.knowledge.blob_store import BlobNotFoundError, BlobStore, FilesystemBlobStore
 from mylife.knowledge.extraction import DocumentTextRow
 from mylife.knowledge.models import Document, DocumentRow
+from mylife.knowledge.retrieval import MemoryRow
 from mylife.knowledge.service import _to_document
 from mylife.timeline import EntityProjection
 from mylife.timeline.entities import EntityRecord, EntityRow, RelationshipRecord, RelationshipRow
@@ -118,6 +119,7 @@ class DataSubjectService:
             ("audit_log", delete(AuditLogRow).where(AuditLogRow.subject_user_id == user_id)),
             ("relationships", delete(RelationshipRow).where(RelationshipRow.user_id == user_id)),
             ("entities", delete(EntityRow).where(EntityRow.user_id == user_id)),
+            ("memory_index", delete(MemoryRow).where(MemoryRow.user_id == user_id)),
             ("document_texts", delete(DocumentTextRow).where(DocumentTextRow.user_id == user_id)),
             ("documents", delete(DocumentRow).where(DocumentRow.user_id == user_id)),
             ("goals", delete(GoalRow).where(GoalRow.user_id == user_id)),

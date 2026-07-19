@@ -116,6 +116,43 @@ def test_extract_unsupported_type_is_422(client: TestClient) -> None:
     assert client.post(f"/documents/{document_id}/extract", headers=auth).status_code == 422
 
 
+def _upload_text(client: TestClient, auth: dict[str, str], text: str) -> str:
+    response = client.post(
+        "/documents",
+        files={"file": ("note.txt", text.encode(), "text/plain")},
+        headers=auth,
+    )
+    return str(response.json()["document_id"])
+
+
+def test_index_and_search(client: TestClient) -> None:
+    auth = _auth(client)
+    fin = _upload_text(client, auth, "annual budget and spending report")
+    _upload_text(client, auth, "sleep and workout training log")
+    for doc_id in (fin, _upload_text(client, auth, "unrelated")):
+        client.post(f"/documents/{doc_id}/extract", headers=auth)
+        client.post(f"/documents/{doc_id}/index", headers=auth)
+    # Index the health doc too.
+    health = client.get("/documents", headers=auth).json()
+    for d in health:
+        client.post(f"/documents/{d['document_id']}/extract", headers=auth)
+        client.post(f"/documents/{d['document_id']}/index", headers=auth)
+
+    hits = client.get("/memory/search", params={"q": "budget spending"}, headers=auth)
+    assert hits.status_code == 200
+    assert hits.json()[0]["document_id"] == fin
+
+
+def test_index_without_text_is_409(client: TestClient) -> None:
+    auth = _auth(client)
+    document_id = _upload(client, auth)  # application/pdf, never extracted
+    assert client.post(f"/documents/{document_id}/index", headers=auth).status_code == 409
+
+
+def test_search_requires_auth(client: TestClient) -> None:
+    assert client.get("/memory/search", params={"q": "x"}).status_code == 401
+
+
 def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/documents").status_code == 401
     assert (
