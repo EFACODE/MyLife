@@ -42,7 +42,9 @@ def test_register_creates_user_and_emits_event(session: Session) -> None:
     bus.subscribe(published.append)
     service = IdentityService(session, bus)
 
-    user = service.register_user("  Ada@Example.COM ", "Ada", now=NOW, correlation_id="cid")
+    user = service.register_user(
+        "  Ada@Example.COM ", "Ada", password="s3cretpw", now=NOW, correlation_id="cid"
+    )
 
     assert user.email == "ada@example.com"  # normalized
     assert user.status == "active"
@@ -54,10 +56,14 @@ def test_register_creates_user_and_emits_event(session: Session) -> None:
 
 def test_duplicate_email_rejected(session: Session) -> None:
     service = IdentityService(session, InProcessEventBus())
-    service.register_user("ada@example.com", "Ada", now=NOW, correlation_id="c")
+    service.register_user(
+        "ada@example.com", "Ada", password="s3cretpw", now=NOW, correlation_id="c"
+    )
 
     with pytest.raises(DuplicateUserError):
-        service.register_user("ADA@example.com", "Ada 2", now=NOW, correlation_id="c")
+        service.register_user(
+            "ADA@example.com", "Ada 2", password="s3cretpw", now=NOW, correlation_id="c"
+        )
 
     assert len(EventStore(session).read_all()) == 1
 
@@ -65,7 +71,7 @@ def test_duplicate_email_rejected(session: Session) -> None:
 def test_invalid_email_rejected(session: Session) -> None:
     service = IdentityService(session, InProcessEventBus())
     with pytest.raises(InvalidEmailError):
-        service.register_user("not-an-email", "X", now=NOW, correlation_id="c")
+        service.register_user("not-an-email", "X", password="s3cretpw", now=NOW, correlation_id="c")
 
 
 def test_household_link_and_unknown(session: Session) -> None:
@@ -73,14 +79,24 @@ def test_household_link_and_unknown(session: Session) -> None:
     household = service.create_household("Home", now=NOW)
 
     user = service.register_user(
-        "a@b.com", "A", now=NOW, correlation_id="c", household_id=household.household_id
+        "a@b.com",
+        "A",
+        password="s3cretpw",
+        now=NOW,
+        correlation_id="c",
+        household_id=household.household_id,
     )
     assert user.household_id == household.household_id
     assert service.get_household(household.household_id) == household
 
     with pytest.raises(UnknownHouseholdError):
         service.register_user(
-            "c@d.com", "C", now=NOW, correlation_id="c", household_id=uuid.uuid4()
+            "c@d.com",
+            "C",
+            password="s3cretpw",
+            now=NOW,
+            correlation_id="c",
+            household_id=uuid.uuid4(),
         )
 
 

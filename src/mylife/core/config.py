@@ -6,8 +6,10 @@ so the application boots with zero configuration; production deployments
 override them through the environment.
 """
 
+import secrets
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +42,15 @@ class Settings(BaseSettings):
     # (``redis_url``); override either independently through the environment.
     celery_broker_url: str | None = None
     celery_result_backend: str | None = None
+
+    # Authentication (T2.2). The JWT signing secret has NO hardcoded value: it
+    # defaults to a random per-process value so local dev works without config,
+    # but production MUST set MYLIFE_JWT_SECRET (a stable value shared across
+    # processes) or tokens won't validate between workers/restarts.
+    jwt_secret: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    jwt_algorithm: str = "HS256"
+    access_token_ttl_seconds: int = 3600
+    jwt_issuer: str = "mylife"
 
     @property
     def broker_url(self) -> str:

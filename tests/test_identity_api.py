@@ -36,7 +36,9 @@ def client() -> Iterator[TestClient]:
 
 
 def test_register_and_read_user(client: TestClient) -> None:
-    created = client.post("/users", json={"email": "ada@example.com", "display_name": "Ada"})
+    created = client.post(
+        "/users", json={"email": "ada@example.com", "display_name": "Ada", "password": "s3cretpw"}
+    )
     assert created.status_code == 201
     body = created.json()
     assert body["email"] == "ada@example.com"
@@ -48,13 +50,19 @@ def test_register_and_read_user(client: TestClient) -> None:
 
 
 def test_duplicate_email_is_409(client: TestClient) -> None:
-    client.post("/users", json={"email": "dup@example.com", "display_name": "A"})
-    again = client.post("/users", json={"email": "dup@example.com", "display_name": "B"})
+    client.post(
+        "/users", json={"email": "dup@example.com", "display_name": "A", "password": "s3cretpw"}
+    )
+    again = client.post(
+        "/users", json={"email": "dup@example.com", "display_name": "B", "password": "s3cretpw"}
+    )
     assert again.status_code == 409
 
 
 def test_invalid_email_is_422(client: TestClient) -> None:
-    response = client.post("/users", json={"email": "nope", "display_name": "A"})
+    response = client.post(
+        "/users", json={"email": "nope", "display_name": "A", "password": "s3cretpw"}
+    )
     assert response.status_code == 422
 
 
@@ -69,7 +77,12 @@ def test_household_create_link_and_unknown(client: TestClient) -> None:
 
     user = client.post(
         "/users",
-        json={"email": "h@example.com", "display_name": "H", "household_id": household_id},
+        json={
+            "email": "h@example.com",
+            "display_name": "H",
+            "password": "s3cretpw",
+            "household_id": household_id,
+        },
     )
     assert user.status_code == 201
     assert user.json()["household_id"] == household_id
@@ -79,6 +92,7 @@ def test_household_create_link_and_unknown(client: TestClient) -> None:
         json={
             "email": "u@example.com",
             "display_name": "U",
+            "password": "s3cretpw",
             "household_id": "22222222-2222-2222-2222-222222222222",
         },
     )

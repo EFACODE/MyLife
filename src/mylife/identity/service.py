@@ -16,6 +16,7 @@ from mylife.core.events import EventBus, EventDispatchError, EventStore
 from mylife.core.events.store import _stored_utc
 from mylife.identity.models import (
     ACTIVE_STATUS,
+    CredentialRow,
     Household,
     HouseholdRow,
     User,
@@ -23,6 +24,7 @@ from mylife.identity.models import (
     UserRegisteredPayload,
     UserRow,
 )
+from mylife.identity.security import hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -85,11 +87,12 @@ class IdentityService:
         email: str,
         display_name: str,
         *,
+        password: str,
         now: datetime,
         correlation_id: str,
         household_id: uuid.UUID | None = None,
     ) -> User:
-        """Register a user (unique email) and emit ``UserRegistered``."""
+        """Register a user (unique email) with a credential, emit ``UserRegistered``."""
         normalized = _normalize_email(email)
         if household_id is not None and self._session.get(HouseholdRow, household_id) is None:
             raise UnknownHouseholdError(household_id)
@@ -105,9 +108,13 @@ class IdentityService:
             household_id=household_id,
             created_at=now,
         )
+        credential = CredentialRow(
+            user_id=user_id, password_hash=hash_password(password), updated_at=now
+        )
         try:
             with self._session.begin_nested():
                 self._session.add(row)
+                self._session.add(credential)
                 self._session.flush()
         except IntegrityError as exc:
             raise DuplicateUserError(normalized) from exc
@@ -127,6 +134,19 @@ class IdentityService:
             logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
 
         return _to_user(row)
+
+    def authenticate(self, email: str, password: str) -> User | None:
+        """Return the user if the email+password are valid, else ``None``."""
+        normalized = email.strip().lower()
+        user_row = self._session.scalars(
+            select(UserRow).where(UserRow.email == normalized)
+        ).one_or_none()
+        if user_row is None:
+            return None
+        credential = self._session.get(CredentialRow, user_row.user_id)
+        if credential is None or not verify_password(password, credential.password_hash):
+            return None
+        return _to_user(user_row)
 
     def get_user(self, user_id: uuid.UUID) -> User | None:
         """Return the user or ``None``."""

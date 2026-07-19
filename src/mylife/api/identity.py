@@ -34,6 +34,7 @@ class RegisterUserRequest(BaseModel):
 
     email: str = Field(min_length=3)
     display_name: str = Field(min_length=1)
+    password: str = Field(min_length=8)
     household_id: uuid.UUID | None = None
 
 
@@ -55,6 +56,7 @@ def register_user(
         return IdentityService(session, bus).register_user(
             request.email,
             request.display_name,
+            password=request.password,
             now=utcnow(),
             correlation_id=correlation_id,
             household_id=request.household_id,

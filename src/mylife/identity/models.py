@@ -29,6 +29,16 @@ class HouseholdRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class CredentialRow(Base):
+    """A user's login credential (Argon2 password hash). One per user."""
+
+    __tablename__ = "credentials"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    password_hash: Mapped[str] = mapped_column(String)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class UserRow(Base):
     """A registered user."""
 

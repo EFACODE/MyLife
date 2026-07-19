@@ -3,6 +3,7 @@
 > Spec-Driven Development artifact. **Approve before implementation.**
 
 - **Status:** Approved — implemented (`src/mylife/identity/`, migration `0006`, tests in `tests/test_identity.py` + `tests/test_identity_api.py`)
+- **Evolution:** `T2.2` made `register_user`/`POST /users` require a `password` (a credential is created atomically with the user); `UserRegistered`'s payload is unchanged.
 - **Backlog task:** `T2.1` — [issue #9](https://github.com/EFACODE/MyLife/issues/9)
 - **Bounded context:** Identity
 - **Author / date:** Claude Code / 2026-07-18
