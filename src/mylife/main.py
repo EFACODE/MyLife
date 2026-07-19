@@ -14,6 +14,7 @@ from mylife.api import (
     briefing,
     consent,
     data_subject,
+    finance,
     health,
     identity,
     timeline,
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(audit.router)
     app.include_router(data_subject.router)
     app.include_router(timeline.router)
+    app.include_router(finance.router)
     app.include_router(briefing.router)
     return app
 
