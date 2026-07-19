@@ -6,6 +6,7 @@ accounts, records expenses, imports transactions and lists them back. See
 """
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,9 +18,18 @@ from mylife.api.deps import get_event_bus
 from mylife.connectors import ConnectorRunner, ConsentRequiredError, FetchContext
 from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
-from mylife.core.events.envelope import utcnow
+from mylife.core.events.envelope import ensure_utc, utcnow
 from mylife.db.base import get_session
-from mylife.finance import Account, FinanceService, Transaction, UnknownAccountError
+from mylife.finance import (
+    Account,
+    Balance,
+    CashFlow,
+    FinanceService,
+    NetWorth,
+    NetWorthService,
+    Transaction,
+    UnknownAccountError,
+)
 from mylife.finance.bank_csv import BankCsvConnector
 from mylife.identity import User
 from mylife.identity.consent import ConsentService
@@ -53,6 +63,14 @@ class TransactionRequest(BaseModel):
     description: str = Field(min_length=1)
     category: str | None = None
     external_id: str | None = None
+
+
+class PositionRequest(BaseModel):
+    """Request to record an absolute valuation of an account."""
+
+    account_id: uuid.UUID
+    value_minor: int
+    currency: str = Field(min_length=3, max_length=3)
 
 
 class BankImportRequest(BaseModel):
@@ -154,6 +172,65 @@ def list_transactions(
     """List the authenticated user's transactions, newest first."""
     return FinanceService(session, bus).list_transactions(
         current_user.user_id, account_id=account_id, limit=limit
+    )
+
+
+@router.post("/finance/positions", response_model=Balance, status_code=201)
+def record_position(
+    request: PositionRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Balance:
+    """Record an absolute valuation for one of the user's accounts."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        return FinanceService(session, bus).record_valuation(
+            current_user.user_id,
+            request.account_id,
+            request.value_minor,
+            request.currency,
+            now=utcnow(),
+            correlation_id=correlation_id,
+        )
+    except UnknownAccountError as exc:
+        raise HTTPException(status_code=404, detail="account not found") from exc
+
+
+@router.get("/finance/accounts/{account_id}/balance", response_model=Balance)
+def get_balance(
+    account_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> Balance:
+    """Return the current balance of one of the user's accounts."""
+    balance = NetWorthService(session).account_balance(current_user.user_id, account_id)
+    if balance is None:
+        raise HTTPException(status_code=404, detail="account not found")
+    return balance
+
+
+@router.get("/finance/net-worth", response_model=NetWorth)
+def get_net_worth(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> NetWorth:
+    """Return the user's net worth, grouped per currency."""
+    return NetWorthService(session).net_worth(current_user.user_id)
+
+
+@router.get("/finance/cash-flow", response_model=CashFlow)
+def get_cash_flow(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    occurred_from: Annotated[datetime, Query()],
+    occurred_to: Annotated[datetime, Query()],
+) -> CashFlow:
+    """Return inflow/outflow/net per currency over the (inclusive UTC) window."""
+    return NetWorthService(session).cash_flow(
+        current_user.user_id,
+        occurred_from=ensure_utc(occurred_from),
+        occurred_to=ensure_utc(occurred_to),
     )
 
 

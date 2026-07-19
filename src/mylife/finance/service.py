@@ -25,9 +25,12 @@ from mylife.finance.models import (
     AccountRow,
     ExpenseCreated,
     FinancePayload,
+    PositionPayload,
+    PositionValued,
     Transaction,
     TransactionImported,
 )
+from mylife.finance.net_worth import Balance, NetWorthService
 from mylife.timeline.query import TimelineEvent, TimelineQueryFilter, TimelineQueryService
 
 logger = logging.getLogger(__name__)
@@ -174,6 +177,39 @@ class FinanceService:
             payload=payload,
         )
         return self._append_and_publish(event)
+
+    def record_valuation(
+        self,
+        user_id: uuid.UUID,
+        account_id: uuid.UUID,
+        value_minor: int,
+        currency: str,
+        *,
+        now: datetime,
+        correlation_id: str,
+    ) -> Balance:
+        """Record a ``PositionValued`` (an absolute account valuation/anchor)."""
+        self._require_account(user_id, account_id)
+        event = PositionValued(
+            user_id=user_id,
+            occurred_at=now,
+            source=FINANCE_SOURCE,
+            correlation_id=correlation_id,
+            payload=PositionPayload(
+                account_id=account_id,
+                value_minor=value_minor,
+                currency=currency.strip().upper(),
+            ),
+        )
+        EventStore(self._session).append(event)
+        self._session.commit()
+        try:
+            self._bus.publish(event)
+        except EventDispatchError:
+            logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
+        balance = NetWorthService(self._session).account_balance(user_id, account_id)
+        assert balance is not None  # the account was just validated as the user's
+        return balance
 
     def list_transactions(
         self,

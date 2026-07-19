@@ -21,6 +21,7 @@ from mylife.db.base import Base
 
 EXPENSE_CREATED: Final = "finance.expense_created"
 TRANSACTION_IMPORTED: Final = "finance.transaction_imported"
+POSITION_VALUED: Final = "finance.position_valued"
 FINANCE_SOURCE = "finance"
 
 # The transaction ``kind`` surfaced by the read model, keyed by event type.
@@ -28,6 +29,8 @@ KIND_BY_TYPE: Final[dict[str, str]] = {
     EXPENSE_CREATED: "expense",
     TRANSACTION_IMPORTED: "import",
 }
+# The finance event types that move money (transactions), vs. valuations.
+TRANSACTION_TYPES: Final[tuple[str, ...]] = (EXPENSE_CREATED, TRANSACTION_IMPORTED)
 
 
 class AccountRow(Base):
@@ -81,6 +84,23 @@ class TransactionImported(LifeEvent[FinancePayload]):
     """Emitted when a transaction is imported from a source (Finance context)."""
 
     event_type: Literal["finance.transaction_imported"] = TRANSACTION_IMPORTED
+    schema_version: Literal[1] = 1
+
+
+class PositionPayload(BaseModel):
+    """An absolute valuation of an account/asset (opening balance or mark)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    account_id: uuid.UUID
+    value_minor: int
+    currency: str
+
+
+class PositionValued(LifeEvent[PositionPayload]):
+    """Emitted when an account/asset is valued at a point in time (Finance)."""
+
+    event_type: Literal["finance.position_valued"] = POSITION_VALUED
     schema_version: Literal[1] = 1
 
 
