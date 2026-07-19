@@ -2,7 +2,7 @@
 
 > Spec-Driven Development artifact. **Approve before implementation.**
 
-- **Status:** In review
+- **Status:** Approved — implemented (`src/mylife/connectors/`, `sync_connector` in `src/mylife/workers/tasks.py`, tests in `tests/test_connector_framework.py`)
 - **Backlog task:** `T3.4` — [issue #22](https://github.com/EFACODE/MyLife/issues/22)
 - **Bounded context:** Timeline (ingestion)
 - **Author / date:** Claude Code / 2026-07-18
