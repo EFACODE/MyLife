@@ -103,7 +103,7 @@ brief places in Phase 0).
 | **T2.2** | ✅ | Authentication (OAuth2/JWT, OIDC-ready) | Yes | Login, session protection, password hashing, least-privilege FastAPI dependencies. `specs/domain/identity/authentication.md`. |
 | **T2.3** | ✅ | Consent model + enforcement | **Yes** | `ConsentGranted`/`ConsentRevoked` events, granular per-integration consent, an enforcement dependency connectors must pass. `specs/domain/identity/consent.md`. |
 | **T2.4** | ✅ | Audit log (append-only) | **Yes** | Record data access, connector actions, consent changes and the evidence behind AI recommendations. `specs/domain/identity/audit-log.md`. |
-| **T2.5** | ⬜ | Data-subject rights: export + deletion | **Yes** | LGPD/GDPR export and deletion pathways with source visibility and revocation. |
+| **T2.5** | ✅ | Data-subject rights: export + deletion | **Yes** | LGPD/GDPR export and deletion pathways with source visibility and revocation. `specs/domain/identity/data-subject-rights.md`. |
 
 ---
 
@@ -211,7 +211,7 @@ them.
 
 | Phase | Group(s) | Done | Total (detailed) |
 | ----- | -------- | ---- | ---------------- |
-| 0 | `T0`, `T2` | 13 | 14 |
+| 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 0 | 9 |
 | 3 | `T6` | 0 | 4 |
