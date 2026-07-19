@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from mylife.core.events import EventBus, EventDispatchError, EventStore, LifeEvent
 from mylife.finance.models import TRANSACTION_TYPES
+from mylife.goals import Goal, GoalProgressService, GoalsService
 from mylife.health.models import SLEEP_RECORDED, WORKOUT_COMPLETED
 from mylife.timeline import TimelineEvent, TimelineQueryFilter, TimelineQueryService
 
@@ -125,6 +126,13 @@ def _format_duration(minutes: int) -> str:
 def _format_money(currency: str, minor: int) -> str:
     """Format minor units as major units with two decimals (no FX)."""
     return f"{currency} {minor / 100:,.2f}"
+
+
+def _goal_target_text(goal: Goal) -> str:
+    """Render a goal's target — money in major units when it has a currency."""
+    if goal.currency:
+        return _format_money(goal.currency, goal.target_value)
+    return f"{goal.target_value} {goal.unit}"
 
 
 def _outflow_by_currency(events: list[TimelineEvent]) -> dict[str, int]:
@@ -293,6 +301,7 @@ class BriefingService:
 
         lines = _build_lines(recent, window_hours)
         lines.extend(_build_cross_domain_lines(recent, previous, window_hours))
+        lines.extend(self._build_goal_lines(user_id, now))
         briefing = Briefing(
             user_id=user_id,
             generated_at=now,
@@ -318,3 +327,27 @@ class BriefingService:
             logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
 
         return briefing
+
+    def _build_goal_lines(self, user_id: uuid.UUID, now: datetime) -> list[BriefingLine]:
+        """Per-goal progress lines plus an at-risk insight for overdue goals (T5.3).
+
+        Goal progress is all-time (via T5.2), independent of the briefing window.
+        """
+        goals = GoalsService(self._session, self._bus).list_goals(user_id)
+        progress_service = GoalProgressService(self._session)
+        lines: list[BriefingLine] = []
+        for goal in goals:
+            progress = progress_service.progress(user_id, goal)
+            pct = round(progress.progress_ratio * 100)
+            reached = " — reached" if progress.achieved else ""
+            summary = f"Goal '{goal.title}': {pct}% toward {_goal_target_text(goal)}{reached}"
+            lines.append(BriefingLine(kind="goal", summary=summary, evidence=progress.evidence))
+            if goal.due_at is not None and goal.due_at < now and not progress.achieved:
+                lines.append(
+                    BriefingLine(
+                        kind="insight",
+                        summary=f"Goal '{goal.title}' is past its due date and not yet reached",
+                        evidence=progress.evidence,
+                    )
+                )
+        return lines
