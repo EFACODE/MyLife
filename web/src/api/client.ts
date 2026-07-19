@@ -8,10 +8,14 @@ import type {
   CashFlow,
   Consent,
   ErasureResult,
+  CreateGoalInput,
   ExpenseInput,
   ExportBundle,
+  Goal,
+  GoalProgress,
   HealthImportResult,
   LoginResponse,
+  Milestone,
   NetWorth,
   PositionInput,
   SleepInput,
@@ -230,6 +234,31 @@ export class ApiClient {
       method: "POST",
       body: { csv },
     });
+  }
+
+  // --- Goals (T10.6) ---
+
+  listGoals(): Promise<Goal[]> {
+    return this.request<Goal[]>("/goals");
+  }
+
+  createGoal(input: CreateGoalInput): Promise<Goal> {
+    return this.request<Goal>("/goals", { method: "POST", body: input });
+  }
+
+  goalProgressAll(): Promise<GoalProgress[]> {
+    return this.request<GoalProgress[]>("/goals/progress");
+  }
+
+  recordMilestone(goalId: string, value: number, note?: string | null): Promise<Milestone> {
+    return this.request<Milestone>(`/goals/${goalId}/milestones`, {
+      method: "POST",
+      body: { value, note: note ?? null },
+    });
+  }
+
+  listMilestones(goalId: string): Promise<Milestone[]> {
+    return this.request<Milestone[]>(`/goals/${goalId}/milestones`);
   }
 }
 

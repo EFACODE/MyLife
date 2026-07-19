@@ -54,6 +54,47 @@ export interface TimelineQuery {
   offset?: number;
 }
 
+// --- Goals (T10.6) ---
+
+export interface Goal {
+  goal_id: string;
+  title: string;
+  metric: string;
+  target_value: number;
+  unit: string;
+  currency: string | null;
+  due_at: string | null;
+  created_at: string;
+}
+
+export interface Milestone {
+  event_id: string;
+  goal_id: string;
+  value: number;
+  note: string | null;
+  occurred_at: string;
+}
+
+export interface GoalProgress {
+  goal_id: string;
+  metric: string;
+  current_value: number;
+  target_value: number;
+  progress_ratio: number;
+  achieved: boolean;
+  source: string;
+  evidence: string[];
+}
+
+export interface CreateGoalInput {
+  title: string;
+  metric: string;
+  target_value: number;
+  unit: string;
+  currency?: string | null;
+  due_at?: string | null;
+}
+
 // --- Health (T10.5) ---
 
 export interface SleepSession {

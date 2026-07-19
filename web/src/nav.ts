@@ -12,6 +12,7 @@ export const NAV: NavItem[] = [
   { path: "/capture", label: "Capture" },
   { path: "/finance", label: "Finance" },
   { path: "/health", label: "Health" },
+  { path: "/goals", label: "Goals" },
   { path: "/consent", label: "Consent" },
   { path: "/audit", label: "Audit" },
   { path: "/privacy", label: "Privacy" },
