@@ -53,4 +53,27 @@ describe("ApiClient", () => {
       "application/x-www-form-urlencoded",
     );
   });
+
+  it("upload posts multipart FormData with the bearer token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse({ document_id: "d1" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const file = new File(["hi"], "note.txt", { type: "text/plain" });
+
+    await new ApiClient("http://api", () => "tok").upload("/documents", file);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://api/documents");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok");
+  });
+
+  it("fires onUnauthorized on a 401", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okResponse({}, 401)));
+    const onUnauthorized = vi.fn();
+    const client = new ApiClient("http://api", () => "t", onUnauthorized);
+
+    await expect(client.request("/x")).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).toHaveBeenCalled();
+  });
 });

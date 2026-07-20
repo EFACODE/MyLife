@@ -1,9 +1,47 @@
 import type {
+  Account,
+  Answer,
+  AuditEntry,
+  Balance,
+  BankImportResult,
   Briefing,
+  Calibration,
+  Forecast,
+  Insight,
+  InsightInput,
+  Outcome,
+  CaptureEventInput,
+  CashFlow,
+  Consent,
+  ErasureResult,
+  ConsolidationResult,
+  CreateGoalInput,
+  Document,
+  DocumentText,
+  EntityRecord,
+  ExpenseInput,
+  ExportBundle,
+  ExtractedText,
+  Goal,
+  GoalProgress,
+  HealthImportResult,
   LoginResponse,
+  Memory,
+  Milestone,
+  RelationshipRecord,
+  SearchHit,
+  NetWorth,
+  PositionInput,
+  SleepInput,
+  SleepSession,
+  TimelineEvent,
   TimelinePage,
   TimelineQuery,
+  Transaction,
+  TransactionInput,
   User,
+  Workout,
+  WorkoutInput,
 } from "./types";
 
 /** Raised when the API returns a non-2xx response. */
@@ -29,7 +67,13 @@ export class ApiClient {
   constructor(
     private readonly baseUrl: string,
     private readonly getToken: () => string | null,
+    private readonly onUnauthorized?: () => void,
   ) {}
+
+  private fail(status: number, message: string): never {
+    if (status === 401) this.onUnauthorized?.();
+    throw new ApiError(status, message);
+  }
 
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { method = "GET", body, auth = true } = options;
@@ -44,10 +88,24 @@ export class ApiClient {
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!response.ok) {
-      throw new ApiError(response.status, `${method} ${path} -> ${response.status}`);
-    }
+    if (!response.ok) this.fail(response.status, `${method} ${path} -> ${response.status}`);
     if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
+  }
+
+  /** Upload a file as multipart/form-data (field name "file"). */
+  async upload<T>(path: string, file: File): Promise<T> {
+    const form = new FormData();
+    form.append("file", file);
+    const headers: Record<string, string> = {};
+    const token = this.getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    if (!response.ok) this.fail(response.status, `POST ${path} -> ${response.status}`);
     return (await response.json()) as T;
   }
 
@@ -78,12 +136,237 @@ export class ApiClient {
     return this.request<TimelinePage>(`/timeline/events?${params.toString()}`);
   }
 
+  /** Record a Life Event by hand. */
+  captureEvent(input: CaptureEventInput): Promise<TimelineEvent> {
+    return this.request<TimelineEvent>("/timeline/events", { method: "POST", body: input });
+  }
+
   /** Deliver a rule-based, evidence-linked briefing for the user. */
   deliverBriefing(userId: string, windowHours = 24): Promise<Briefing> {
     return this.request<Briefing>("/briefing", {
       method: "POST",
       body: { user_id: userId, window_hours: windowHours },
     });
+  }
+
+  // --- Privacy & governance (T10.2) ---
+
+  listConsents(): Promise<Consent[]> {
+    return this.request<Consent[]>("/consents");
+  }
+
+  grantConsent(scope: string): Promise<Consent> {
+    return this.request<Consent>("/consents", { method: "POST", body: { scope } });
+  }
+
+  revokeConsent(scope: string): Promise<void> {
+    return this.request<void>(`/consents/${encodeURIComponent(scope)}`, { method: "DELETE" });
+  }
+
+  getAudit(): Promise<AuditEntry[]> {
+    return this.request<AuditEntry[]>("/audit");
+  }
+
+  exportMe(): Promise<ExportBundle> {
+    return this.request<ExportBundle>("/me/export");
+  }
+
+  deleteMe(): Promise<ErasureResult> {
+    return this.request<ErasureResult>("/me", { method: "DELETE" });
+  }
+
+  // --- Finance (T10.4) ---
+
+  listAccounts(): Promise<Account[]> {
+    return this.request<Account[]>("/accounts");
+  }
+
+  createAccount(name: string, currency: string): Promise<Account> {
+    return this.request<Account>("/accounts", { method: "POST", body: { name, currency } });
+  }
+
+  recordExpense(input: ExpenseInput): Promise<Transaction> {
+    return this.request<Transaction>("/finance/expenses", { method: "POST", body: input });
+  }
+
+  recordTransaction(input: TransactionInput): Promise<Transaction> {
+    return this.request<Transaction>("/finance/transactions", { method: "POST", body: input });
+  }
+
+  listTransactions(accountId?: string, limit?: number): Promise<Transaction[]> {
+    const params = new URLSearchParams();
+    if (accountId) params.set("account_id", accountId);
+    if (limit !== undefined) params.set("limit", String(limit));
+    const query = params.toString();
+    return this.request<Transaction[]>(`/finance/transactions${query ? `?${query}` : ""}`);
+  }
+
+  recordPosition(input: PositionInput): Promise<Balance> {
+    return this.request<Balance>("/finance/positions", { method: "POST", body: input });
+  }
+
+  accountBalance(accountId: string): Promise<Balance> {
+    return this.request<Balance>(`/finance/accounts/${accountId}/balance`);
+  }
+
+  netWorth(): Promise<NetWorth> {
+    return this.request<NetWorth>("/finance/net-worth");
+  }
+
+  cashFlow(occurredFrom: string, occurredTo: string): Promise<CashFlow> {
+    const params = new URLSearchParams({ occurred_from: occurredFrom, occurred_to: occurredTo });
+    return this.request<CashFlow>(`/finance/cash-flow?${params.toString()}`);
+  }
+
+  importBank(accountId: string, csv: string): Promise<BankImportResult> {
+    return this.request<BankImportResult>("/finance/connectors/bank/import", {
+      method: "POST",
+      body: { account_id: accountId, csv },
+    });
+  }
+
+  // --- Health (T10.5) ---
+
+  listSleep(): Promise<SleepSession[]> {
+    return this.request<SleepSession[]>("/health/sleep");
+  }
+
+  recordSleep(input: SleepInput): Promise<SleepSession> {
+    return this.request<SleepSession>("/health/sleep", { method: "POST", body: input });
+  }
+
+  listWorkouts(): Promise<Workout[]> {
+    return this.request<Workout[]>("/health/workouts");
+  }
+
+  recordWorkout(input: WorkoutInput): Promise<Workout> {
+    return this.request<Workout>("/health/workouts", { method: "POST", body: input });
+  }
+
+  importHealth(csv: string): Promise<HealthImportResult> {
+    return this.request<HealthImportResult>("/health/connectors/import", {
+      method: "POST",
+      body: { csv },
+    });
+  }
+
+  // --- Goals (T10.6) ---
+
+  listGoals(): Promise<Goal[]> {
+    return this.request<Goal[]>("/goals");
+  }
+
+  createGoal(input: CreateGoalInput): Promise<Goal> {
+    return this.request<Goal>("/goals", { method: "POST", body: input });
+  }
+
+  goalProgressAll(): Promise<GoalProgress[]> {
+    return this.request<GoalProgress[]>("/goals/progress");
+  }
+
+  recordMilestone(goalId: string, value: number, note?: string | null): Promise<Milestone> {
+    return this.request<Milestone>(`/goals/${goalId}/milestones`, {
+      method: "POST",
+      body: { value, note: note ?? null },
+    });
+  }
+
+  listMilestones(goalId: string): Promise<Milestone[]> {
+    return this.request<Milestone[]>(`/goals/${goalId}/milestones`);
+  }
+
+  // --- Knowledge (T10.7) ---
+
+  uploadDocument(file: File): Promise<Document> {
+    return this.upload<Document>("/documents", file);
+  }
+
+  listDocuments(): Promise<Document[]> {
+    return this.request<Document[]>("/documents");
+  }
+
+  extractDocument(documentId: string): Promise<ExtractedText> {
+    return this.request<ExtractedText>(`/documents/${documentId}/extract`, { method: "POST" });
+  }
+
+  getDocumentText(documentId: string): Promise<DocumentText> {
+    return this.request<DocumentText>(`/documents/${documentId}/text`);
+  }
+
+  indexDocument(documentId: string): Promise<Memory> {
+    return this.request<Memory>(`/documents/${documentId}/index`, { method: "POST" });
+  }
+
+  memorySearch(query: string, limit?: number): Promise<SearchHit[]> {
+    const params = new URLSearchParams({ q: query });
+    if (limit !== undefined) params.set("limit", String(limit));
+    return this.request<SearchHit[]>(`/memory/search?${params.toString()}`);
+  }
+
+  consolidateGraph(): Promise<ConsolidationResult> {
+    return this.request<ConsolidationResult>("/knowledge-graph/consolidate", { method: "POST" });
+  }
+
+  listEntities(): Promise<EntityRecord[]> {
+    return this.request<EntityRecord[]>("/knowledge-graph/entities");
+  }
+
+  listRelationships(): Promise<RelationshipRecord[]> {
+    return this.request<RelationshipRecord[]>("/knowledge-graph/relationships");
+  }
+
+  // --- Assistant (T10.8) ---
+
+  assistantQuery(question: string): Promise<Answer> {
+    return this.request<Answer>("/assistant/query", { method: "POST", body: { question } });
+  }
+
+  runAlerts(): Promise<Insight[]> {
+    return this.request<Insight[]>("/assistant/alerts/run", { method: "POST" });
+  }
+
+  listInsights(): Promise<Insight[]> {
+    return this.request<Insight[]>("/insights");
+  }
+
+  recordInsight(input: InsightInput): Promise<Insight> {
+    return this.request<Insight>("/insights", { method: "POST", body: input });
+  }
+
+  // --- Forecast (T10.9) ---
+
+  listForecasts(): Promise<Forecast[]> {
+    return this.request<Forecast[]>("/forecasts");
+  }
+
+  runForecasts(horizonDays = 30): Promise<Forecast[]> {
+    return this.request<Forecast[]>("/forecasts/run", {
+      method: "POST",
+      body: { horizon_days: horizonDays },
+    });
+  }
+
+  simulateForecast(forecastId: string, scale: number, label?: string): Promise<Forecast> {
+    return this.request<Forecast>(`/forecasts/${forecastId}/simulate`, {
+      method: "POST",
+      body: { scale, label: label ?? null },
+    });
+  }
+
+  recordOutcome(
+    forecastId: string,
+    observedValue: number,
+    observedAt: string,
+    note?: string | null,
+  ): Promise<Outcome> {
+    return this.request<Outcome>(`/forecasts/${forecastId}/outcome`, {
+      method: "POST",
+      body: { observed_value: observedValue, observed_at: observedAt, note: note ?? null },
+    });
+  }
+
+  calibration(): Promise<Calibration> {
+    return this.request<Calibration>("/forecasts/calibration");
   }
 }
 
