@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     # future S3/GCS adapter) through the environment.
     blob_store_path: str = "./var/blobs"
 
+    # Static SPA serving (T11.1). When set to the built web bundle directory, the
+    # API serves the single-page app same-origin (so no CORS is needed). Unset in
+    # development/tests (the SPA runs on the Vite dev server).
+    static_dir: str | None = None
+
     @property
     def broker_url(self) -> str:
         """Effective Celery broker URL (falls back to ``redis_url``)."""

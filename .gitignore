@@ -28,6 +28,8 @@ coverage.xml
 # Local environment
 .env
 .env.local
+# Production secrets — filled from .env.prod.example, never committed (T11.2)
+.env.prod
 
 # Editor / OS
 .idea/
