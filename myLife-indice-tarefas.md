@@ -290,6 +290,18 @@ only terminates TLS and proxies the domain. `specs/domain/platform/deployment.md
 | **T11.2** | ✅ | Production compose + Caddy + migrate | No | `docker-compose.prod.yml` (api, worker, postgres, redis, caddy) + `Caddyfile` + entrypoint running `alembic upgrade head` + `.env.prod.example`; persistent volumes for Postgres/Redis/blobs. |
 | **T11.3** | ✅ | `DEPLOY.md` runbook | No | Provision a VPS, DNS, env (incl. `MYLIFE_JWT_SECRET`), bring-up, backups, upgrades. |
 
+### `T12` — CI/CD *(build, publish & auto-deploy)*
+
+Make releases hands-off: on every push to `main`, build the image and publish it
+to **GHCR**, then deploy to the VPS over SSH (pull → migrate → `up -d`). The build
+needs no external account (built-in token); the deploy is secret-gated and
+skip-safe. `specs/domain/platform/cicd.md`.
+
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T12.1** | ✅ | GHCR build/publish + compose image param | **Yes** | `deploy.yml` `build` job: `docker/build-push-action` → `ghcr.io/<owner>/<repo>` (lowercased) `:latest`+`:<sha>`, `type=gha` cache; compose `image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}` (keeps `build: .`). |
+| **T12.2** | ✅ | SSH auto-deploy job + remote script | No | `deploy` job gated on `VPS_HOST`/`VPS_SSH_KEY` (skips cleanly if absent), SSHes and runs `deploy/remote-deploy.sh` (git pull, GHCR pull, one-shot migrate, `up -d`, prune); DEPLOY.md CI/CD section + secrets. |
+
 ---
 
 ## Progress snapshot
@@ -307,5 +319,6 @@ only terminates TLS and proxies the domain. `specs/domain/platform/deployment.md
 | platform · mobile/infra/dashboards | `T9` | — | deferred |
 | platform · web console | `T10.1`–`T10.9` | 9 | 9 |
 | platform · deployment | `T11.1`–`T11.3` | 3 | 3 |
+| platform · CI/CD | `T12.1`–`T12.2` | 2 | 2 |
 
 _Update the **Status** column and this snapshot as each PR merges._
