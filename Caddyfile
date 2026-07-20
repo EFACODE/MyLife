@@ -1,0 +1,8 @@
+# Caddy reverse proxy for My Life (T11.2).
+# MYLIFE_DOMAIN sets the site address — a real domain gets automatic HTTPS via
+# Let's Encrypt; use ":80" for local/no-TLS testing. The API serves the SPA
+# same-origin, so a single upstream is all that's needed.
+{$MYLIFE_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}

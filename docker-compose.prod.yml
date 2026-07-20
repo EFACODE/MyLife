@@ -1,0 +1,110 @@
+# Production stack for My Life on a single host (T11.2).
+#
+#   cp .env.prod.example .env.prod   # then edit secrets
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# The API serves the SPA same-origin; Caddy terminates TLS and proxies the domain.
+# See DEPLOY.md.
+name: mylife
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mylife}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-mylife}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mylife} -d ${POSTGRES_DB:-mylife}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # One-shot: apply DB migrations before the app starts.
+  migrate:
+    image: mylife:latest
+    command: ["alembic", "upgrade", "head"]
+    env_file: [.env.prod]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    image: mylife:latest
+    env_file: [.env.prod]
+    environment:
+      MYLIFE_STATIC_DIR: /app/static
+      MYLIFE_BLOB_STORE_PATH: /data/blobs
+    volumes:
+      - blob_data:/data/blobs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health/ready').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  worker:
+    image: mylife:latest
+    command: ["celery", "-A", "mylife.workers.celery_app", "worker", "--loglevel=info"]
+    env_file: [.env.prod]
+    environment:
+      MYLIFE_BLOB_STORE_PATH: /data/blobs
+    volumes:
+      - blob_data:/data/blobs
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      MYLIFE_DOMAIN: ${MYLIFE_DOMAIN:?set MYLIFE_DOMAIN in .env.prod}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  blob_data:
+  caddy_data:
+  caddy_config:

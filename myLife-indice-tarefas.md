@@ -287,7 +287,7 @@ only terminates TLS and proxies the domain. `specs/domain/platform/deployment.md
 | PR | Status | Title | Spec | Scope & acceptance |
 | -- | ------ | ----- | ---- | ------------------ |
 | **T11.1** | ✅ | Containerize app + serve SPA same-origin | **Yes** | Multi-stage `Dockerfile` (build web → serve via FastAPI `StaticFiles` when `MYLIFE_STATIC_DIR` set, SPA history fallback, API routes win) + `.dockerignore` + `SpaStaticFiles`. Non-root image. Env-gated (dev unchanged). |
-| **T11.2** | ⬜ | Production compose + Caddy + migrate | No | `docker-compose.prod.yml` (api, worker, postgres, redis, caddy) + `Caddyfile` + entrypoint running `alembic upgrade head` + `.env.prod.example`; persistent volumes for Postgres/Redis/blobs. |
+| **T11.2** | ✅ | Production compose + Caddy + migrate | No | `docker-compose.prod.yml` (api, worker, postgres, redis, caddy) + `Caddyfile` + entrypoint running `alembic upgrade head` + `.env.prod.example`; persistent volumes for Postgres/Redis/blobs. |
 | **T11.3** | ⬜ | `DEPLOY.md` runbook | No | Provision a VPS, DNS, env (incl. `MYLIFE_JWT_SECRET`), bring-up, backups, upgrades. |
 
 ---
