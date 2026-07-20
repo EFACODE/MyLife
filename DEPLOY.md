@@ -121,18 +121,59 @@ curl -fsS https://mylife.example.com/health/ready      # {"status":"ready",...}
 Then open `https://mylife.example.com/` — the SPA loads and can register the
 first user.
 
-## 6. Day-2 operations
+## 6. Automatic deploys (CI/CD)
 
-**Upgrade to a new release:**
+The `Deploy` workflow (`.github/workflows/deploy.yml`) builds the image and
+publishes it to the **GitHub Container Registry (GHCR)** on every push to `main`,
+then deploys it to this host over SSH — so after the one-time setup below you
+never build or restart by hand. The build/publish step needs **no** external
+account (it uses the built-in `GITHUB_TOKEN`); only the SSH deploy needs secrets.
+
+**One-time setup:**
+
+1. **Prepare the host** as in sections 2–5 (Docker installed, `.env.prod` filled,
+   the repo cloned to `~/mylife` — the default deploy dir; override with a
+   `MYLIFE_DIR` secret/env if you clone elsewhere). Do the first bring-up manually
+   (section 5) so the stack and volumes exist.
+2. **Create a deploy SSH key** and authorize it on the host:
+   ```bash
+   ssh-keygen -t ed25519 -f deploy_key -N ""      # on your machine
+   ssh-copy-id -i deploy_key.pub user@your-host   # authorize the public key
+   ```
+3. **Add GitHub Actions secrets** (repo → Settings → Secrets and variables →
+   Actions):
+   | Secret | Value |
+   | --- | --- |
+   | `VPS_HOST` | The host's IP or domain. |
+   | `VPS_USER` | The SSH user (the one that owns `~/mylife` and can run `docker`). |
+   | `VPS_SSH_KEY` | The **private** key contents (`cat deploy_key`). |
+4. **GHCR package visibility.** After the first successful publish, either make the
+   `mylife` package **public** (GHCR → the package → Package settings → Change
+   visibility) so the host pulls without auth, or keep it private and add
+   `GHCR_USER` + `GHCR_TOKEN` (a read-only PAT) to the host's environment so
+   `deploy/remote-deploy.sh` can `docker login`.
+
+Until `VPS_HOST`/`VPS_SSH_KEY` exist the deploy job **skips cleanly** (the build
+still publishes the image), so it's safe to merge before the host is ready.
+
+Once set up, every push to `main` runs `deploy/remote-deploy.sh` on the host:
+`git pull` (refresh compose) → `docker compose pull` → one-shot `migrate`
+(`alembic upgrade head`) → `up -d` → prune. You can also trigger it manually from
+the Actions tab (**Run workflow**).
+
+## 7. Day-2 operations
+
+**Manual upgrade** (if you're not using CI/CD, or to build from source on the host):
 
 ```bash
 git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-`migrate` re-runs `alembic upgrade head` on each `up`, so schema changes apply
-before the new `api`/`worker` start. Migrations are append-only and forward-only
-(consistent with the project's immutable-history invariant).
+`migrate` re-runs `alembic upgrade head`, so schema changes apply before the new
+`api`/`worker` start. Migrations are append-only and forward-only (consistent with
+the project's immutable-history invariant). The compose `image` defaults to the
+GHCR image but is overridden to a from-source build when you pass `--build`.
 
 **Back up** (Postgres is the source of truth; blobs are the uploaded documents):
 
@@ -169,7 +210,7 @@ docker compose -f docker-compose.prod.yml down           # stop stack (keeps vol
 docker compose -f docker-compose.prod.yml down -v        # DANGER: also deletes all data volumes
 ```
 
-## 7. Notes & limitations
+## 8. Notes & limitations
 
 - **Same-origin SPA:** the API mounts the built bundle at `/` only when
   `MYLIFE_STATIC_DIR` points at it (set in the compose file). Dev/test runs
