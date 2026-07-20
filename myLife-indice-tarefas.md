@@ -278,6 +278,18 @@ shared architecture the feature tasks plug into. `specs/domain/platform/web-cons
 | **T10.8** | ✅ | Assistant pages | No | Grounded query, alerts, insights. |
 | **T10.9** | ✅ | Forecast pages | No | Record/run/list/detail, simulate, outcome, calibration. |
 
+### `T11` — Deployment *(VPS + Docker Compose)*
+
+Ship to a **single VPS** with Docker Compose: API + Celery worker + Postgres + Redis
++ Caddy on one box. The **SPA is served same-origin by the API** (no CORS); Caddy
+only terminates TLS and proxies the domain. `specs/domain/platform/deployment.md`.
+
+| PR | Status | Title | Spec | Scope & acceptance |
+| -- | ------ | ----- | ---- | ------------------ |
+| **T11.1** | ✅ | Containerize app + serve SPA same-origin | **Yes** | Multi-stage `Dockerfile` (build web → serve via FastAPI `StaticFiles` when `MYLIFE_STATIC_DIR` set, SPA history fallback, API routes win) + `.dockerignore` + `SpaStaticFiles`. Non-root image. Env-gated (dev unchanged). |
+| **T11.2** | ⬜ | Production compose + Caddy + migrate | No | `docker-compose.prod.yml` (api, worker, postgres, redis, caddy) + `Caddyfile` + entrypoint running `alembic upgrade head` + `.env.prod.example`; persistent volumes for Postgres/Redis/blobs. |
+| **T11.3** | ⬜ | `DEPLOY.md` runbook | No | Provision a VPS, DNS, env (incl. `MYLIFE_JWT_SECRET`), bring-up, backups, upgrades. |
+
 ---
 
 ## Progress snapshot
@@ -294,5 +306,6 @@ shared architecture the feature tasks plug into. `specs/domain/platform/web-cons
 | platform · tracing + web | `T9.3`–`T9.5` | 3 | 3 |
 | platform · mobile/infra/dashboards | `T9` | — | deferred |
 | platform · web console | `T10.1`–`T10.9` | 9 | 9 |
+| platform · deployment | `T11.1`–`T11.3` | 1 | 3 |
 
 _Update the **Status** column and this snapshot as each PR merges._

@@ -5,6 +5,8 @@ Run locally with::
     uvicorn mylife.main:app --reload
 """
 
+import os
+
 from fastapi import FastAPI
 
 from mylife import __version__
@@ -27,6 +29,7 @@ from mylife.api import (
     metrics,
     timeline,
 )
+from mylife.api.spa import SpaStaticFiles
 from mylife.core.config import get_settings
 from mylife.core.logging import configure_logging
 from mylife.core.metrics_middleware import MetricsMiddleware
@@ -63,6 +66,9 @@ def create_app() -> FastAPI:
     app.include_router(forecast.router)
     app.include_router(assistant.router)
     app.include_router(briefing.router)
+    # Serve the built SPA same-origin (production) — mounted last so API routes win.
+    if settings.static_dir and os.path.isdir(settings.static_dir):
+        app.mount("/", SpaStaticFiles(directory=settings.static_dir, html=True), name="spa")
     return app
 
 
