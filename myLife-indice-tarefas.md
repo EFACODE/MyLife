@@ -288,7 +288,7 @@ only terminates TLS and proxies the domain. `specs/domain/platform/deployment.md
 | -- | ------ | ----- | ---- | ------------------ |
 | **T11.1** | ✅ | Containerize app + serve SPA same-origin | **Yes** | Multi-stage `Dockerfile` (build web → serve via FastAPI `StaticFiles` when `MYLIFE_STATIC_DIR` set, SPA history fallback, API routes win) + `.dockerignore` + `SpaStaticFiles`. Non-root image. Env-gated (dev unchanged). |
 | **T11.2** | ✅ | Production compose + Caddy + migrate | No | `docker-compose.prod.yml` (api, worker, postgres, redis, caddy) + `Caddyfile` + entrypoint running `alembic upgrade head` + `.env.prod.example`; persistent volumes for Postgres/Redis/blobs. |
-| **T11.3** | ⬜ | `DEPLOY.md` runbook | No | Provision a VPS, DNS, env (incl. `MYLIFE_JWT_SECRET`), bring-up, backups, upgrades. |
+| **T11.3** | ✅ | `DEPLOY.md` runbook | No | Provision a VPS, DNS, env (incl. `MYLIFE_JWT_SECRET`), bring-up, backups, upgrades. |
 
 ---
 
@@ -306,6 +306,6 @@ only terminates TLS and proxies the domain. `specs/domain/platform/deployment.md
 | platform · tracing + web | `T9.3`–`T9.5` | 3 | 3 |
 | platform · mobile/infra/dashboards | `T9` | — | deferred |
 | platform · web console | `T10.1`–`T10.9` | 9 | 9 |
-| platform · deployment | `T11.1`–`T11.3` | 1 | 3 |
+| platform · deployment | `T11.1`–`T11.3` | 3 | 3 |
 
 _Update the **Status** column and this snapshot as each PR merges._
