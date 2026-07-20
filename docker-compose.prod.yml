@@ -37,7 +37,7 @@ services:
 
   # One-shot: apply DB migrations before the app starts.
   migrate:
-    image: mylife:latest
+    image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}
     command: ["alembic", "upgrade", "head"]
     env_file: [.env.prod]
     depends_on:
@@ -46,8 +46,10 @@ services:
     restart: "no"
 
   api:
+    # Pulled from GHCR in CI/CD deploys; `build: .` lets a from-source bring-up
+    # (docker compose up --build) still work when MYLIFE_IMAGE is unset.
     build: .
-    image: mylife:latest
+    image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}
     env_file: [.env.prod]
     environment:
       MYLIFE_STATIC_DIR: /app/static
@@ -73,7 +75,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: mylife:latest
+    image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}
     command: ["celery", "-A", "mylife.workers.celery_app", "worker", "--loglevel=info"]
     env_file: [.env.prod]
     environment:
