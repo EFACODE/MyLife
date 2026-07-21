@@ -100,7 +100,7 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml config >/dev/null
 ## 5. Bring the stack up
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
 This builds the image (web SPA → FastAPI runtime), starts Postgres/Redis, runs
@@ -108,8 +108,8 @@ This builds the image (web SPA → FastAPI runtime), starts Postgres/Redis, runs
 Watch it settle:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps          # all healthy/running; migrate = Exited (0)
-docker compose -f docker-compose.prod.yml logs -f api  # ctrl-c to stop tailing
+docker compose --env-file .env.prod -f docker-compose.prod.yml ps          # all healthy/running; migrate = Exited (0)
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f api  # ctrl-c to stop tailing
 ```
 
 Verify from your workstation:
@@ -167,7 +167,7 @@ the Actions tab (**Run workflow**).
 
 ```bash
 git pull
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
 `migrate` re-runs `alembic upgrade head`, so schema changes apply before the new
@@ -179,7 +179,7 @@ GHCR image but is overridden to a from-source build when you pass `--build`.
 
 ```bash
 # Database → timestamped SQL dump
-docker compose -f docker-compose.prod.yml exec -T postgres \
+docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T postgres \
   pg_dump -U mylife mylife | gzip > backup-db-$(date +%F).sql.gz
 
 # Document blob store
@@ -194,20 +194,20 @@ periodically.
 
 ```bash
 gunzip -c backup-db-YYYY-MM-DD.sql.gz | \
-  docker compose -f docker-compose.prod.yml exec -T postgres psql -U mylife -d mylife
+  docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T postgres psql -U mylife -d mylife
 ```
 
 **Rotate the JWT secret** (invalidates all existing tokens — users re-login):
 edit `MYLIFE_JWT_SECRET` in `.env.prod`, then
-`docker compose -f docker-compose.prod.yml up -d api worker`.
+`docker compose --env-file .env.prod -f docker-compose.prod.yml up -d api worker`.
 
 **Common checks:**
 
 ```bash
-docker compose -f docker-compose.prod.yml logs migrate   # why a migration failed
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs migrate   # why a migration failed
 curl -fsS https://mylife.example.com/metrics             # Prometheus metrics (T9)
-docker compose -f docker-compose.prod.yml down           # stop stack (keeps volumes)
-docker compose -f docker-compose.prod.yml down -v        # DANGER: also deletes all data volumes
+docker compose --env-file .env.prod -f docker-compose.prod.yml down           # stop stack (keeps volumes)
+docker compose --env-file .env.prod -f docker-compose.prod.yml down -v        # DANGER: also deletes all data volumes
 ```
 
 ## 8. Notes & limitations
