@@ -11,9 +11,13 @@ set -euo pipefail
 
 : "${MYLIFE_IMAGE:?MYLIFE_IMAGE must be set (image ref to deploy)}"
 DIR="${MYLIFE_DIR:-$HOME/mylife}"
-COMPOSE_FILE="docker-compose.prod.yml"
 
 cd "$DIR"
+
+# Compose reads ${MYLIFE_DOMAIN}/${POSTGRES_PASSWORD}/etc. from --env-file (the
+# `env_file:` service directive only injects vars into containers, not into
+# compose-level interpolation), so pass .env.prod on every invocation.
+compose() { docker compose --env-file .env.prod -f docker-compose.prod.yml "$@"; }
 
 # Refresh the compose file / Caddyfile from the repo (fast-forward only).
 if [ -d .git ]; then
@@ -29,13 +33,13 @@ export MYLIFE_IMAGE
 echo "Deploying image: $MYLIFE_IMAGE"
 
 # Pull the new image for every service that uses it.
-docker compose -f "$COMPOSE_FILE" pull
+compose pull
 
 # Apply migrations (one-shot) before starting the new app/worker.
-docker compose -f "$COMPOSE_FILE" run --rm migrate
+compose run --rm migrate
 
 # Roll the stack to the new image.
-docker compose -f "$COMPOSE_FILE" up -d
+compose up -d
 
 # Reclaim disk from superseded image layers.
 docker image prune -f
