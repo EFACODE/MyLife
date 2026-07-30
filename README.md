@@ -68,10 +68,13 @@ connects to the Postgres/Redis instances above. Stop the services with
 | Task              | Command                          |
 | ----------------- | -------------------------------- |
 | Run the API       | `uvicorn mylife.main:app --reload` |
+| Run a worker      | `celery -A mylife.workers.celery_app:celery_app worker` |
 | Lint              | `ruff check .`                   |
 | Format            | `ruff format .`                  |
 | Type-check        | `mypy`                           |
 | Test              | `pytest`                         |
+| Migrate DB        | `alembic upgrade head`           |
+| New migration     | `alembic revision -m "…" --autogenerate` |
 | All pre-commit    | `pre-commit run --all-files`     |
 
 Once running, the API docs are served at `http://localhost:8000/docs` and the
