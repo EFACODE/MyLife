@@ -1,0 +1,241 @@
+{
+  "general": {
+    "accessibility": {
+      "skip_to_content": "Skip to content",
+      "close": "Close",
+      "previous": "Previous",
+      "next": "Next",
+      "loading": "Loading",
+      "menu": "Menu",
+      "search": "Search",
+      "cart": "Cart",
+      "wishlist": "Wishlist",
+      "account": "Account",
+      "star_rating": "{{ rating }} out of {{ scale }} stars",
+      "error": "Error",
+      "refresh_page": "Choosing a selection results in a full page refresh."
+    },
+    "meta": {
+      "tags": "Tagged \"{{ tags }}\"",
+      "page": "Page {{ page }}"
+    },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {{ number }}",
+      "load_more": "Load more"
+    },
+    "newsletter": {
+      "heading": "Stay in touch",
+      "label": "Email address",
+      "placeholder": "your@email.com",
+      "submit": "Subscribe",
+      "success": "Thank you. Please confirm your subscription from your inbox.",
+      "error": "Please enter a valid email address."
+    },
+    "search": {
+      "heading": "Search",
+      "placeholder": "Search products, collections, journal",
+      "submit": "Search",
+      "results_for": "Results for \"{{ terms }}\"",
+      "no_results": "No results for \"{{ terms }}\". Try another phrase.",
+      "results_count": {
+        "one": "{{ count }} result",
+        "other": "{{ count }} results"
+      },
+      "view_all": "View all results",
+      "suggestions": "Suggestions",
+      "products": "Products",
+      "collections": "Collections",
+      "pages": "Pages",
+      "articles": "Journal"
+    },
+    "share": {
+      "copy_link": "Copy link",
+      "copied": "Link copied"
+    },
+    "breadcrumbs": {
+      "label": "Breadcrumbs",
+      "home": "Home"
+    },
+    "continue_shopping": "Continue shopping",
+    "back_to_home": "Back to home"
+  },
+  "products": {
+    "product": {
+      "add_to_cart": "Add to cart",
+      "quick_add": "Quick add",
+      "quick_view": "Quick view",
+      "adding": "Adding",
+      "added": "Added",
+      "sold_out": "Sold out",
+      "unavailable": "Unavailable",
+      "on_sale": "Sale",
+      "new": "New",
+      "sale_badge": "Save {{ amount }}",
+      "price_from": "From",
+      "quantity": "Quantity",
+      "increase": "Increase quantity",
+      "decrease": "Decrease quantity",
+      "vendor": "Brand",
+      "sku": "SKU",
+      "view_details": "View details",
+      "view_full_details": "View full details",
+      "choose_options": "Choose options",
+      "variant_sold_out": "{{ option }} — sold out",
+      "media": {
+        "gallery_label": "Product gallery",
+        "thumbnail": "Show image {{ index }}",
+        "zoom": "Zoom image",
+        "close_zoom": "Close zoom"
+      },
+      "rating": {
+        "label": "{{ rating }} out of {{ scale }}",
+        "count": {
+          "one": "{{ count }} review",
+          "other": "{{ count }} reviews"
+        }
+      },
+      "inventory": {
+        "in_stock": "In stock, ready to ship",
+        "low_stock": "Low stock — {{ count }} left",
+        "out_of_stock": "Out of stock"
+      },
+      "delivery": {
+        "heading": "Delivery",
+        "standard": "Standard delivery in 3–5 working days.",
+        "free": "Complimentary shipping on orders over {{ amount }}.",
+        "returns": "Free returns within 30 days."
+      },
+      "related_heading": "You may also like",
+      "recently_viewed_heading": "Recently viewed"
+    },
+    "wishlist": {
+      "add": "Save to wishlist",
+      "remove": "Remove from wishlist",
+      "heading": "Wishlist",
+      "empty": "Your wishlist is empty. Tap the heart on any product to save it here.",
+      "count": {
+        "one": "{{ count }} item saved",
+        "other": "{{ count }} items saved"
+      }
+    },
+    "facets": {
+      "heading": "Filter",
+      "apply": "Apply",
+      "clear": "Clear",
+      "clear_all": "Clear all",
+      "sort_by": "Sort by",
+      "filter_by": "Filter",
+      "from": "From",
+      "to": "To",
+      "max_price": "The highest price is {{ price }}",
+      "active": "Active filters",
+      "results": {
+        "one": "{{ count }} product",
+        "other": "{{ count }} products"
+      },
+      "no_results": "No products match these filters."
+    }
+  },
+  "cart": {
+    "general": {
+      "heading": "Cart",
+      "empty": "Your cart is empty.",
+      "empty_cta": "Explore the collection",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "taxes_and_shipping": "Taxes and shipping calculated at checkout.",
+      "checkout": "Checkout",
+      "view_cart": "View cart",
+      "remove": "Remove",
+      "item_count": {
+        "one": "{{ count }} item",
+        "other": "{{ count }} items"
+      },
+      "note": "Order note",
+      "update": "Update"
+    },
+    "shipping_bar": {
+      "progress": "You are {{ amount }} away from complimentary shipping.",
+      "qualified": "You have unlocked complimentary shipping."
+    },
+    "discount": {
+      "label": "Discount code",
+      "placeholder": "Enter code",
+      "apply": "Apply",
+      "applied": "Applied",
+      "error": "That code could not be applied."
+    },
+    "upsell": {
+      "heading": "Pairs well with"
+    },
+    "label": {
+      "product": "Product",
+      "quantity": "Quantity",
+      "total": "Total"
+    }
+  },
+  "sections": {
+    "header": {
+      "menu": "Menu",
+      "close_menu": "Close menu",
+      "announcement": "Announcement"
+    },
+    "footer": {
+      "policies": "Policies",
+      "follow_us": "Follow us",
+      "copyright": "© {{ year }} {{ shop }}. All rights reserved."
+    },
+    "quick_order": {
+      "view_in_cart": "View in cart"
+    }
+  },
+  "templates": {
+    "search": {
+      "title": "Search"
+    },
+    "404": {
+      "title": "Page not found",
+      "subtext": "The page you were looking for has moved or no longer exists."
+    },
+    "contact": {
+      "form": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "message": "Message",
+        "send": "Send",
+        "post_success": "Thank you for reaching out. We reply within one working day."
+      }
+    }
+  },
+  "gift_cards": {
+    "issued": {
+      "title": "Here is your {{ value }} gift card",
+      "subtext": "Your gift card",
+      "add_to_apple_wallet": "Add to Apple Wallet",
+      "expired": "This gift card has expired.",
+      "expires_on": "Expires on {{ expires_on }}",
+      "copy_code": "Copy code",
+      "shop_link": "Start shopping"
+    }
+  },
+  "customer": {
+    "account": {
+      "title": "Account",
+      "details": "Account details",
+      "orders": "Orders",
+      "log_out": "Log out"
+    },
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "sign_in": "Sign in",
+      "forgot_password": "Forgot your password?",
+      "create_account": "Create account"
+    }
+  }
+}

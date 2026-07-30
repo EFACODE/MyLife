@@ -1,0 +1,123 @@
+{%- if section.blocks.size > 0 -%}
+  {%- liquid
+    assign version = section.id | append: section.blocks.size
+  -%}
+
+  <announcement-bar
+    class="announcement"
+    data-rotate="{{ section.settings.rotate }}"
+    data-rotate-speed="{{ section.settings.rotate_speed }}"
+    data-version="{{ version }}"
+    role="region"
+    aria-label="{{ 'sections.header.announcement' | t }}"
+  >
+    <div class="page-width">
+      <div class="announcement__inner">
+        <div class="announcement__rotator{% if section.blocks.size == 1 %} announcement__rotator--static{% endif %}">
+          {%- for block in section.blocks -%}
+            <div
+              class="announcement__item{% if forloop.first %} is-active{% endif %}"
+              {{ block.shopify_attributes }}
+            >
+              {%- if block.settings.icon != 'none' -%}
+                {% render 'icon', name: block.settings.icon, size: 14 %}
+              {%- endif -%}
+
+              {%- if block.settings.link != blank -%}
+                <a href="{{ block.settings.link }}">{{ block.settings.message | escape }}</a>
+              {%- else -%}
+                <span>{{ block.settings.message | escape }}</span>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+
+        {%- if section.settings.dismissible -%}
+          <button
+            type="button"
+            class="announcement__close"
+            data-announcement-close
+            aria-label="{{ 'general.accessibility.close' | t }}"
+          >
+            {% render 'icon', name: 'close', size: 14 %}
+          </button>
+        {%- endif -%}
+      </div>
+    </div>
+  </announcement-bar>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.announcement.name",
+  "tag": "aside",
+  "class": "announcement-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "rotate",
+      "default": true,
+      "label": "t:sections.announcement.rotate"
+    },
+    {
+      "type": "range",
+      "id": "rotate_speed",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "unit": "s",
+      "label": "t:sections.announcement.rotate_speed",
+      "default": 5
+    },
+    {
+      "type": "checkbox",
+      "id": "dismissible",
+      "default": false,
+      "label": "t:sections.announcement.dismissible"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "message",
+      "name": "t:sections.announcement.message",
+      "limit": 5,
+      "settings": [
+        {
+          "type": "text",
+          "id": "message",
+          "default": "Complimentary shipping on orders over 150",
+          "label": "t:sections.announcement.message"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.all.link"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "options": [
+            { "value": "none", "label": "None" },
+            { "value": "truck", "label": "Delivery" },
+            { "value": "leaf", "label": "Sustainability" },
+            { "value": "gift", "label": "Gift" },
+            { "value": "sparkle", "label": "Sparkle" },
+            { "value": "return", "label": "Returns" }
+          ],
+          "default": "none",
+          "label": "Icon"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.announcement.name",
+      "blocks": [
+        { "type": "message" },
+        { "type": "message", "settings": { "message": "Free returns within 30 days", "icon": "return" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

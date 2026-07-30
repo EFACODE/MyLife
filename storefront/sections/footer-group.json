@@ -1,0 +1,42 @@
+{
+  "name": "Footer",
+  "type": "footer",
+  "sections": {
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "menu-1": {
+          "type": "menu",
+          "settings": {
+            "heading": "Shop",
+            "menu": "footer"
+          }
+        },
+        "menu-2": {
+          "type": "menu",
+          "settings": {
+            "heading": "About",
+            "menu": "footer"
+          }
+        },
+        "contact-1": {
+          "type": "contact",
+          "settings": {
+            "heading": "Contact",
+            "email": "studio@example.com",
+            "text": "<p>Mon–Fri, 9–17 CET</p>"
+          }
+        }
+      },
+      "block_order": ["menu-1", "menu-2", "contact-1"],
+      "settings": {
+        "text": "<p>Considered pieces for the modern home, made with honest materials and lasting craft.</p>",
+        "show_newsletter": true,
+        "show_social": true,
+        "show_policies": true,
+        "show_payment_icons": true
+      }
+    }
+  },
+  "order": ["footer"]
+}

@@ -1,0 +1,215 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero",
+      "settings": {
+        "height": "full",
+        "alignment": "bottom-left",
+        "overlay_opacity": 25,
+        "parallax": true,
+        "show_scroll_cue": true,
+        "eyebrow": "New collection",
+        "heading": "Quiet objects for considered homes",
+        "text": "Furniture, lighting and everyday pieces made from honest materials — designed to be lived with for decades, not seasons.",
+        "cta_label": "Shop Collection"
+      }
+    },
+    "featured-categories": {
+      "type": "featured-categories",
+      "blocks": {
+        "living-room": {
+          "type": "category",
+          "settings": { "title": "Living Room", "caption": "Sofas, tables, storage" }
+        },
+        "kitchen": {
+          "type": "category",
+          "settings": { "title": "Kitchen", "caption": "Ceramics, glassware, tools" }
+        },
+        "bedroom": {
+          "type": "category",
+          "settings": { "title": "Bedroom", "caption": "Linen, lighting, storage" }
+        },
+        "bathroom": {
+          "type": "category",
+          "settings": { "title": "Bathroom", "caption": "Towels, vessels, care" }
+        },
+        "office": {
+          "type": "category",
+          "settings": { "title": "Office", "caption": "Desks, seating, paper" }
+        },
+        "decorative-objects": {
+          "type": "category",
+          "settings": { "title": "Decorative Objects", "caption": "Vases, candles, art" }
+        }
+      },
+      "block_order": [
+        "living-room",
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "office",
+        "decorative-objects"
+      ],
+      "settings": {
+        "eyebrow": "Shop by room",
+        "heading": "Featured categories",
+        "link_label": "View all",
+        "color_scheme": "light",
+        "padding_top": 112,
+        "padding_bottom": 96
+      }
+    },
+    "best-sellers": {
+      "type": "featured-products",
+      "settings": {
+        "products_to_show": 4,
+        "columns_desktop": 4,
+        "eyebrow": "Most loved",
+        "heading": "Best sellers",
+        "link_label": "View all",
+        "color_scheme": "light",
+        "padding_top": 96,
+        "padding_bottom": 40
+      }
+    },
+    "promo-banner": {
+      "type": "promo-banner",
+      "settings": {
+        "eyebrow": "Limited release",
+        "heading": "The winter linen edit",
+        "text": "<p>Stonewashed European flax in three quiet shades. Woven in small batches, softer with every wash.</p>",
+        "cta_label": "Shop the edit",
+        "image_position": "right",
+        "float_image": true,
+        "gradient_from": "#F7F7F5",
+        "gradient_to": "#E8E6E1",
+        "text_color": "#222222",
+        "padding_top": 56,
+        "padding_bottom": 96
+      }
+    },
+    "collection-grid": {
+      "type": "collection-grid",
+      "blocks": {
+        "tile-1": {
+          "type": "tile",
+          "settings": { "eyebrow": "Kitchen", "heading": "Stoneware", "link_label": "Explore" }
+        },
+        "tile-2": {
+          "type": "tile",
+          "settings": { "eyebrow": "Living", "heading": "Oak & ash", "link_label": "Explore" }
+        },
+        "tile-3": {
+          "type": "tile",
+          "settings": { "eyebrow": "Bedroom", "heading": "Washed linen", "link_label": "Explore" }
+        },
+        "tile-4": {
+          "type": "tile",
+          "settings": { "eyebrow": "Lighting", "heading": "Paper lighting", "link_label": "Explore" }
+        },
+        "tile-5": {
+          "type": "tile",
+          "settings": { "eyebrow": "Storage", "heading": "Woven baskets", "link_label": "Explore" }
+        },
+        "tile-6": {
+          "type": "tile",
+          "settings": { "eyebrow": "Decorative", "heading": "Objects", "link_label": "Explore" }
+        }
+      },
+      "block_order": ["tile-1", "tile-2", "tile-3", "tile-4", "tile-5", "tile-6"],
+      "settings": {
+        "eyebrow": "Collections",
+        "heading": "Curated by material and mood",
+        "layout": "masonry",
+        "color_scheme": "light",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
+    "rich-text": {
+      "type": "rich-text",
+      "settings": {
+        "eyebrow": "Our approach",
+        "heading": "Made to be lived with",
+        "text": "<p>We work with small European workshops and choose materials that age well — solid oak, stoneware, wool and linen. Fewer pieces, made properly.</p>",
+        "center": true,
+        "color_scheme": "light",
+        "padding_top": 40,
+        "padding_bottom": 96
+      }
+    },
+    "reviews": {
+      "type": "reviews",
+      "blocks": {
+        "review-1": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "The oak side table arrived beautifully packed and the grain is even lovelier in person. It has quietly become the best thing in the room.",
+            "author": "Anna L.",
+            "location": "Copenhagen"
+          }
+        },
+        "review-2": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Ordering was effortless and delivery was exactly when promised. The linen softened after one wash, just as described.",
+            "author": "Marc D.",
+            "location": "Antwerp"
+          }
+        },
+        "review-3": {
+          "type": "review",
+          "settings": {
+            "rating": 5,
+            "quote": "Everything feels considered — from the ceramics to the packaging. This is the first shop where I have bought the whole set.",
+            "author": "Yuki T.",
+            "location": "Kyoto"
+          }
+        }
+      },
+      "block_order": ["review-1", "review-2", "review-3"],
+      "settings": {
+        "eyebrow": "In their homes",
+        "heading": "What customers say",
+        "color_scheme": "surface",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    },
+    "recently-viewed": {
+      "type": "recently-viewed",
+      "settings": {
+        "heading": "Recently viewed",
+        "products_to_show": 4,
+        "columns_desktop": 4,
+        "padding_top": 56,
+        "padding_bottom": 56
+      }
+    },
+    "newsletter": {
+      "type": "newsletter",
+      "settings": {
+        "eyebrow": "Newsletter",
+        "heading": "Slow news, twice a month",
+        "text": "New arrivals, studio visits and quiet ideas for the home. No noise.",
+        "disclaimer": "By subscribing you agree to our privacy policy. Unsubscribe at any time.",
+        "color_scheme": "light",
+        "padding_top": 56,
+        "padding_bottom": 112
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "featured-categories",
+    "best-sellers",
+    "promo-banner",
+    "collection-grid",
+    "rich-text",
+    "reviews",
+    "recently-viewed",
+    "newsletter"
+  ]
+}

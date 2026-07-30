@@ -1,0 +1,195 @@
+{%- comment -%}
+  Quick view fragment, requested as /products/handle?view=quick-view.
+  `layout none` keeps the response to just the markup the modal needs.
+{%- endcomment -%}
+
+{% layout none %}
+
+{%- assign variant = product.selected_or_first_available_variant -%}
+
+<div data-quick-view-content>
+  <div class="quick-view__body">
+    <div>
+      <div class="media media--portrait" style="border-radius: var(--radius);">
+        {%- if product.featured_media -%}
+          {% render 'image',
+            image: product.featured_media,
+            sizes: '(min-width: 750px) 44vw, 90vw',
+            loading: 'eager',
+            max_width: 1200
+          %}
+        {%- else -%}
+          {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+        {%- endif -%}
+      </div>
+
+      {%- if product.media.size > 1 -%}
+        <div class="product__thumbs" style="margin-top: 8px;">
+          {%- for media in product.media limit: 5 -%}
+            {%- if forloop.first == false -%}
+              <div class="product__thumb" style="opacity: 1;">
+                <img
+                  src="{{ media.preview_image | image_url: width: 200 }}"
+                  width="66"
+                  height="82"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  style="object-fit: cover; height: 82px;"
+                >
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    <div class="product__info">
+      <div class="product__header">
+        {%- if product.vendor != blank -%}
+          <span class="eyebrow">{{ product.vendor }}</span>
+        {%- endif -%}
+
+        <h2 class="h3">
+          <a href="{{ product.url }}">{{ product.title | escape }}</a>
+        </h2>
+
+        {% render 'rating', product: product %}
+
+        <div class="product__price-row">
+          {% render 'price', product: product, class: 'price--large', id: product.id %}
+        </div>
+      </div>
+
+      {%- if product.description != blank -%}
+        <p class="product__description">
+          {{ product.description | strip_html | truncatewords: 30 }}
+        </p>
+      {%- endif -%}
+
+      {%- unless product.has_only_default_variant -%}
+        <variant-picker
+          class="variant-picker"
+          data-section-id="{{ product.id }}"
+          data-product-url="{{ product.url }}"
+          data-product-handle="{{ product.handle }}"
+          data-update-url="false"
+        >
+          {%- for option in product.options_with_values -%}
+            {%- liquid
+              assign option_downcased = option.name | downcase
+              assign is_color = false
+              if option_downcased == 'color' or option_downcased == 'colour'
+                assign is_color = true
+              endif
+            -%}
+
+            <fieldset class="variant-option" data-option-index="{{ forloop.index0 }}">
+              <legend class="variant-option__label">
+                <span>{{ option.name }}</span>
+                <span class="variant-option__selected" data-selected-value>{{ option.selected_value }}</span>
+              </legend>
+
+              <div class="variant-option__values">
+                {%- for value in option.values -%}
+                  {%- assign input_id = 'qv-' | append: product.id | append: '-' | append: option.position | append: '-' | append: forloop.index -%}
+                  <input
+                    class="variant-option__input"
+                    type="radio"
+                    id="Option-{{ input_id }}"
+                    name="Option-qv-{{ product.id }}-{{ option.position }}"
+                    value="{{ value | escape }}"
+                    {% if option.selected_value == value %}checked{% endif %}
+                  >
+                  <label
+                    class="variant-option__value{% if is_color %} variant-option__value--swatch{% endif %}"
+                    for="Option-{{ input_id }}"
+                    {% if is_color %}
+                      style="background-color: {{ value | downcase | replace: ' ', '' }};"
+                      title="{{ value | escape }}"
+                    {% endif %}
+                  >
+                    {%- if is_color -%}
+                      <span class="visually-hidden">{{ value }}</span>
+                    {%- else -%}
+                      {{ value }}
+                    {%- endif -%}
+                  </label>
+                {%- endfor -%}
+              </div>
+            </fieldset>
+          {%- endfor -%}
+
+          <script type="application/json" data-variant-json>
+            [
+              {%- for v in product.variants -%}
+                {
+                  "id": {{ v.id }},
+                  "available": {{ v.available | json }},
+                  "options": {{ v.options | json }},
+                  "price": {{ v.price }},
+                  "compare_at_price": {{ v.compare_at_price | default: 0 }}
+                }{% unless forloop.last %},{% endunless %}
+              {%- endfor -%}
+            ]
+          </script>
+        </variant-picker>
+      {%- endunless -%}
+
+      <div class="product__buy">
+        <product-form
+          class="contents"
+          data-product-title="{{ product.title | escape }}"
+          data-product-image="{% if product.featured_media %}{{ product.featured_media | image_url: width: 120 }}{% endif %}"
+        >
+          {%- form 'product', product, novalidate: 'novalidate' -%}
+            <input
+              type="hidden"
+              name="id"
+              value="{{ variant.id }}"
+              data-variant-id-input="{{ product.id }}"
+            >
+            <input type="hidden" name="quantity" value="1">
+
+            <div class="product__buy-row">
+              <button
+                type="submit"
+                class="button button--primary button--large"
+                data-add-button="{{ product.id }}"
+                {% if product.available == false %}disabled aria-disabled="true"{% endif %}
+              >
+                <span class="button__label">
+                  {%- if product.available -%}
+                    {{ 'products.product.add_to_cart' | t }}
+                  {%- else -%}
+                    {{ 'products.product.sold_out' | t }}
+                  {%- endif -%}
+                </span>
+                <span class="button__spinner"><span class="spinner"></span></span>
+              </button>
+
+              <wishlist-toggle data-handle="{{ product.handle }}" style="flex: 0 0 auto;">
+                <button
+                  type="button"
+                  class="button button--secondary wishlist-toggle"
+                  style="width: 48px; padding: 0;"
+                  aria-pressed="false"
+                  aria-label="{{ 'products.wishlist.add' | t }}"
+                >
+                  {% render 'icon', name: 'heart', size: 18 %}
+                </button>
+              </wishlist-toggle>
+            </div>
+
+            <p class="form__message form__message--error" data-form-error role="status"></p>
+          {%- endform -%}
+        </product-form>
+
+        <a class="link link--reveal" href="{{ product.url }}">
+          {{ 'products.product.view_full_details' | t }}
+          {% render 'icon', name: 'arrow-right', size: 15 %}
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

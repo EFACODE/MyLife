@@ -1,0 +1,219 @@
+{%- comment -%}
+  Minimal product card: hover image swap, quick add, quick view, wishlist,
+  rating, price and colour swatches.
+
+  Accepts:
+    product     - product object (required)
+    sizes       - sizes attribute for the image
+    loading     - 'lazy' (default) or 'eager' for above-the-fold rows
+    ratio       - override the theme's card ratio
+    reveal      - add a scroll reveal wrapper (default true)
+    reveal_delay- ms delay for staggered rows
+    index       - loop index, used to stagger the reveal automatically
+{%- endcomment -%}
+
+{%- liquid
+  assign ratio = ratio | default: settings.card_image_ratio
+  case ratio
+    when 'square'
+      assign ratio_class = 'media--square'
+    when 'landscape'
+      assign ratio_class = 'media--landscape'
+    else
+      assign ratio_class = 'media--portrait'
+  endcase
+
+  assign sizes = sizes | default: '(min-width: 1200px) 24vw, (min-width: 750px) 32vw, 46vw'
+  assign loading = loading | default: 'lazy'
+
+  assign secondary = product.media[1]
+  assign show_swap = false
+  if settings.card_hover_swap and secondary and secondary.media_type == 'image'
+    assign show_swap = true
+  endif
+
+  assign variant = product.selected_or_first_available_variant
+  assign on_sale = false
+  if variant.compare_at_price > variant.price
+    assign on_sale = true
+  endif
+
+  assign is_new = false
+  assign new_cutoff = 'now' | date: '%s' | minus: 2592000
+  assign published = product.published_at | date: '%s'
+  if published > new_cutoff
+    assign is_new = true
+  endif
+
+  if reveal_delay
+    assign delay = reveal_delay
+  elsif index
+    assign stagger = index | modulo: 4 | times: 70
+    assign delay = stagger
+  else
+    assign delay = 0
+  endif
+-%}
+
+<div
+  class="product-card{% if show_swap %} product-card--swap{% endif %}"
+  {% unless reveal == false %}
+    data-reveal
+    style="--reveal-delay: {{ delay }}ms;"
+  {% endunless %}
+  data-product-handle="{{ product.handle }}"
+  data-wishlist-card
+>
+  <a
+    class="product-card__media media {{ ratio_class }}"
+    href="{{ product.url }}"
+    aria-label="{{ product.title | escape }}"
+    tabindex="-1"
+  >
+    {%- if product.featured_media -%}
+      {% render 'image',
+        image: product.featured_media,
+        sizes: sizes,
+        loading: loading,
+        class: 'product-card__media-primary',
+        max_width: 900
+      %}
+
+      {%- if show_swap -%}
+        {% render 'image',
+          image: secondary,
+          sizes: sizes,
+          loading: 'lazy',
+          class: 'product-card__media-secondary',
+          max_width: 900
+        %}
+      {%- endif -%}
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </a>
+
+  {%- if is_new or on_sale or product.available == false -%}
+    <div class="product-card__badges">
+      {%- if product.available == false -%}
+        <span class="badge badge--sold-out">{{ 'products.product.sold_out' | t }}</span>
+      {%- else -%}
+        {%- if on_sale -%}
+          {%- assign saving = variant.compare_at_price | minus: variant.price | money -%}
+          <span class="badge badge--contrast">{{ 'products.product.sale_badge' | t: amount: saving }}</span>
+        {%- endif -%}
+        {%- if is_new -%}
+          <span class="badge">{{ 'products.product.new' | t }}</span>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  {%- if settings.card_wishlist -%}
+    <wishlist-toggle class="contents" data-handle="{{ product.handle }}">
+      <button
+        type="button"
+        class="product-card__wishlist"
+        aria-pressed="false"
+        aria-label="{{ 'products.wishlist.add' | t }}"
+      >
+        {% render 'icon', name: 'heart', size: 17 %}
+      </button>
+    </wishlist-toggle>
+  {%- endif -%}
+
+  {%- comment -%}
+    Liquid has no operator precedence, so the condition is resolved up front.
+  {%- endcomment -%}
+  {%- liquid
+    assign show_quick_add = false
+    if settings.card_quick_add and product.available
+      assign show_quick_add = true
+    endif
+
+    assign show_actions = false
+    if show_quick_add or settings.card_quick_view
+      assign show_actions = true
+    endif
+  -%}
+
+  {%- if show_actions -%}
+    <div class="product-card__actions">
+      {%- if show_quick_add -%}
+        {%- if product.variants.size == 1 and product.has_only_default_variant -%}
+          <product-form
+            class="contents"
+            data-product-title="{{ product.title | escape }}"
+            data-product-image="{% if product.featured_media %}{{ product.featured_media | image_url: width: 120 }}{% endif %}"
+          >
+            {%- form 'product', product, class: 'contents' -%}
+              <input type="hidden" name="id" value="{{ variant.id }}">
+              <input type="hidden" name="quantity" value="1">
+              <button type="submit" class="button button--glass" data-cursor-hover>
+                <span class="button__label">{{ 'products.product.quick_add' | t }}</span>
+                <span class="button__spinner"><span class="spinner"></span></span>
+              </button>
+            {%- endform -%}
+          </product-form>
+        {%- else -%}
+          {%- comment -%} Multiple variants need a choice, so open quick view instead. {%- endcomment -%}
+          <button type="button" class="button button--glass" data-quick-view="{{ product.url }}">
+            <span class="button__label">{{ 'products.product.choose_options' | t }}</span>
+          </button>
+        {%- endif -%}
+      {%- endif -%}
+
+      {%- if settings.card_quick_view -%}
+        <button
+          type="button"
+          class="button button--glass product-card__quick-view"
+          data-quick-view="{{ product.url }}"
+          aria-label="{{ 'products.product.quick_view' | t }}"
+        >
+          {% render 'icon', name: 'eye', size: 17 %}
+        </button>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  <div class="product-card__info">
+    {%- if product.vendor != blank and settings.card_rating == false -%}
+      <span class="product-card__vendor">{{ product.vendor }}</span>
+    {%- endif -%}
+
+    <h3 class="product-card__title">
+      <a href="{{ product.url }}">{{ product.title | escape }}</a>
+    </h3>
+
+    {%- if settings.card_rating -%}
+      {% render 'rating', product: product %}
+    {%- endif -%}
+
+    <div class="product-card__meta">
+      {% render 'price', product: product, show_from: true %}
+    </div>
+
+    {%- comment -%} Colour swatches, derived from a "Color" option if present. {%- endcomment -%}
+    {%- assign color_option = null -%}
+    {%- for option in product.options_with_values -%}
+      {%- assign downcased = option.name | downcase -%}
+      {%- if downcased == 'color' or downcased == 'colour' -%}
+        {%- assign color_option = option -%}
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- if color_option and color_option.values.size > 1 -%}
+      <div class="product-card__swatches" aria-hidden="true">
+        {%- for value in color_option.values limit: 5 -%}
+          <span class="swatch" style="background-color: {{ value | downcase | replace: ' ', '' }};"></span>
+        {%- endfor -%}
+        {%- if color_option.values.size > 5 -%}
+          <span class="swatch swatch--more">+{{ color_option.values.size | minus: 5 }}</span>
+        {%- endif -%}
+      </div>
+      <span class="visually-hidden">
+        {{ color_option.name }}: {{ color_option.values | join: ', ' }}
+      </span>
+    {%- endif -%}
+  </div>
+</div>

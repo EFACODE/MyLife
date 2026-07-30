@@ -1,0 +1,66 @@
+<section class="section section--tight">
+  <div class="page-width" style="max-width: 460px;">
+    <div class="stack" style="--stack-gap: 22px;" data-reveal>
+      <h1 class="h2">{{ 'customer.login.title' | t }}</h1>
+
+      {%- form 'customer_login', novalidate: 'novalidate' -%}
+        <div class="stack" style="--stack-gap: 12px;">
+          {%- if form.errors -%}
+            <p class="form__message form__message--error" role="status">
+              {{ form.errors.messages.form }}
+            </p>
+          {%- endif -%}
+
+          <label class="field field--floating">
+            <input class="field__input" type="email" name="customer[email]" placeholder=" " autocomplete="email" required>
+            <span class="field__label">{{ 'customer.login.email' | t }}</span>
+          </label>
+
+          <label class="field field--floating">
+            <input class="field__input" type="password" name="customer[password]" placeholder=" " autocomplete="current-password" required>
+            <span class="field__label">{{ 'customer.login.password' | t }}</span>
+          </label>
+
+          <button type="submit" class="button button--primary button--full">
+            {{ 'customer.login.sign_in' | t }}
+          </button>
+
+          <a class="link link--reveal" href="#recover" style="align-self: center;">
+            {{ 'customer.login.forgot_password' | t }}
+          </a>
+        </div>
+      {%- endform -%}
+
+      <hr>
+
+      <div class="stack" style="--stack-gap: 10px;">
+        <p class="text-body">{{ 'customer.login.create_account' | t }}</p>
+        <a class="button button--secondary button--full" href="{{ routes.account_register_url }}">
+          {{ 'customer.login.create_account' | t }}
+        </a>
+      </div>
+
+      <div id="recover">
+        {%- form 'recover_customer_password' -%}
+          <div class="stack" style="--stack-gap: 12px;">
+            {%- if form.posted_successfully? -%}
+              <p class="form__message" role="status">
+                {% render 'icon', name: 'check', size: 16 %}
+                {{ 'general.newsletter.success' | t }}
+              </p>
+            {%- endif -%}
+
+            <label class="field field--floating">
+              <input class="field__input" type="email" name="email" placeholder=" " autocomplete="email" required>
+              <span class="field__label">{{ 'customer.login.email' | t }}</span>
+            </label>
+
+            <button type="submit" class="button button--secondary button--full">
+              {{ 'customer.login.forgot_password' | t }}
+            </button>
+          </div>
+        {%- endform -%}
+      </div>
+    </div>
+  </div>
+</section>

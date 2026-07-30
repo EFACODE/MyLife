@@ -1,0 +1,56 @@
+{%- comment -%}
+  Price display.
+
+  Accepts:
+    product   - product object (uses the selected or first available variant)
+    variant   - variant object, takes precedence over product
+    class     - extra classes, e.g. 'price--large'
+    id        - value for data-variant-price, so the variant picker can update it
+    show_from - prefix ranged prices with "From"
+{%- endcomment -%}
+
+{%- liquid
+  if variant
+    assign target = variant
+  else
+    assign target = product.selected_or_first_available_variant
+  endif
+
+  assign price = target.price
+  assign compare_at = target.compare_at_price
+  assign on_sale = false
+  if compare_at and compare_at > price
+    assign on_sale = true
+  endif
+
+  assign ranged = false
+  if show_from and product and product.price_varies
+    assign ranged = true
+    assign price = product.price_min
+  endif
+-%}
+
+<div
+  class="price {% if on_sale %}price--on-sale{% endif %} {{ class }}"
+  {% if id %}data-variant-price="{{ id }}"{% endif %}
+>
+  {%- if ranged -%}
+    <span class="visually-hidden">{{ 'products.product.price_from' | t }}</span>
+    <span class="price__from" aria-hidden="true">{{ 'products.product.price_from' | t }}</span>
+  {%- endif -%}
+
+  <span class="price__current">{{ price | money }}</span>
+
+  {%- if on_sale -%}
+    <s class="price__compare">{{ compare_at | money }}</s>
+    <span class="visually-hidden">{{ 'products.product.on_sale' | t }}</span>
+  {%- endif -%}
+
+  {%- if target.unit_price_measurement -%}
+    <span class="price__unit text-muted">
+      {{ target.unit_price | money }}/{% if target.unit_price_measurement.reference_value != 1 %}
+        {{- target.unit_price_measurement.reference_value -}}
+      {% endif %}{{ target.unit_price_measurement.reference_unit }}
+    </span>
+  {%- endif -%}
+</div>

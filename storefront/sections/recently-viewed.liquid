@@ -1,0 +1,99 @@
+{%- comment -%}
+  Recently viewed. Handles are kept in localStorage and resolved through one
+  search request, so nothing renders for a first-time visitor.
+{%- endcomment -%}
+
+<recently-viewed
+  class="recently-viewed"
+  data-limit="{{ section.settings.products_to_show }}"
+  data-section-id="recently-viewed-results"
+  {% if template.name == 'product' %}data-current-product="{{ product.handle }}"{% endif %}
+  hidden
+>
+  <section
+    class="section"
+    style="
+      --section-padding-top: {{ section.settings.padding_top }}px;
+      --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+    "
+  >
+    <div class="page-width">
+      <div class="section__header">
+        <div class="section__header-text" data-reveal>
+          {%- liquid
+            assign rv_heading = section.settings.heading
+            if rv_heading == blank
+              assign rv_heading = 'products.product.recently_viewed_heading' | t
+            endif
+          -%}
+          <h2 class="h3">{{ rv_heading }}</h2>
+        </div>
+      </div>
+
+      <div
+        class="scroller"
+        style="--columns-desktop: {{ section.settings.columns_desktop }};"
+        data-recently-viewed-target
+      ></div>
+    </div>
+  </section>
+</recently-viewed>
+
+{% schema %}
+{
+  "name": "t:sections.recently_viewed.name",
+  "tag": "div",
+  "class": "recently-viewed-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Recently viewed",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "label": "t:sections.best_sellers.products_to_show",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "label": "t:sections.all.columns_desktop",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.recently_viewed.name"
+    }
+  ]
+}
+{% endschema %}

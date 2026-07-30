@@ -1,0 +1,128 @@
+<section
+  class="section section--surface"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="page-width page-width--narrow">
+    <div class="stack" style="--stack-gap: 24px;" data-reveal>
+      {%- if section.settings.heading != blank -%}
+        <h2 class="h2">{{ section.settings.heading | escape }}</h2>
+      {%- endif -%}
+      {%- if section.settings.text != blank -%}
+        <p class="text-lead">{{ section.settings.text | escape }}</p>
+      {%- endif -%}
+
+      {%- form 'contact' -%}
+        <div class="stack" style="--stack-gap: 12px;">
+          {%- if form.posted_successfully? -%}
+            <p class="form__message" role="status">
+              {% render 'icon', name: 'check', size: 16 %}
+              {{ 'templates.contact.form.post_success' | t }}
+            </p>
+          {%- endif -%}
+
+          {%- if form.errors -%}
+            <p class="form__message form__message--error" role="status">
+              {{ form.errors.translated_fields.email | capitalize }} {{ form.errors.messages.email }}
+            </p>
+          {%- endif -%}
+
+          <label class="field field--floating">
+            <input
+              class="field__input"
+              type="text"
+              name="contact[name]"
+              value="{% if customer %}{{ customer.name }}{% endif %}"
+              placeholder=" "
+              autocomplete="name"
+              required
+            >
+            <span class="field__label">{{ 'templates.contact.form.name' | t }}</span>
+          </label>
+
+          <label class="field field--floating">
+            <input
+              class="field__input"
+              type="email"
+              name="contact[email]"
+              value="{% if customer %}{{ customer.email }}{% endif %}"
+              placeholder=" "
+              autocomplete="email"
+              required
+            >
+            <span class="field__label">{{ 'templates.contact.form.email' | t }}</span>
+          </label>
+
+          <label class="field field--floating">
+            <input
+              class="field__input"
+              type="tel"
+              name="contact[phone]"
+              placeholder=" "
+              autocomplete="tel"
+            >
+            <span class="field__label">{{ 'templates.contact.form.phone' | t }}</span>
+          </label>
+
+          <label class="field field--floating">
+            <textarea class="field__input" name="contact[body]" rows="5" placeholder=" " required></textarea>
+            <span class="field__label">{{ 'templates.contact.form.message' | t }}</span>
+          </label>
+
+          <button type="submit" class="button button--primary" style="align-self: flex-start;">
+            {{ 'templates.contact.form.send' | t }}
+          </button>
+        </div>
+      {%- endform -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Contact form",
+  "tag": "section",
+  "class": "contact-form-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Get in touch",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "default": "We reply within one working day.",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "Contact form"
+    }
+  ]
+}
+{% endschema %}

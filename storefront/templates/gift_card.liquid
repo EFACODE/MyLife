@@ -1,0 +1,51 @@
+{% layout 'gift_card' %}
+
+<div class="gift-card">
+  <div class="page-width" style="max-width: 520px; padding-block: 64px;">
+    <div class="stack" style="--stack-gap: 24px; align-items: center; text-align: center;">
+      <span class="eyebrow">{{ shop.name }}</span>
+      <h1 class="h2">Your gift card</h1>
+
+      <p class="h1" style="font-variant-numeric: tabular-nums;">
+        {{ gift_card.balance | money }}
+      </p>
+
+      {%- if gift_card.expired -%}
+        <p class="form__message form__message--error">This gift card has expired.</p>
+      {%- elsif gift_card.expires_on -%}
+        <p class="text-body">Expires on {{ gift_card.expires_on | date: '%d %B %Y' }}</p>
+      {%- endif -%}
+
+      <div
+        style="
+          width: 100%;
+          padding: 28px;
+          border-radius: var(--radius-lg);
+          background-color: var(--color-surface);
+        "
+      >
+        {{ gift_card.qr_identifier }}
+
+        <p
+          style="
+            margin: 18px 0 0;
+            font-size: 1.125rem;
+            letter-spacing: 0.14em;
+            font-variant-numeric: tabular-nums;
+          "
+        >
+          {{ gift_card.code | format_code }}
+        </p>
+      </div>
+
+      <div class="cluster" style="justify-content: center;">
+        <a class="button button--primary" href="{{ shop.url }}">
+          {{ 'general.continue_shopping' | t }}
+        </a>
+        <button type="button" class="button button--secondary" onclick="window.print();">
+          Print
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

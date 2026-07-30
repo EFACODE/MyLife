@@ -1,0 +1,214 @@
+{%- liquid
+  assign scheme_class = 'section--surface'
+  if section.settings.color_scheme == 'light'
+    assign scheme_class = ''
+  elsif section.settings.color_scheme == 'contrast'
+    assign scheme_class = 'section--contrast'
+  endif
+-%}
+
+<section
+  class="section {{ scheme_class }}"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="page-width">
+    {%- if section.settings.heading != blank -%}
+      <div class="section__header">
+        <div class="section__header-text" data-reveal>
+          {%- if section.settings.eyebrow != blank -%}
+            <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+          {%- endif -%}
+          <h2 class="h2">{{ section.settings.heading | escape }}</h2>
+          {%- if section.settings.text != blank -%}
+            <p class="text-lead">{{ section.settings.text | escape }}</p>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    <div class="review-grid">
+      {%- for block in section.blocks -%}
+        {%- assign delay = forloop.index0 | times: 90 -%}
+
+        <blockquote
+          class="review-card"
+          data-reveal
+          style="--reveal-delay: {{ delay }}ms;"
+          {{ block.shopify_attributes }}
+        >
+          {%- if block.settings.rating > 0 -%}
+            <div class="rating" role="img" aria-label="{{ 'general.accessibility.star_rating' | t: rating: block.settings.rating, scale: 5 }}">
+              <span class="rating__stars" aria-hidden="true">
+                ★★★★★
+                <span class="rating__stars-fill" style="width: {{ block.settings.rating | times: 20 }}%;">★★★★★</span>
+              </span>
+            </div>
+          {%- endif -%}
+
+          {%- if block.settings.quote != blank -%}
+            <p class="review-card__quote">{{ block.settings.quote | escape }}</p>
+          {%- endif -%}
+
+          <footer class="review-card__footer">
+            {%- if block.settings.avatar != blank -%}
+              <img
+                class="review-card__avatar"
+                src="{{ block.settings.avatar | image_url: width: 96 }}"
+                width="38"
+                height="38"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              >
+            {%- endif -%}
+
+            <div>
+              {%- if block.settings.author != blank -%}
+                <cite class="review-card__author" style="font-style: normal;">
+                  {{ block.settings.author | escape }}
+                </cite>
+              {%- endif -%}
+              {%- if block.settings.location != blank -%}
+                <div class="review-card__location">{{ block.settings.location | escape }}</div>
+              {%- endif -%}
+            </div>
+          </footer>
+        </blockquote>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.reviews.name",
+  "tag": "section",
+  "class": "reviews-section",
+  "max_blocks": 9,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "In their homes",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "What customers say",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        { "value": "light", "label": "t:sections.all.scheme_light" },
+        { "value": "surface", "label": "t:sections.all.scheme_surface" },
+        { "value": "contrast", "label": "t:sections.all.scheme_contrast" }
+      ],
+      "default": "surface",
+      "label": "t:sections.all.color_scheme"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "t:sections.reviews.review",
+      "settings": [
+        {
+          "type": "range",
+          "id": "rating",
+          "min": 0,
+          "max": 5,
+          "step": 1,
+          "label": "t:sections.reviews.rating",
+          "default": 5
+        },
+        {
+          "type": "textarea",
+          "id": "quote",
+          "default": "The oak side table arrived beautifully packed and the grain is even lovelier in person. It has quietly become the best thing in the room.",
+          "label": "t:sections.reviews.quote"
+        },
+        {
+          "type": "text",
+          "id": "author",
+          "default": "Anna L.",
+          "label": "t:sections.reviews.author"
+        },
+        {
+          "type": "text",
+          "id": "location",
+          "default": "Copenhagen",
+          "label": "t:sections.reviews.location"
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar",
+          "label": "t:sections.all.image"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.reviews.name",
+      "blocks": [
+        { "type": "review" },
+        {
+          "type": "review",
+          "settings": {
+            "quote": "Ordering was effortless and delivery was exactly when promised. The linen softened after one wash, just as described.",
+            "author": "Marc D.",
+            "location": "Antwerp"
+          }
+        },
+        {
+          "type": "review",
+          "settings": {
+            "quote": "Everything feels considered — from the ceramics to the packaging. This is the first shop where I have bought the whole set.",
+            "author": "Yuki T.",
+            "location": "Kyoto"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

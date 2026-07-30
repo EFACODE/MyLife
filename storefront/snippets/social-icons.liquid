@@ -1,0 +1,59 @@
+{%- comment -%}
+  Social links. Renders only the accounts that have been filled in.
+{%- endcomment -%}
+
+{%- liquid
+  assign has_social = false
+  if settings.social_instagram != blank or settings.social_pinterest != blank or settings.social_facebook != blank or settings.social_tiktok != blank or settings.social_youtube != blank
+    assign has_social = true
+  endif
+-%}
+
+{%- if has_social -%}
+  <ul class="footer__social" role="list">
+    {%- if settings.social_instagram != blank -%}
+      <li>
+        <a class="footer__social-link" href="{{ settings.social_instagram }}" rel="me noopener" target="_blank">
+          {% render 'icon', name: 'instagram', size: 18 %}
+          <span class="visually-hidden">Instagram</span>
+        </a>
+      </li>
+    {%- endif -%}
+
+    {%- if settings.social_pinterest != blank -%}
+      <li>
+        <a class="footer__social-link" href="{{ settings.social_pinterest }}" rel="me noopener" target="_blank">
+          {% render 'icon', name: 'pinterest', size: 18 %}
+          <span class="visually-hidden">Pinterest</span>
+        </a>
+      </li>
+    {%- endif -%}
+
+    {%- if settings.social_facebook != blank -%}
+      <li>
+        <a class="footer__social-link" href="{{ settings.social_facebook }}" rel="me noopener" target="_blank">
+          {% render 'icon', name: 'facebook', size: 18 %}
+          <span class="visually-hidden">Facebook</span>
+        </a>
+      </li>
+    {%- endif -%}
+
+    {%- if settings.social_tiktok != blank -%}
+      <li>
+        <a class="footer__social-link" href="{{ settings.social_tiktok }}" rel="me noopener" target="_blank">
+          {% render 'icon', name: 'tiktok', size: 18 %}
+          <span class="visually-hidden">TikTok</span>
+        </a>
+      </li>
+    {%- endif -%}
+
+    {%- if settings.social_youtube != blank -%}
+      <li>
+        <a class="footer__social-link" href="{{ settings.social_youtube }}" rel="me noopener" target="_blank">
+          {% render 'icon', name: 'youtube', size: 18 %}
+          <span class="visually-hidden">YouTube</span>
+        </a>
+      </li>
+    {%- endif -%}
+  </ul>
+{%- endif -%}

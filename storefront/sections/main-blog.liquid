@@ -1,0 +1,68 @@
+{% render 'breadcrumbs' %}
+
+<section class="section section--tight">
+  <div class="page-width">
+    <div class="collection-hero" data-reveal>
+      <h1 class="h1">{{ blog.title | escape }}</h1>
+    </div>
+
+    {%- paginate blog.articles by section.settings.posts_per_page -%}
+      <div class="category-grid" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));">
+        {%- for article in blog.articles -%}
+          {%- assign delay = forloop.index0 | modulo: 3 | times: 80 -%}
+          <a
+            class="collection-tile"
+            href="{{ article.url }}"
+            data-reveal
+            style="--reveal-delay: {{ delay }}ms; min-height: 340px;"
+          >
+            <div class="collection-tile__media">
+              {%- if article.image -%}
+                {% render 'image',
+                  image: article.image,
+                  sizes: '(min-width: 750px) 32vw, 92vw',
+                  max_width: 1000
+                %}
+              {%- else -%}
+                {{ 'lifestyle-2' | placeholder_svg_tag: 'placeholder-svg' }}
+              {%- endif -%}
+              <span class="collection-tile__scrim" aria-hidden="true"></span>
+            </div>
+
+            <div class="collection-tile__content">
+              <span class="eyebrow" style="color: rgba(255,255,255,0.72);">
+                {{ article.published_at | date: '%d %B %Y' }}
+              </span>
+              <h2 class="h3">{{ article.title | escape }}</h2>
+              <span class="collection-tile__cta">
+                {{ 'products.product.view_details' | t }}
+                {% render 'icon', name: 'arrow-right', size: 15 %}
+              </span>
+            </div>
+          </a>
+        {%- endfor -%}
+      </div>
+
+      {% render 'pagination', paginate: paginate %}
+    {%- endpaginate -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Blog",
+  "tag": "div",
+  "class": "main-blog-section",
+  "settings": [
+    {
+      "type": "range",
+      "id": "posts_per_page",
+      "min": 3,
+      "max": 24,
+      "step": 3,
+      "label": "Posts per page",
+      "default": 9
+    }
+  ]
+}
+{% endschema %}

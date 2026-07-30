@@ -1,0 +1,62 @@
+{
+  "name": "Header",
+  "type": "header",
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "blocks": {
+        "message-1": {
+          "type": "message",
+          "settings": {
+            "message": "Complimentary shipping on orders over 150",
+            "icon": "truck"
+          }
+        },
+        "message-2": {
+          "type": "message",
+          "settings": {
+            "message": "Free returns within 30 days",
+            "icon": "return"
+          }
+        },
+        "message-3": {
+          "type": "message",
+          "settings": {
+            "message": "Made in small batches by European workshops",
+            "icon": "leaf"
+          }
+        }
+      },
+      "block_order": ["message-1", "message-2", "message-3"],
+      "settings": {
+        "rotate": true,
+        "rotate_speed": 5,
+        "dismissible": false
+      }
+    },
+    "header": {
+      "type": "header",
+      "blocks": {
+        "promo-1": {
+          "type": "promo",
+          "settings": {
+            "menu_item": "Living Room",
+            "caption": "New arrivals"
+          }
+        }
+      },
+      "block_order": ["promo-1"],
+      "settings": {
+        "logo_width": 132,
+        "menu": "main-menu",
+        "sticky": true,
+        "hide_on_scroll": true,
+        "transparent_on_home": true,
+        "show_search": true,
+        "show_wishlist": true,
+        "show_account": true
+      }
+    }
+  },
+  "order": ["announcement-bar", "header"]
+}
