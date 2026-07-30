@@ -1,0 +1,41 @@
+{%- comment -%}
+  Wishlist drawer. Saved handles live in localStorage; each card is fetched
+  from the product's `card` alternate template on open.
+{%- endcomment -%}
+
+<wishlist-drawer id="WishlistDrawer" aria-hidden="true">
+  <div class="overlay-backdrop" data-overlay-backdrop></div>
+
+  <div
+    class="drawer drawer--right"
+    data-overlay-panel
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ 'products.wishlist.heading' | t }}"
+    tabindex="-1"
+  >
+    <header class="drawer__header">
+      <h2 class="drawer__title">{{ 'products.wishlist.heading' | t }}</h2>
+      <button
+        type="button"
+        class="drawer__close"
+        data-overlay-close
+        aria-label="{{ 'general.accessibility.close' | t }}"
+      >
+        {% render 'icon', name: 'close', size: 20 %}
+      </button>
+    </header>
+
+    <div class="drawer__body">
+      <div data-wishlist-list></div>
+
+      <div class="drawer__empty" data-wishlist-empty hidden>
+        {% render 'icon', name: 'heart', size: 26 %}
+        <p class="text-body">{{ 'products.wishlist.empty' | t }}</p>
+        <a class="button button--secondary" href="{{ routes.all_products_collection_url }}" data-overlay-close>
+          {{ 'general.continue_shopping' | t }}
+        </a>
+      </div>
+    </div>
+  </div>
+</wishlist-drawer>

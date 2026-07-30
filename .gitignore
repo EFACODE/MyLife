@@ -42,3 +42,7 @@ coverage.xml
 
 # Local document blob storage (T6.1)
 /var/
+
+# Packaged Shopify theme — a build artifact zipped from storefront/ for
+# upload, so the source in storefront/ stays the single point of truth.
+/atelier-shopify-theme.zip

@@ -1,0 +1,103 @@
+{% render 'breadcrumbs' %}
+
+<article class="section section--tight">
+  <div class="page-width page-width--narrow">
+    <header class="collection-hero" data-reveal style="max-width: none;">
+      <span class="eyebrow">{{ article.published_at | date: '%d %B %Y' }}</span>
+      <h1 class="h1">{{ article.title | escape }}</h1>
+      {%- if article.author != blank and section.settings.show_author -%}
+        <p class="text-body">{{ article.author }}</p>
+      {%- endif -%}
+    </header>
+
+    {%- if article.image -%}
+      <div class="media media--wide" data-reveal="blur" style="border-radius: var(--radius); margin-bottom: 40px;">
+        {% render 'image',
+          image: article.image,
+          sizes: '(min-width: 990px) 860px, 100vw',
+          loading: 'eager',
+          fetchpriority: 'high',
+          max_width: 1600
+        %}
+      </div>
+    {%- endif -%}
+
+    <div class="rte measure" data-reveal>
+      {{ article.content }}
+    </div>
+
+    {%- if article.tags.size > 0 -%}
+      <div class="active-facets" style="margin-top: 32px;">
+        {%- for tag in article.tags -%}
+          <span class="active-facet" style="padding-right: 14px;">{{ tag }}</span>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
+    <div class="cluster" style="margin-top: 32px;">
+      <button class="link link--reveal" type="button" data-copy-link="{{ shop.url | append: article.url }}">
+        {% render 'icon', name: 'share', size: 15 %}
+        {{ 'general.share.copy_link' | t }}
+      </button>
+    </div>
+
+    {%- if blog.comments_enabled? -%}
+      <div style="margin-top: 48px;">
+        {%- if article.comments_count > 0 -%}
+          <h2 class="h4" style="margin-bottom: 20px;">{{ article.comments_count }}</h2>
+          {%- for comment in article.comments -%}
+            <div class="review-card" style="margin-bottom: 12px;">
+              <p class="review-card__quote" style="font-size: 0.9375rem;">{{ comment.content }}</p>
+              <footer class="review-card__footer">
+                <span class="review-card__author">{{ comment.author }}</span>
+              </footer>
+            </div>
+          {%- endfor -%}
+        {%- endif -%}
+
+        {%- form 'new_comment', article -%}
+          <div class="stack" style="--stack-gap: 12px; margin-top: 24px;">
+            {%- if form.errors -%}
+              <p class="form__message form__message--error">{{ form.errors.messages.form }}</p>
+            {%- endif -%}
+            {%- if form.posted_successfully? -%}
+              <p class="form__message">{{ 'templates.contact.form.post_success' | t }}</p>
+            {%- endif -%}
+
+            <label class="field field--floating">
+              <input class="field__input" type="text" name="comment[author]" placeholder=" " required>
+              <span class="field__label">{{ 'templates.contact.form.name' | t }}</span>
+            </label>
+            <label class="field field--floating">
+              <input class="field__input" type="email" name="comment[email]" placeholder=" " required>
+              <span class="field__label">{{ 'templates.contact.form.email' | t }}</span>
+            </label>
+            <label class="field field--floating">
+              <textarea class="field__input" name="comment[body]" rows="4" placeholder=" " required></textarea>
+              <span class="field__label">{{ 'templates.contact.form.message' | t }}</span>
+            </label>
+            <button type="submit" class="button button--primary" style="align-self: flex-start;">
+              {{ 'templates.contact.form.send' | t }}
+            </button>
+          </div>
+        {%- endform -%}
+      </div>
+    {%- endif -%}
+  </div>
+</article>
+
+{% schema %}
+{
+  "name": "Article",
+  "tag": "div",
+  "class": "main-article-section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_author",
+      "default": true,
+      "label": "Show author"
+    }
+  ]
+}
+{% endschema %}

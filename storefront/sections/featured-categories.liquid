@@ -1,0 +1,217 @@
+{%- liquid
+  assign scheme_class = ''
+  if section.settings.color_scheme == 'surface'
+    assign scheme_class = 'section--surface'
+  elsif section.settings.color_scheme == 'contrast'
+    assign scheme_class = 'section--contrast'
+  endif
+-%}
+
+<section
+  class="section {{ scheme_class }}"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="page-width">
+    {%- if section.settings.heading != blank or section.settings.text != blank -%}
+      <div class="section__header">
+        <div class="section__header-text" data-reveal>
+          {%- if section.settings.eyebrow != blank -%}
+            <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+          {%- endif -%}
+          {%- if section.settings.heading != blank -%}
+            <h2 class="h2">{{ section.settings.heading | escape }}</h2>
+          {%- endif -%}
+          {%- if section.settings.text != blank -%}
+            <p class="text-lead">{{ section.settings.text | escape }}</p>
+          {%- endif -%}
+        </div>
+
+        {%- if section.settings.link_label != blank -%}
+          <a class="link link--reveal" href="{{ section.settings.link }}" data-reveal>
+            {{ section.settings.link_label | escape }}
+            {% render 'icon', name: 'arrow-right', size: 16 %}
+          </a>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="category-grid{% if section.blocks.size == 6 %} category-grid--six{% endif %}">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign category_collection = block.settings.collection
+          assign title = block.settings.title | default: category_collection.title
+          assign url = block.settings.link | default: category_collection.url | default: routes.all_products_collection_url
+
+          assign image = block.settings.image
+          if image == blank and category_collection.featured_image
+            assign image = category_collection.featured_image
+          endif
+
+          assign delay = forloop.index0 | times: 70
+        -%}
+
+        <a
+          class="category-card"
+          href="{{ url }}"
+          data-reveal
+          style="--reveal-delay: {{ delay }}ms;"
+          {{ block.shopify_attributes }}
+        >
+          <div class="category-card__media">
+            {%- if image != blank -%}
+              {% render 'image',
+                image: image,
+                sizes: '(min-width: 1200px) 17vw, (min-width: 750px) 32vw, 48vw',
+                max_width: 800
+              %}
+            {%- else -%}
+              {{ 'collection-1' | placeholder_svg_tag: 'placeholder-svg' }}
+            {%- endif -%}
+            <span class="category-card__scrim" aria-hidden="true"></span>
+          </div>
+
+          <div class="category-card__content">
+            <span class="category-card__title">{{ title | escape }}</span>
+            <span class="category-card__reveal">
+              {%- if block.settings.caption != blank -%}
+                {{ block.settings.caption | escape }}
+              {%- elsif category_collection.all_products_count > 0 -%}
+                {{ 'products.facets.results' | t: count: category_collection.all_products_count }}
+              {%- else -%}
+                {{ 'products.product.view_details' | t }}
+              {%- endif -%}
+            </span>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.categories.name",
+  "tag": "section",
+  "class": "categories-section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "Shop by room",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Featured categories",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "default": "View all",
+      "label": "t:sections.all.link_label"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:sections.all.link"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        { "value": "light", "label": "t:sections.all.scheme_light" },
+        { "value": "surface", "label": "t:sections.all.scheme_surface" },
+        { "value": "contrast", "label": "t:sections.all.scheme_contrast" }
+      ],
+      "default": "light",
+      "label": "t:sections.all.color_scheme"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "t:sections.categories.category",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "t:sections.categories.collection"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:sections.all.heading",
+          "info": "Leave blank to use the collection title."
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "Hover caption"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:sections.all.image"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.all.link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.categories.name",
+      "blocks": [
+        { "type": "category", "settings": { "title": "Living Room", "caption": "Sofas, tables, storage" } },
+        { "type": "category", "settings": { "title": "Kitchen", "caption": "Ceramics, glassware, tools" } },
+        { "type": "category", "settings": { "title": "Bedroom", "caption": "Linen, lighting, storage" } },
+        { "type": "category", "settings": { "title": "Bathroom", "caption": "Towels, vessels, care" } },
+        { "type": "category", "settings": { "title": "Office", "caption": "Desks, seating, paper" } },
+        { "type": "category", "settings": { "title": "Decorative Objects", "caption": "Vases, candles, art" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

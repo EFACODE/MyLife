@@ -1,0 +1,46 @@
+{%- comment -%}
+  Free shipping progress. The bar renders server-side so it is correct on
+  first paint, then the custom element keeps it live after cart changes.
+{%- endcomment -%}
+
+{%- if settings.cart_free_shipping_bar -%}
+  {%- liquid
+    assign threshold = settings.cart_free_shipping_threshold | times: 1 | times: 100
+    assign remaining = threshold | minus: cart.total_price
+    assign qualified = false
+    if remaining <= 0
+      assign qualified = true
+    endif
+
+    assign progress = 0
+    if threshold > 0
+      assign progress = cart.total_price | times: 100.0 | divided_by: threshold | at_most: 100
+    endif
+  -%}
+
+  {%- if threshold > 0 -%}
+    <shipping-bar
+      class="shipping-bar{% if qualified %} shipping-bar--qualified{% endif %}"
+      data-total="{{ cart.total_price }}"
+    >
+      <p class="shipping-bar__text" data-shipping-text>
+        {%- if qualified -%}
+          {{ 'cart.shipping_bar.qualified' | t }}
+        {%- else -%}
+          {%- assign amount = remaining | money -%}
+          {{ 'cart.shipping_bar.progress' | t: amount: amount }}
+        {%- endif -%}
+      </p>
+
+      <div
+        class="shipping-bar__track"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="{{ progress | round }}"
+      >
+        <span class="shipping-bar__fill" data-shipping-fill style="--progress: {{ progress }}%;"></span>
+      </div>
+    </shipping-bar>
+  {%- endif -%}
+{%- endif -%}

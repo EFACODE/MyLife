@@ -1,0 +1,175 @@
+{%- comment -%}
+  Best sellers / featured products. Works from a collection, and falls back to
+  onboarding placeholders in the editor so the layout is never empty.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_class = ''
+  if section.settings.color_scheme == 'surface'
+    assign scheme_class = 'section--surface'
+  elsif section.settings.color_scheme == 'contrast'
+    assign scheme_class = 'section--contrast'
+  endif
+
+  assign products = section.settings.collection.products
+  assign product_count = section.settings.collection.all_products_count | default: 0
+  assign limit = section.settings.products_to_show
+-%}
+
+<section
+  class="section {{ scheme_class }}"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="page-width">
+    <div class="section__header">
+      <div class="section__header-text" data-reveal>
+        {%- if section.settings.eyebrow != blank -%}
+          <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+        {%- endif -%}
+        {%- if section.settings.heading != blank -%}
+          <h2 class="h2">{{ section.settings.heading | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.text != blank -%}
+          <p class="text-lead">{{ section.settings.text | escape }}</p>
+        {%- endif -%}
+      </div>
+
+      {%- if section.settings.collection != blank -%}
+        <a class="link link--reveal" href="{{ section.settings.collection.url }}" data-reveal>
+          {{ section.settings.link_label | default: 'View all' }}
+          {% render 'icon', name: 'arrow-right', size: 16 %}
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div
+      class="scroller"
+      style="--columns-desktop: {{ section.settings.columns_desktop }};"
+    >
+      {%- if product_count > 0 -%}
+        {%- for product in products limit: limit -%}
+          {% render 'product-card',
+            product: product,
+            index: forloop.index0,
+            sizes: '(min-width: 1200px) 24vw, (min-width: 750px) 32vw, 74vw'
+          %}
+        {%- endfor -%}
+      {%- else -%}
+        {%- for i in (1..limit) -%}
+          <div class="product-card" data-reveal>
+            <div class="product-card__media media media--portrait">
+              {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+            </div>
+            <div class="product-card__info">
+              <h3 class="product-card__title">Example product</h3>
+              <div class="price"><span class="price__current">{{ 4500 | money }}</span></div>
+            </div>
+          </div>
+        {%- endfor -%}
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.best_sellers.name",
+  "tag": "section",
+  "class": "featured-products-section",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:sections.categories.collection"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 2,
+      "max": 12,
+      "step": 1,
+      "label": "t:sections.best_sellers.products_to_show",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "label": "t:sections.all.columns_desktop",
+      "default": 4
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "Most loved",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Best sellers",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "default": "View all",
+      "label": "t:sections.all.link_label"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        { "value": "light", "label": "t:sections.all.scheme_light" },
+        { "value": "surface", "label": "t:sections.all.scheme_surface" },
+        { "value": "contrast", "label": "t:sections.all.scheme_contrast" }
+      ],
+      "default": "light",
+      "label": "t:sections.all.color_scheme"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.best_sellers.name"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,54 @@
+<section class="section section--tight">
+  <div class="page-width" style="max-width: 720px;">
+    <div class="collection-hero" data-reveal>
+      <h1 class="h1">Addresses</h1>
+      <a class="link link--reveal" href="{{ routes.account_url }}">
+        {{ 'customer.account.title' | t }}
+      </a>
+    </div>
+
+    {%- paginate customer.addresses by 6 -%}
+      <div class="stack" style="--stack-gap: 12px;">
+        {%- for address in customer.addresses -%}
+          <div class="review-card">
+            <div class="text-body">{{ address | format_address }}</div>
+            {%- if address == customer.default_address -%}
+              <span class="badge">Default</span>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+
+      {% render 'pagination', paginate: paginate %}
+    {%- endpaginate -%}
+
+    <div style="margin-top: 32px;">
+      <h2 class="h4" style="margin-bottom: 16px;">Add a new address</h2>
+
+      {%- form 'customer_address', customer.new_address -%}
+        <div class="stack" style="--stack-gap: 12px;">
+          <label class="field field--floating">
+            <input class="field__input" type="text" name="address[address1]" placeholder=" " autocomplete="address-line1">
+            <span class="field__label">Address</span>
+          </label>
+          <label class="field field--floating">
+            <input class="field__input" type="text" name="address[city]" placeholder=" " autocomplete="address-level2">
+            <span class="field__label">City</span>
+          </label>
+          <label class="field field--floating">
+            <input class="field__input" type="text" name="address[zip]" placeholder=" " autocomplete="postal-code">
+            <span class="field__label">Postal code</span>
+          </label>
+          <label class="field field--floating">
+            <input class="field__input" type="text" name="address[country]" placeholder=" " autocomplete="country-name">
+            <span class="field__label">Country</span>
+          </label>
+
+          <button type="submit" class="button button--primary" style="align-self: flex-start;">
+            Save address
+          </button>
+        </div>
+      {%- endform -%}
+    </div>
+  </div>
+</section>

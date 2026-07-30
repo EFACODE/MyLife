@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-cart",
+      "settings": {
+        "empty_text": "Everything you save will appear here."
+      }
+    }
+  },
+  "order": ["main"]
+}

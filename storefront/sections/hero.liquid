@@ -1,0 +1,239 @@
+{%- liquid
+  case section.settings.height
+    when 'full'
+      assign height_class = 'hero--full'
+    when 'large'
+      assign height_class = 'hero--large'
+    else
+      assign height_class = 'hero--medium'
+  endcase
+
+  case section.settings.alignment
+    when 'center'
+      assign align_inline = 'center'
+      assign text_align = 'center'
+      assign align_block = 'center'
+    when 'bottom-center'
+      assign align_inline = 'center'
+      assign text_align = 'center'
+      assign align_block = 'flex-end'
+    when 'center-left'
+      assign align_inline = 'flex-start'
+      assign text_align = 'left'
+      assign align_block = 'center'
+    else
+      assign align_inline = 'flex-start'
+      assign text_align = 'left'
+      assign align_block = 'flex-end'
+  endcase
+-%}
+
+<section
+  class="hero {{ height_class }}"
+  style="
+    --hero-overlay: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+    --hero-align-inline: {{ align_inline }};
+    --hero-align-block: {{ align_block }};
+    --hero-text-align: {{ text_align }};
+  "
+>
+  <div class="hero__media" {% if section.settings.parallax %}data-parallax="0.14"{% endif %}>
+    {%- if section.settings.image != blank -%}
+      {%- comment -%}
+        The hero is the LCP element: eager, high priority, and never lazy.
+        A separate mobile crop avoids shipping a 2000px landscape to phones.
+      {%- endcomment -%}
+      {%- if section.settings.image_mobile != blank -%}
+        <picture>
+          <source
+            media="(max-width: 749px)"
+            srcset="
+              {{ section.settings.image_mobile | image_url: width: 750 }} 750w,
+              {{ section.settings.image_mobile | image_url: width: 1100 }} 1100w
+            "
+            sizes="100vw"
+          >
+          {% render 'image',
+            image: section.settings.image,
+            sizes: '100vw',
+            loading: 'eager',
+            fetchpriority: 'high',
+            widths: '900,1200,1600,2000,2400',
+            max_width: 2400
+          %}
+        </picture>
+      {%- else -%}
+        {% render 'image',
+          image: section.settings.image,
+          sizes: '100vw',
+          loading: 'eager',
+          fetchpriority: 'high',
+          widths: '900,1200,1600,2000,2400',
+          max_width: 2400
+        %}
+      {%- endif -%}
+    {%- else -%}
+      {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </div>
+
+  <div class="hero__overlay" aria-hidden="true"></div>
+
+  <div class="page-width" style="width: 100%;">
+    <div class="hero__content">
+      {%- if section.settings.eyebrow != blank -%}
+        <span class="eyebrow" data-reveal style="--reveal-delay: 60ms;">
+          {{ section.settings.eyebrow | escape }}
+        </span>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h1 class="h0 hero__title" data-reveal style="--reveal-delay: 120ms; --reveal-shift: 0px;">
+          <span data-text-reveal>{{ section.settings.heading | escape }}</span>
+        </h1>
+      {%- endif -%}
+
+      {%- if section.settings.text != blank -%}
+        <p class="hero__text" data-reveal style="--reveal-delay: 280ms;">
+          {{ section.settings.text | escape }}
+        </p>
+      {%- endif -%}
+
+      {%- if section.settings.cta_label != blank -%}
+        <div class="cluster" data-reveal style="--reveal-delay: 380ms;">
+          <a class="button button--surface button--large" href="{{ section.settings.cta_link | default: routes.all_products_collection_url }}">
+            {{ section.settings.cta_label | escape }}
+          </a>
+
+          {%- if section.settings.cta_label_secondary != blank -%}
+            <a
+              class="button button--glass button--large"
+              href="{{ section.settings.cta_link_secondary | default: routes.root_url }}"
+            >
+              {{ section.settings.cta_label_secondary | escape }}
+            </a>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- if section.settings.show_scroll_cue -%}
+    <a class="hero__scroll-cue" href="#MainContent" aria-label="{{ 'general.accessibility.skip_to_content' | t }}">
+      {% render 'icon', name: 'arrow-down', size: 20 %}
+    </a>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.hero.name",
+  "tag": "div",
+  "class": "hero-section",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:sections.all.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "t:sections.hero.mobile_image"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "options": [
+        { "value": "full", "label": "t:sections.hero.height_full" },
+        { "value": "large", "label": "t:sections.hero.height_large" },
+        { "value": "medium", "label": "t:sections.hero.height_medium" }
+      ],
+      "default": "full",
+      "label": "t:sections.hero.height"
+    },
+    {
+      "type": "select",
+      "id": "alignment",
+      "options": [
+        { "value": "bottom-left", "label": "Bottom left" },
+        { "value": "bottom-center", "label": "Bottom centre" },
+        { "value": "center-left", "label": "Middle left" },
+        { "value": "center", "label": "Middle centre" }
+      ],
+      "default": "bottom-left",
+      "label": "t:sections.hero.alignment"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 70,
+      "step": 5,
+      "unit": "%",
+      "label": "t:sections.hero.overlay",
+      "default": 25
+    },
+    {
+      "type": "checkbox",
+      "id": "parallax",
+      "default": true,
+      "label": "t:sections.hero.parallax"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_scroll_cue",
+      "default": true,
+      "label": "Show scroll cue"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.heading"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "New collection",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Quiet objects for considered homes",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "default": "Furniture, lighting and everyday pieces made from honest materials — designed to be lived with for decades, not seasons.",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "default": "Shop Collection",
+      "label": "t:sections.all.link_label"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "t:sections.all.link"
+    },
+    {
+      "type": "text",
+      "id": "cta_label_secondary",
+      "label": "Secondary button label"
+    },
+    {
+      "type": "url",
+      "id": "cta_link_secondary",
+      "label": "Secondary button link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.hero.name"
+    }
+  ]
+}
+{% endschema %}

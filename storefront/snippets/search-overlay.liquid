@@ -1,0 +1,56 @@
+{%- comment -%}
+  Full-screen predictive search. Results are fetched from the
+  `predictive-search` section so the markup stays in Liquid.
+{%- endcomment -%}
+
+<search-overlay
+  id="SearchOverlay"
+  class="search-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-label="{{ 'general.search.heading' | t }}"
+  aria-hidden="true"
+>
+  <div class="search-overlay__inner" data-overlay-panel-inner>
+    <form action="{{ routes.search_url }}" method="get" role="search" class="search-overlay__form">
+      {% render 'icon', name: 'search', size: 22 %}
+
+      <label class="visually-hidden" for="SearchOverlayInput">{{ 'general.search.heading' | t }}</label>
+      <input
+        id="SearchOverlayInput"
+        class="search-overlay__input"
+        type="search"
+        name="q"
+        placeholder="{{ 'general.search.placeholder' | t }}"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        data-search-input
+        data-overlay-autofocus
+      >
+      <input type="hidden" name="options[prefix]" value="last">
+
+      <button type="button" class="drawer__close" data-overlay-close aria-label="{{ 'general.accessibility.close' | t }}">
+        {% render 'icon', name: 'close', size: 20 %}
+      </button>
+    </form>
+
+    <div class="search-overlay__results" data-search-results aria-live="polite"></div>
+
+    {%- comment -%} Curated shortcuts, shown until the visitor starts typing. {%- endcomment -%}
+    {%- if linklists.search-suggestions.links.size > 0 -%}
+      <div class="search-overlay__results" data-search-default>
+        <div class="search-overlay__group">
+          <h2 class="search-overlay__group-title">{{ 'general.search.suggestions' | t }}</h2>
+          <div class="stack" style="--stack-gap: 4px;">
+            {%- for link in linklists.search-suggestions.links -%}
+              <a class="search-result" href="{{ link.url }}">
+                <span class="search-result__title">{{ link.title }}</span>
+              </a>
+            {%- endfor -%}
+          </div>
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</search-overlay>

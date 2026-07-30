@@ -1,0 +1,234 @@
+{%- comment -%}
+  Editorial masonry of collections. The first and last tiles in each group of
+  six span two columns, which gives the grid its magazine rhythm without any
+  JavaScript layout work.
+{%- endcomment -%}
+
+{%- liquid
+  assign scheme_class = ''
+  if section.settings.color_scheme == 'surface'
+    assign scheme_class = 'section--surface'
+  endif
+
+  assign layout_class = 'collection-mosaic--grid'
+  if section.settings.layout == 'masonry'
+    assign layout_class = 'collection-mosaic--masonry'
+  endif
+-%}
+
+<section
+  class="section {{ scheme_class }}"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="{% if section.settings.full_width %}page-width--flush{% else %}page-width{% endif %}">
+    {%- if section.settings.heading != blank -%}
+      <div class="section__header">
+        <div class="section__header-text" data-reveal>
+          {%- if section.settings.eyebrow != blank -%}
+            <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+          {%- endif -%}
+          <h2 class="h2">{{ section.settings.heading | escape }}</h2>
+          {%- if section.settings.text != blank -%}
+            <p class="text-lead">{{ section.settings.text | escape }}</p>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    <div class="collection-mosaic {{ layout_class }}">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign tile_collection = block.settings.collection
+          assign title = block.settings.heading | default: tile_collection.title
+          assign url = block.settings.link | default: tile_collection.url | default: routes.all_products_collection_url
+
+          assign image = block.settings.image
+          if image == blank and tile_collection.featured_image
+            assign image = tile_collection.featured_image
+          endif
+
+          assign delay = forloop.index0 | times: 60
+        -%}
+
+        <a
+          class="collection-tile"
+          href="{{ url }}"
+          data-reveal
+          style="--reveal-delay: {{ delay }}ms;"
+          {{ block.shopify_attributes }}
+        >
+          <div class="collection-tile__media">
+            {%- if image != blank -%}
+              {% render 'image',
+                image: image,
+                sizes: '(min-width: 750px) 46vw, 92vw',
+                max_width: 1400
+              %}
+            {%- else -%}
+              {{ 'collection-2' | placeholder_svg_tag: 'placeholder-svg' }}
+            {%- endif -%}
+            <span class="collection-tile__scrim" aria-hidden="true"></span>
+          </div>
+
+          <div class="collection-tile__content">
+            {%- if block.settings.eyebrow != blank -%}
+              <span class="eyebrow" style="color: rgba(255,255,255,0.72);">
+                {{ block.settings.eyebrow | escape }}
+              </span>
+            {%- endif -%}
+
+            <h3 class="h3">{{ title | escape }}</h3>
+
+            {%- if tile_collection.all_products_count > 0 -%}
+              <span class="collection-tile__count">
+                {{ 'products.facets.results' | t: count: tile_collection.all_products_count }}
+              </span>
+            {%- endif -%}
+
+            <span class="collection-tile__cta">
+              {{ block.settings.link_label | default: 'Explore' }}
+              {% render 'icon', name: 'arrow-right', size: 15 %}
+            </span>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.collection_grid.name",
+  "tag": "section",
+  "class": "collection-grid-section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "Collections",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Curated by material and mood",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "options": [
+        { "value": "masonry", "label": "t:sections.collection_grid.layout_masonry" },
+        { "value": "grid", "label": "t:sections.collection_grid.layout_grid" }
+      ],
+      "default": "masonry",
+      "label": "t:sections.collection_grid.layout"
+    },
+    {
+      "type": "checkbox",
+      "id": "full_width",
+      "default": false,
+      "label": "t:sections.all.full_width"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        { "value": "light", "label": "t:sections.all.scheme_light" },
+        { "value": "surface", "label": "t:sections.all.scheme_surface" }
+      ],
+      "default": "light",
+      "label": "t:sections.all.color_scheme"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "t:sections.categories.collection",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "t:sections.categories.collection"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:sections.all.image"
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "t:sections.all.eyebrow"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:sections.all.heading"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "default": "Explore",
+          "label": "t:sections.all.link_label"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.all.link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.collection_grid.name",
+      "blocks": [
+        { "type": "tile", "settings": { "heading": "Stoneware", "eyebrow": "Kitchen" } },
+        { "type": "tile", "settings": { "heading": "Oak & ash", "eyebrow": "Living" } },
+        { "type": "tile", "settings": { "heading": "Washed linen", "eyebrow": "Bedroom" } },
+        { "type": "tile", "settings": { "heading": "Paper lighting", "eyebrow": "Lighting" } },
+        { "type": "tile", "settings": { "heading": "Woven baskets", "eyebrow": "Storage" } },
+        { "type": "tile", "settings": { "heading": "Objects", "eyebrow": "Decorative" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
