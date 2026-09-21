@@ -16,6 +16,7 @@ contracts — never by reaching into another context's internals. See
 | **Goals** | Outcomes, targets, plans, progress | `GoalCreated`, `GoalMilestoneReached` |
 | **Knowledge** | Documents, notes, semantic retrieval | `DocumentIngested`, `MemoryIndexed` |
 | **Assistant** | Queries, explanations, interventions | `InsightGenerated`, `BriefingDelivered` |
+| **Notifications** | Outbound delivery (email/WhatsApp), channel preferences | `NotificationRequested`, `NotificationSent` |
 
 ## Relationships
 
@@ -30,6 +31,12 @@ contracts — never by reaching into another context's internals. See
   curated context with least privilege, and emits evidence-backed insights.
 - **Connectors** feed raw records and normalized events into the timeline under
   Identity's consent rules; the external system stays authoritative for raw data.
+- **Notifications is a downstream service, not an event-stream consumer.** It
+  has no domain logic of its own — a peer domain (Finance's bill due-date
+  scan is the first caller) decides *that* a user should be notified and
+  calls `NotificationService` directly; Notifications owns *how* the message
+  reaches the user (channel adapters, delivery preferences) and records
+  every attempt as its own evidence-linked events.
 
 ```
                  Identity (consent, user_id)

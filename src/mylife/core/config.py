@@ -62,6 +62,19 @@ class Settings(BaseSettings):
     # development/tests (the SPA runs on the Vite dev server).
     static_dir: str | None = None
 
+    # Outbound notifications (T4.8). Each channel is only wired up
+    # (`build_channels_from_settings`) when its credentials are set; unset in
+    # local dev, so bill reminders record `NotificationDeliveryFailed` with a
+    # "no channel configured" reason instead of silently doing nothing.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_address: str = "notifications@mylife.local"
+    smtp_use_tls: bool = True
+    whatsapp_phone_number_id: str | None = None
+    whatsapp_access_token: str | None = None
+
     @property
     def broker_url(self) -> str:
         """Effective Celery broker URL (falls back to ``redis_url``)."""

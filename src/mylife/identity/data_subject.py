@@ -20,6 +20,8 @@ from mylife.core.events import EventStore, InProcessEventBus, StoredEvent, Store
 from mylife.core.events.raw_store import RawRecordRow
 from mylife.core.events.raw_store import _to_stored as _raw_to_stored
 from mylife.core.events.store import EventRow
+from mylife.finance.bills import Bill, BillRow
+from mylife.finance.bills_service import _to_bill
 from mylife.finance.models import Account, AccountRow
 from mylife.forecast.contract import ForecastRow
 from mylife.forecast.outcome import OutcomeRow
@@ -34,6 +36,8 @@ from mylife.knowledge.extraction import DocumentTextRow
 from mylife.knowledge.models import Document, DocumentRow
 from mylife.knowledge.retrieval import MemoryRow
 from mylife.knowledge.service import _to_document
+from mylife.notifications.models import NotificationPreference, NotificationPreferenceRow
+from mylife.notifications.preferences import _to_preference
 from mylife.timeline import EntityProjection
 from mylife.timeline.entities import EntityRecord, EntityRow, RelationshipRecord, RelationshipRow
 
@@ -53,6 +57,8 @@ class ExportBundle(BaseModel):
     entities: list[EntityRecord]
     relationships: list[RelationshipRecord]
     accounts: list[Account]
+    bills: list[Bill]
+    notification_preference: NotificationPreference | None
     goals: list[Goal]
     documents: list[Document]
 
@@ -82,6 +88,9 @@ class DataSubjectService:
         account_rows = self._session.scalars(
             select(AccountRow).where(AccountRow.user_id == user_id).order_by(AccountRow.created_at)
         )
+        bill_rows = self._session.scalars(
+            select(BillRow).where(BillRow.user_id == user_id).order_by(BillRow.created_at)
+        )
         goal_rows = self._session.scalars(
             select(GoalRow).where(GoalRow.user_id == user_id).order_by(GoalRow.created_at)
         )
@@ -90,6 +99,7 @@ class DataSubjectService:
             .where(DocumentRow.user_id == user_id)
             .order_by(DocumentRow.created_at)
         )
+        preference_row = self._session.get(NotificationPreferenceRow, user_id)
         return ExportBundle(
             user=_to_user(user_row) if user_row is not None else None,
             consents=ConsentService(self._session, InProcessEventBus()).list_consents(user_id),
@@ -107,6 +117,10 @@ class DataSubjectService:
                 )
                 for row in account_rows
             ],
+            bills=[_to_bill(row) for row in bill_rows],
+            notification_preference=(
+                _to_preference(preference_row) if preference_row is not None else None
+            ),
             goals=[_to_goal(row) for row in goal_rows],
             documents=[_to_document(row) for row in document_rows],
         )
@@ -132,6 +146,13 @@ class DataSubjectService:
             ("document_texts", delete(DocumentTextRow).where(DocumentTextRow.user_id == user_id)),
             ("documents", delete(DocumentRow).where(DocumentRow.user_id == user_id)),
             ("goals", delete(GoalRow).where(GoalRow.user_id == user_id)),
+            ("bills", delete(BillRow).where(BillRow.user_id == user_id)),
+            (
+                "notification_preferences",
+                delete(NotificationPreferenceRow).where(
+                    NotificationPreferenceRow.user_id == user_id
+                ),
+            ),
             ("accounts", delete(AccountRow).where(AccountRow.user_id == user_id)),
             ("consents", delete(ConsentRow).where(ConsentRow.user_id == user_id)),
             ("raw_records", delete(RawRecordRow).where(RawRecordRow.user_id == user_id)),

@@ -78,7 +78,7 @@ packages = ["mylife"]
 
 # Celery ships no type information; treat its imports as untyped.
 [[tool.mypy.overrides]]
-module = ["celery"]
+module = ["celery", "celery.schedules"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

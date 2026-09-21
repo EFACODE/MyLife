@@ -27,6 +27,7 @@ from mylife.api import (
     knowledge,
     knowledge_graph,
     metrics,
+    notifications,
     timeline,
 )
 from mylife.api.spa import SpaStaticFiles
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(data_subject.router)
     app.include_router(timeline.router)
     app.include_router(finance.router)
+    app.include_router(notifications.router)
     app.include_router(health_tracking.router)
     app.include_router(goals.router)
     app.include_router(knowledge.router)

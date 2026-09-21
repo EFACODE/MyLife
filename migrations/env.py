@@ -19,6 +19,7 @@ from mylife.assistant import insight as _assistant_insight  # noqa: F401
 from mylife.core import events as _events  # noqa: F401
 from mylife.core.config import get_settings
 from mylife.db.base import Base
+from mylife.finance import bills as _finance_bills  # noqa: F401
 from mylife.finance import models as _finance_models  # noqa: F401
 from mylife.forecast import contract as _forecast_contract  # noqa: F401
 from mylife.forecast import outcome as _forecast_outcome  # noqa: F401
@@ -29,6 +30,7 @@ from mylife.identity import models as _identity_models  # noqa: F401
 from mylife.knowledge import extraction as _knowledge_extraction  # noqa: F401
 from mylife.knowledge import models as _knowledge_models  # noqa: F401
 from mylife.knowledge import retrieval as _knowledge_retrieval  # noqa: F401
+from mylife.notifications import models as _notifications_models  # noqa: F401
 from mylife.timeline import entities as _timeline_entities  # noqa: F401
 
 # Alembic Config object (values from alembic.ini).

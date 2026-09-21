@@ -1,8 +1,10 @@
 """Worker tasks.
 
 A no-op ``ping`` liveness probe plus ``sync_connector``, which runs a registered
-connector for a user (T3.4). Publishing from the worker uses the Redis stream so
-in-process subscribers in the app react.
+connector for a user (T3.4). ``send_bill_reminders`` (T4.8) is the project's
+first periodic (Celery beat) task, scanning every user with active bills for
+due-soon/overdue reminders. Publishing from the worker uses the Redis stream
+so in-process subscribers in the app react.
 """
 
 import uuid
@@ -100,3 +102,40 @@ def run_weekly_insights(user_id: str) -> dict[str, object]:
             uuid.UUID(user_id), now=utcnow(), correlation_id=new_correlation_id()
         )
     return {"alerts": len(insights)}
+
+
+@celery_app.task(name="mylife.send_bill_reminders")  # type: ignore[untyped-decorator]  # Celery decorator is untyped
+def send_bill_reminders() -> dict[str, object]:
+    """Scan every user with active bills and send due-soon/overdue reminders (T4.8)."""
+    import redis
+    from sqlalchemy import select
+
+    from mylife.core.config import get_settings
+    from mylife.core.context import new_correlation_id
+    from mylife.core.events import RedisStreamPublisher
+    from mylife.core.events.envelope import utcnow
+    from mylife.db.base import get_session_factory
+    from mylife.finance.bill_alerts import BillAlertsService
+    from mylife.finance.bills import BillRow
+    from mylife.notifications import build_channels_from_settings
+
+    settings = get_settings()
+    client = redis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
+    bus = RedisStreamPublisher(client)
+    channels = build_channels_from_settings(settings)
+    now = utcnow()
+    sent = 0
+    failed = 0
+    factory = get_session_factory()
+    with factory() as session:
+        user_ids = session.scalars(
+            select(BillRow.user_id).where(BillRow.active.is_(True)).distinct()
+        )
+        service = BillAlertsService(session, bus, channels)
+        for user_id in user_ids:
+            for outcome in service.run(user_id, now=now, correlation_id=new_correlation_id()):
+                if outcome.delivered:
+                    sent += 1
+                else:
+                    failed += 1
+    return {"sent": sent, "failed": failed}
