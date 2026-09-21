@@ -97,7 +97,11 @@ jobs:
           # Re-mask: the trimmed value may not byte-match the registered
           # secret, so it wouldn't otherwise be redacted from this log.
           echo "::add-mask::$host"
-          if ! ssh-keyscan -H "$host" >> ~/.ssh/known_hosts; then
+          case "$host" in
+            -*) echo "::error::VPS_HOST starts with '-' — the secret has a stray leading character (e.g. a copied bullet '- '). Re-set VPS_HOST to just the bare hostname/IP."; exit 1 ;;
+          esac
+          # "--" stops option parsing so a malformed host can never be read as a flag.
+          if ! ssh-keyscan -H -- "$host" >> ~/.ssh/known_hosts; then
             echo "::error::ssh-keyscan couldn't reach '$host' on port 22 — check VPS_HOST and that the host allows inbound SSH from GitHub's runners."
             exit 1
           fi
