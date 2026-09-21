@@ -109,6 +109,11 @@ export class ApiClient {
     return (await response.json()) as T;
   }
 
+  /** Register a new user (public — no auth token required or sent). */
+  registerUser(input: { email: string; display_name: string; password: string }): Promise<User> {
+    return this.request<User>("/users", { method: "POST", body: input, auth: false });
+  }
+
   /** OAuth2 password flow: exchange credentials for an access token. */
   async login(email: string, password: string): Promise<string> {
     const form = new URLSearchParams({ username: email, password });
