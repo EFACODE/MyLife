@@ -38,6 +38,7 @@ services:
   # One-shot: apply DB migrations before the app starts.
   migrate:
     image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}
+    pull_policy: always
     command: ["alembic", "upgrade", "head"]
     env_file: [.env.prod]
     depends_on:
@@ -48,8 +49,14 @@ services:
   api:
     # Pulled from GHCR in CI/CD deploys; `build: .` lets a from-source bring-up
     # (docker compose up --build) still work when MYLIFE_IMAGE is unset.
+    # `pull_policy: always` matters here: Compose skips `pull` by default for a
+    # service that also has `build:` (it assumes you want the local build), so
+    # without this, `deploy/remote-deploy.sh`'s `compose pull` silently never
+    # fetched the freshly published image and `up -d` kept running the stale
+    # container indefinitely, even though the deploy job reported success.
     build: .
     image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}
+    pull_policy: always
     env_file: [.env.prod]
     environment:
       MYLIFE_STATIC_DIR: /app/static
@@ -76,6 +83,7 @@ services:
 
   worker:
     image: ${MYLIFE_IMAGE:-ghcr.io/efacode/mylife:latest}
+    pull_policy: always
     command: ["celery", "-A", "mylife.workers.celery_app", "worker", "--loglevel=info"]
     env_file: [.env.prod]
     environment:
