@@ -84,10 +84,23 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          # Trim stray whitespace/newlines a secret may carry from copy-paste.
+          host="$(printf '%s' "$VPS_HOST" | tr -d '[:space:]')"
+          if [ -z "$host" ]; then
+            echo "::error::VPS_HOST secret is empty after trimming whitespace."
+            exit 1
+          fi
+          # Re-mask: the trimmed value may not byte-match the registered
+          # secret, so it wouldn't otherwise be redacted from this log.
+          echo "::add-mask::$host"
+          if ! ssh-keyscan -H "$host" >> ~/.ssh/known_hosts; then
+            echo "::error::ssh-keyscan couldn't reach '$host' on port 22 — check VPS_HOST and that the host allows inbound SSH from GitHub's runners."
+            exit 1
+          fi
 
       - name: Deploy over SSH
         if: steps.check.outputs.ready == 'true'
@@ -96,5 +109,12 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           IMAGE: ${{ needs.build.outputs.image }}:${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/deploy_key "${VPS_USER}@${VPS_HOST}" \
+          set -euo pipefail
+          host="$(printf '%s' "$VPS_HOST" | tr -d '[:space:]')"
+          user="$(printf '%s' "$VPS_USER" | tr -d '[:space:]')"
+          # Re-mask: trimmed values may not byte-match the registered
+          # secrets, so ssh's own error output could otherwise leak them.
+          echo "::add-mask::$host"
+          echo "::add-mask::$user"
+          ssh -i ~/.ssh/deploy_key "${user}@${host}" \
             "MYLIFE_IMAGE='${IMAGE}' bash -s" < deploy/remote-deploy.sh

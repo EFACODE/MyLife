@@ -87,9 +87,10 @@ Illustrative shapes:
 
 ```python
 class BriefingLine(BaseModel):
-    kind: str          # "total" | "category" | "source"
+    kind: str  # "total" | "category" | "source"
     summary: str
     evidence: list[UUID]
+
 
 class Briefing(BaseModel):
     user_id: UUID

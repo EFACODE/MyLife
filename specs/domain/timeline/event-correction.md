@@ -69,18 +69,21 @@ accurate (the latest understanding is discoverable).
 ## 5. API & event contracts
 
 ```python
-class EventCorrectionPayload(BaseModel):     # frozen
+class EventCorrectionPayload(BaseModel):  # frozen
     reason: str
     note: str | None = None
+
 
 class EventCorrected(LifeEvent[EventCorrectionPayload]):
     event_type: Literal["timeline.event_corrected"] = "timeline.event_corrected"
     schema_version: Literal[1] = 1
     # corrects_event_id (from the envelope) must be set to the target event.
 
+
 # EventStore gains:
-def read_corrections(self, event_id: UUID, *, limit: int = 100,
-                     after_seq: int | None = None) -> list[StoredEvent]: ...
+def read_corrections(
+    self, event_id: UUID, *, limit: int = 100, after_seq: int | None = None
+) -> list[StoredEvent]: ...
 ```
 
 - **Envelope change:** `LifeEvent.corrects_event_id: UUID | None = None` —

@@ -80,26 +80,29 @@ No HTTP API. Python contract (illustrative signatures):
 ```python
 class DuplicateEventError(Exception): ...
 
-class StoredEvent(BaseModel):        # frozen
+
+class StoredEvent(BaseModel):  # frozen
     global_seq: int
     event_id: UUID
     user_id: UUID
     event_type: str
-    occurred_at: datetime            # UTC
-    recorded_at: datetime            # UTC
+    occurred_at: datetime  # UTC
+    recorded_at: datetime  # UTC
     schema_version: int
     source: str
     correlation_id: str
     payload: Mapping[str, object]
+
     def rehydrate(self, model_type: type[EventT]) -> EventT: ...
+
 
 class EventStore:
     def __init__(self, session: Session) -> None: ...
     def append(self, event: LifeEvent[BaseModel]) -> StoredEvent: ...
-    def read_stream(self, user_id: UUID, *, limit: int = 100,
-                    after_seq: int | None = None) -> list[StoredEvent]: ...
-    def read_all(self, *, limit: int = 100,
-                 after_seq: int | None = None) -> list[StoredEvent]: ...
+    def read_stream(
+        self, user_id: UUID, *, limit: int = 100, after_seq: int | None = None
+    ) -> list[StoredEvent]: ...
+    def read_all(self, *, limit: int = 100, after_seq: int | None = None) -> list[StoredEvent]: ...
 ```
 
 - A "stream" in this task is a **user's timeline** (keyed by `user_id`). If

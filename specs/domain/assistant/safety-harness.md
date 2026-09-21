@@ -64,7 +64,11 @@ is reusable to gate a future LLM's outputs before they reach the user.
 - **No HTTP/event surface.** `SafetyEvaluator` is a library:
 
 ```python
-class Violation(BaseModel): rule: str; detail: str
+class Violation(BaseModel):
+    rule: str
+    detail: str
+
+
 class SafetyEvaluator:
     def evaluate_insight(self, insight: Insight) -> list[Violation]: ...
     def evaluate_answer(self, answer: Answer) -> list[Violation]: ...
