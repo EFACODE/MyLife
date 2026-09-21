@@ -359,6 +359,85 @@ export interface PositionInput {
   currency: string;
 }
 
+// --- Bills (T4.7) ---
+
+export type BillRecurrence = "monthly" | "once";
+
+export interface Bill {
+  bill_id: string;
+  account_id: string;
+  payee: string;
+  amount_minor: number;
+  currency: string;
+  category: string | null;
+  recurrence: BillRecurrence;
+  due_day: number | null;
+  due_at: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface RegisterBillInput {
+  account_id: string;
+  payee: string;
+  amount_minor: number;
+  currency: string;
+  category?: string | null;
+  recurrence: BillRecurrence;
+  due_day?: number | null;
+  due_at?: string | null;
+}
+
+export interface BillPayment {
+  event_id: string;
+  bill_id: string;
+  period: string;
+  due_at: string;
+  amount_minor: number;
+  paid_at: string;
+  transaction_id: string | null;
+}
+
+export interface BillOccurrence {
+  bill_id: string;
+  account_id: string;
+  payee: string;
+  category: string | null;
+  currency: string;
+  amount_minor: number;
+  period: string;
+  due_at: string;
+  paid: boolean;
+  paid_at: string | null;
+  overdue: boolean;
+}
+
+// --- Notifications (T4.8) ---
+
+export type NotificationChannel = "email" | "whatsapp";
+
+export interface NotificationPreference {
+  email_enabled: boolean;
+  whatsapp_enabled: boolean;
+  whatsapp_phone: string | null;
+  updated_at: string;
+}
+
+export interface SetNotificationPreferenceInput {
+  email_enabled: boolean;
+  whatsapp_enabled: boolean;
+  whatsapp_phone?: string | null;
+}
+
+export interface NotificationOutcome {
+  request_event_id: string;
+  channel: NotificationChannel;
+  recipient: string;
+  delivered: boolean;
+  provider_message_id: string | null;
+  reason: string | null;
+}
+
 // --- Timeline capture (T10.3) ---
 
 export interface CaptureEventInput {
