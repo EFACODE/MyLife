@@ -36,15 +36,21 @@ echo "Deploying image: $MYLIFE_IMAGE"
 compose pull
 
 # Apply migrations (one-shot) before starting the new app/worker.
-compose run --rm migrate
+#
+# `< /dev/null` matters: this whole script is streamed to `bash -s` over SSH
+# with its source as bash's own stdin (see deploy.yml's "Deploy over SSH"
+# step). `docker compose run` attaches to stdin by default like `docker run
+# -i`, and without this redirect it inherits that same fd — reading (and so
+# silently discarding) every line still unread from THIS SCRIPT, including
+# everything below this point. Root-caused live: the deploy job reported
+# success with zero log output for anything after migrate, because `up -d`
+# and everything after it was being consumed as migrate's stdin instead of
+# ever reaching bash as commands.
+compose run --rm migrate < /dev/null
 
-# Roll the stack to the new image. In the non-interactive shell this script
-# runs under over SSH, Compose's own "has the resolved image changed?" check
-# has been observed to silently keep the old api/worker containers running
-# even though the correct :$MYLIFE_IMAGE was freshly pulled above (confirmed:
-# the identical pull -> run migrate -> up -d sequence, run by hand in an
-# interactive shell, recreates them correctly every time) — force it instead
-# of relying on that heuristic, so a deploy always actually applies.
+# Roll the stack to the new image. --force-recreate is belt-and-suspenders:
+# api/worker should already be recreated by a plain `up -d` since the pulled
+# image differs, but this guarantees it regardless.
 compose up -d
 compose up -d --force-recreate api worker
 
