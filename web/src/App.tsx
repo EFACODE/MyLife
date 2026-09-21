@@ -14,6 +14,7 @@ import { HomePage } from "./pages/HomePage";
 import { KnowledgePage } from "./pages/knowledge/KnowledgePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrivacyPage } from "./pages/privacy/PrivacyPage";
+import { SignupPage } from "./pages/SignupPage";
 import { CapturePage } from "./pages/timeline/CapturePage";
 
 export function App() {
@@ -22,6 +23,7 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route
             element={
               <RequireAuth>

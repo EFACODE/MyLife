@@ -277,6 +277,7 @@ shared architecture the feature tasks plug into. `specs/domain/platform/web-cons
 | **T10.7** | ✅ | Knowledge pages | No | Documents (upload/extract/index), memory search, knowledge-graph. |
 | **T10.8** | ✅ | Assistant pages | No | Grounded query, alerts, insights. |
 | **T10.9** | ✅ | Forecast pages | No | Record/run/list/detail, simulate, outcome, calibration. |
+| **T10.10** | ✅ | Signup page | No | `web-foundation.md` (T10.1) only scoped `/login`, so there was no way to create the first account through the console. `SignupPage` (name/email/password) → `POST /users` (already specced, T2.1) → auto-login via `/auth/login`; `/signup` route; reciprocal links between login/signup. |
 
 ### `T11` — Deployment *(VPS + Docker Compose)*
 
@@ -317,7 +318,7 @@ skip-safe. `specs/domain/platform/cicd.md`.
 | platform · observability | `T9.1`–`T9.2` | 2 | 2 |
 | platform · tracing + web | `T9.3`–`T9.5` | 3 | 3 |
 | platform · mobile/infra/dashboards | `T9` | — | deferred |
-| platform · web console | `T10.1`–`T10.9` | 9 | 9 |
+| platform · web console | `T10.1`–`T10.10` | 10 | 10 |
 | platform · deployment | `T11.1`–`T11.3` | 3 | 3 |
 | platform · CI/CD | `T12.1`–`T12.2` | 2 | 2 |
 
