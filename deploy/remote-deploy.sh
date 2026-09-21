@@ -38,8 +38,15 @@ compose pull
 # Apply migrations (one-shot) before starting the new app/worker.
 compose run --rm migrate
 
-# Roll the stack to the new image.
+# Roll the stack to the new image. In the non-interactive shell this script
+# runs under over SSH, Compose's own "has the resolved image changed?" check
+# has been observed to silently keep the old api/worker containers running
+# even though the correct :$MYLIFE_IMAGE was freshly pulled above (confirmed:
+# the identical pull -> run migrate -> up -d sequence, run by hand in an
+# interactive shell, recreates them correctly every time) — force it instead
+# of relying on that heuristic, so a deploy always actually applies.
 compose up -d
+compose up -d --force-recreate api worker
 
 # Reclaim disk from superseded image layers.
 docker image prune -f
