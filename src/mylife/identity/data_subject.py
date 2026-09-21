@@ -20,6 +20,8 @@ from mylife.core.events import EventStore, InProcessEventBus, StoredEvent, Store
 from mylife.core.events.raw_store import RawRecordRow
 from mylife.core.events.raw_store import _to_stored as _raw_to_stored
 from mylife.core.events.store import EventRow
+from mylife.finance.bills import Bill, BillRow
+from mylife.finance.bills_service import _to_bill
 from mylife.finance.models import Account, AccountRow
 from mylife.forecast.contract import ForecastRow
 from mylife.forecast.outcome import OutcomeRow
@@ -53,6 +55,7 @@ class ExportBundle(BaseModel):
     entities: list[EntityRecord]
     relationships: list[RelationshipRecord]
     accounts: list[Account]
+    bills: list[Bill]
     goals: list[Goal]
     documents: list[Document]
 
@@ -82,6 +85,9 @@ class DataSubjectService:
         account_rows = self._session.scalars(
             select(AccountRow).where(AccountRow.user_id == user_id).order_by(AccountRow.created_at)
         )
+        bill_rows = self._session.scalars(
+            select(BillRow).where(BillRow.user_id == user_id).order_by(BillRow.created_at)
+        )
         goal_rows = self._session.scalars(
             select(GoalRow).where(GoalRow.user_id == user_id).order_by(GoalRow.created_at)
         )
@@ -107,6 +113,7 @@ class DataSubjectService:
                 )
                 for row in account_rows
             ],
+            bills=[_to_bill(row) for row in bill_rows],
             goals=[_to_goal(row) for row in goal_rows],
             documents=[_to_document(row) for row in document_rows],
         )
@@ -132,6 +139,7 @@ class DataSubjectService:
             ("document_texts", delete(DocumentTextRow).where(DocumentTextRow.user_id == user_id)),
             ("documents", delete(DocumentRow).where(DocumentRow.user_id == user_id)),
             ("goals", delete(GoalRow).where(GoalRow.user_id == user_id)),
+            ("bills", delete(BillRow).where(BillRow.user_id == user_id)),
             ("accounts", delete(AccountRow).where(AccountRow.user_id == user_id)),
             ("consents", delete(ConsentRow).where(ConsentRow.user_id == user_id)),
             ("raw_records", delete(RawRecordRow).where(RawRecordRow.user_id == user_id)),

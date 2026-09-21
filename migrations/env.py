@@ -19,6 +19,7 @@ from mylife.assistant import insight as _assistant_insight  # noqa: F401
 from mylife.core import events as _events  # noqa: F401
 from mylife.core.config import get_settings
 from mylife.db.base import Base
+from mylife.finance import bills as _finance_bills  # noqa: F401
 from mylife.finance import models as _finance_models  # noqa: F401
 from mylife.forecast import contract as _forecast_contract  # noqa: F401
 from mylife.forecast import outcome as _forecast_outcome  # noqa: F401
