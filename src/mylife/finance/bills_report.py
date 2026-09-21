@@ -60,7 +60,14 @@ def _monthly_due_at(year: int, month: int, due_day: int, *, tzinfo: object) -> d
 
 
 def _periods_for_bill(row: BillRow, due_from: datetime, due_to: datetime) -> list[datetime]:
-    """The bill's due occurrences that fall within ``[due_from, due_to]``."""
+    """The bill's due occurrences that fall within ``[due_from, due_to]``.
+
+    Deliberately **not** bounded by the bill's own ``created_at`` — a user
+    registering a bill today can backfill and pay past periods it covers
+    (e.g. logging rent that was already being paid before they started using
+    the report). Callers that must not surface pre-registration periods (the
+    due-date alert scanner, T4.8) filter those out themselves.
+    """
     if row.recurrence == "once":
         if row.due_at is not None:
             due_at = _stored_utc(row.due_at)

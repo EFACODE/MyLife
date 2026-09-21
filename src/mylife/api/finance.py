@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from mylife.api.auth import get_current_user
 from mylife.api.deps import get_event_bus
 from mylife.connectors import ConnectorRunner, ConsentRequiredError, FetchContext
+from mylife.core.config import get_settings
 from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
 from mylife.core.events.envelope import ensure_utc, utcnow
@@ -38,9 +39,11 @@ from mylife.finance import (
     UnknownBillError,
 )
 from mylife.finance.bank_csv import BankCsvConnector
+from mylife.finance.bill_alerts import BillAlertsService
 from mylife.finance.bills import Recurrence
 from mylife.identity import User
 from mylife.identity.consent import ConsentService
+from mylife.notifications import NotificationOutcome, build_channels_from_settings
 
 router = APIRouter(tags=["finance"])
 
@@ -406,4 +409,24 @@ def get_bills_report(
         account_id=account_id,
         paid=paid,
         overdue=overdue,
+    )
+
+
+@router.post("/finance/bills/alerts/run", response_model=list[NotificationOutcome])
+def run_bill_alerts(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> list[NotificationOutcome]:
+    """Scan the user's bills and send a reminder for each due-soon/overdue occurrence.
+
+    Uses whichever channels (email/WhatsApp) the deployment has credentials
+    for and the user has enabled. The same scan also runs daily via Celery
+    beat (``mylife.send_bill_reminders``); this lets a user trigger it on
+    demand.
+    """
+    correlation_id = get_correlation_id() or new_correlation_id()
+    channels = build_channels_from_settings(get_settings())
+    return BillAlertsService(session, bus, channels).run(
+        current_user.user_id, now=utcnow(), correlation_id=correlation_id
     )

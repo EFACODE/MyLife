@@ -30,6 +30,7 @@ from mylife.identity import models as _identity_models  # noqa: F401
 from mylife.knowledge import extraction as _knowledge_extraction  # noqa: F401
 from mylife.knowledge import models as _knowledge_models  # noqa: F401
 from mylife.knowledge import retrieval as _knowledge_retrieval  # noqa: F401
+from mylife.notifications import models as _notifications_models  # noqa: F401
 from mylife.timeline import entities as _timeline_entities  # noqa: F401
 
 # Alembic Config object (values from alembic.ini).

@@ -8,6 +8,7 @@ and net-worth/cash-flow (T4.3) build on this. See
 """
 
 from mylife.finance.bank_csv import BANK_SOURCE, BankCsvConnector
+from mylife.finance.bill_alerts import BillAlert, BillAlertScanner, BillAlertsService
 from mylife.finance.bills import (
     BILL_CANCELLED,
     BILL_PAID,
@@ -64,6 +65,9 @@ __all__ = [
     "Balance",
     "BankCsvConnector",
     "Bill",
+    "BillAlert",
+    "BillAlertScanner",
+    "BillAlertsService",
     "BillCancelled",
     "BillCancelledPayload",
     "BillOccurrence",

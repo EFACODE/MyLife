@@ -1,6 +1,7 @@
 """Tests for the bills endpoints (T4.7)."""
 
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -189,3 +190,30 @@ def test_bill_endpoints_require_auth(client: TestClient) -> None:
         ).status_code
         == 401
     )
+    assert client.post("/finance/bills/alerts/run").status_code == 401
+
+
+def test_run_bill_alerts_without_configured_channels_records_failure(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    due_soon = (datetime.now(UTC) + timedelta(days=3)).isoformat()
+    client.post(
+        "/finance/bills",
+        json={
+            "account_id": account_id,
+            "payee": "Aluguel",
+            "amount_minor": 250000,
+            "currency": "BRL",
+            "recurrence": "once",
+            "due_at": due_soon,  # 3 days out -> due_soon -> alert fires
+        },
+        headers=auth,
+    )
+
+    response = client.post("/finance/bills/alerts/run", headers=auth)
+
+    assert response.status_code == 200
+    outcomes = response.json()
+    assert len(outcomes) == 1
+    assert outcomes[0]["delivered"] is False
+    assert "no email channel configured" in outcomes[0]["reason"]
