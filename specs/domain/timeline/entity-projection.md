@@ -76,14 +76,26 @@ No HTTP API in this task (read/query endpoints come with `T6`/later). Python
 contract (illustrative):
 
 ```python
-class EntityRecord(BaseModel):        # frozen
-    entity_id: UUID; user_id: UUID; entity_type: str; entity_key: str
-    first_seen_at: datetime; last_seen_at: datetime; occurrences: int
+class EntityRecord(BaseModel):  # frozen
+    entity_id: UUID
+    user_id: UUID
+    entity_type: str
+    entity_key: str
+    first_seen_at: datetime
+    last_seen_at: datetime
+    occurrences: int
+
 
 class RelationshipRecord(BaseModel):  # frozen
-    relationship_id: UUID; user_id: UUID
-    source_entity_id: UUID; target_entity_id: UUID; rel_type: str
-    first_seen_at: datetime; last_seen_at: datetime; occurrences: int
+    relationship_id: UUID
+    user_id: UUID
+    source_entity_id: UUID
+    target_entity_id: UUID
+    rel_type: str
+    first_seen_at: datetime
+    last_seen_at: datetime
+    occurrences: int
+
 
 class EntityProjection:
     def __init__(self, session: Session) -> None: ...
@@ -91,6 +103,7 @@ class EntityProjection:
     def list_entities(self, user_id: UUID) -> list[EntityRecord]: ...
     def list_relationships(self, user_id: UUID) -> list[RelationshipRecord]: ...
     def rebuild(self, events: Iterable[LifeEvent[Any]]) -> None: ...
+
 
 class EntityProjectionSubscriber:
     def __init__(self, session_factory: sessionmaker[Session]) -> None: ...

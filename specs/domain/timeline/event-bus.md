@@ -81,17 +81,21 @@ Illustrative signatures:
 ```python
 Handler = Callable[[LifeEvent[BaseModel]], None]
 
+
 class EventDispatchError(Exception):
     errors: list[Exception]
+
 
 class EventBus(Protocol):
     def publish(self, event: LifeEvent[BaseModel]) -> None: ...
 
-class InProcessEventBus:                       # EventBus
+
+class InProcessEventBus:  # EventBus
     def subscribe(self, handler: Handler, *, event_type: str | None = None) -> None: ...
     def publish(self, event: LifeEvent[BaseModel]) -> None: ...
 
-class RedisStreamPublisher:                    # EventBus
+
+class RedisStreamPublisher:  # EventBus
     def __init__(self, client: redis.Redis, *, stream: str = "mylife:events") -> None: ...
     def publish(self, event: LifeEvent[BaseModel]) -> None: ...
 ```

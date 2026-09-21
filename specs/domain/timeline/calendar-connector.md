@@ -79,8 +79,9 @@ evt-2,Gym,health,2026-07-18T18:00:00+00:00,
 Illustrative shape:
 
 ```python
-class CalendarCsvConnector:            # implements T3.4 Connector
+class CalendarCsvConnector:  # implements T3.4 Connector
     source = "calendar"
+
     def __init__(self, csv_text: str, *, fetched_at: datetime) -> None: ...
     def fetch(self, context: FetchContext) -> Iterable[RawPayload]: ...
     def normalize(self, raw: StoredRawRecord) -> Iterable[LifeEvent[Any]]: ...

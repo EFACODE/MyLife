@@ -79,16 +79,18 @@ Illustrative (no HTTP API):
 ```python
 class DuplicateRawRecordError(Exception): ...
 
-class RawRecord(BaseModel):           # caller input (frozen)
+
+class RawRecord(BaseModel):  # caller input (frozen)
     user_id: UUID
     source: str
     external_id: str | None = None
     content_type: str = "application/json"
-    content: JsonValue               # structured payload as received
-    fetched_at: datetime             # UTC
+    content: JsonValue  # structured payload as received
+    fetched_at: datetime  # UTC
     correlation_id: str
 
-class StoredRawRecord(BaseModel):     # frozen
+
+class StoredRawRecord(BaseModel):  # frozen
     raw_record_id: UUID
     user_id: UUID
     source: str
@@ -96,9 +98,10 @@ class StoredRawRecord(BaseModel):     # frozen
     content_type: str
     content: Mapping[str, object] | list[object] | str | int | float | bool | None
     checksum: str
-    fetched_at: datetime             # UTC
-    recorded_at: datetime            # UTC
+    fetched_at: datetime  # UTC
+    recorded_at: datetime  # UTC
     correlation_id: str
+
 
 class RawRecordStore:
     def __init__(self, session: Session) -> None: ...

@@ -87,13 +87,14 @@ POST /timeline/events
 Command/service shape (illustrative):
 
 ```python
-class RecordLifeEventCommand(BaseModel):     # frozen; occurred_at validated UTC
+class RecordLifeEventCommand(BaseModel):  # frozen; occurred_at validated UTC
     user_id: UUID
     occurred_at: datetime
     title: str
     category: str
     note: str | None = None
     source: str = "manual"
+
 
 class TimelineWriter:
     def __init__(self, session: Session, bus: EventBus) -> None: ...

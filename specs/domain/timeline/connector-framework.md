@@ -73,20 +73,24 @@ fake connector for tests.
 No HTTP API. Python contract (illustrative):
 
 ```python
-class FetchContext(BaseModel):        # frozen
+class FetchContext(BaseModel):  # frozen
     user_id: UUID
     correlation_id: str
 
-class RawPayload(BaseModel):          # frozen
+
+class RawPayload(BaseModel):  # frozen
     content: JsonValue
-    fetched_at: datetime              # UTC
+    fetched_at: datetime  # UTC
     external_id: str | None = None
     content_type: str = "application/json"
 
+
 class Connector(Protocol):
     source: str
+
     def fetch(self, context: FetchContext) -> Iterable[RawPayload]: ...
     def normalize(self, raw: StoredRawRecord) -> Iterable[LifeEvent[Any]]: ...
+
 
 @dataclass(frozen=True)
 class SyncResult:
@@ -95,13 +99,15 @@ class SyncResult:
     events_created: int
     skipped_duplicates: int
 
+
 class ConnectorRunner:
     def __init__(self, session: Session, bus: EventBus) -> None: ...
     def sync(self, connector: Connector, context: FetchContext) -> SyncResult: ...
 
+
 class ConnectorRegistry:
     def register(self, connector: Connector) -> None: ...
-    def get(self, source: str) -> Connector: ...        # UnknownConnectorError if absent
+    def get(self, source: str) -> Connector: ...  # UnknownConnectorError if absent
     def all(self) -> list[Connector]: ...
 ```
 

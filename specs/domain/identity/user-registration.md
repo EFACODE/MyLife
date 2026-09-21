@@ -80,12 +80,19 @@ GET /households/{household_id}         -> 200 Household | 404
 ```
 
 ```python
-class User(BaseModel):        # frozen
-    user_id: UUID; email: str; display_name: str
-    status: str; household_id: UUID | None; created_at: datetime
+class User(BaseModel):  # frozen
+    user_id: UUID
+    email: str
+    display_name: str
+    status: str
+    household_id: UUID | None
+    created_at: datetime
 
-class Household(BaseModel):    # frozen
-    household_id: UUID; name: str; created_at: datetime
+
+class Household(BaseModel):  # frozen
+    household_id: UUID
+    name: str
+    created_at: datetime
 ```
 
 - **Event produced:** `UserRegistered` (Identity context), appended + published.

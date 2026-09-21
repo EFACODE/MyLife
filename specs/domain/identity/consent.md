@@ -83,7 +83,8 @@ Consent = { "scope": "calendar", "granted": true, "updated_at": "..." }
 class ConsentGate(Protocol):
     def is_granted(self, user_id: UUID, scope: str) -> bool: ...
 
-class ConsentRequiredError(Exception): ...   # raised by ConnectorRunner
+
+class ConsentRequiredError(Exception): ...  # raised by ConnectorRunner
 ```
 
 - **Events produced:** `ConsentGranted`, `ConsentRevoked` (Identity context).
