@@ -1,3 +1,19 @@
+import {
+  AlertTriangle,
+  Bell,
+  Calculator,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  ListChecks,
+  PiggyBank,
+  PlusCircle,
+  Receipt,
+  Scale,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { ApiError, type ApiClient } from "../../api/client";
@@ -11,6 +27,7 @@ import { Field, TextInput } from "../../components/ui/Field";
 import { Section } from "../../components/ui/Section";
 import { Select } from "../../components/ui/Select";
 import { StatCard } from "../../components/ui/StatCard";
+import { SubTabs, type SubTabItem } from "../../components/ui/SubTabs";
 import { Tabs, type TabItem } from "../../components/ui/Tabs";
 import { categorySolidClass } from "../../lib/categoryColor";
 import { money, moneyByCurrency, parseMoneyInput, shortDate } from "../../lib/format";
@@ -118,7 +135,7 @@ function Accounts({
   }
 
   return (
-    <Section title="Contas">
+    <Section title="Contas" icon={Wallet}>
       <form onSubmit={create} className="mb-4 flex items-end gap-2">
         <Field label="Nome">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
@@ -147,6 +164,7 @@ function NetWorthView({ client }: { client: FinanceApi }) {
   return (
     <Section
       title="Patrimônio líquido"
+      icon={Scale}
       actions={<Button onClick={() => netWorth.run()}>Atualizar</Button>}
     >
       {netWorth.status === "error" && (
@@ -181,7 +199,7 @@ function CashFlowView({ client }: { client: FinanceApi }) {
   }
 
   return (
-    <Section title="Fluxo de caixa">
+    <Section title="Fluxo de caixa" icon={TrendingUp}>
       <form onSubmit={submit} className="mb-3 flex items-end gap-2">
         <Field label="De">
           <TextInput
@@ -244,7 +262,7 @@ function BankImport({ client }: { client: FinanceApi }) {
   }
 
   return (
-    <Section title="Importar extrato bancário (CSV)">
+    <Section title="Importar extrato bancário (CSV)" icon={Receipt}>
       <form onSubmit={submit} className="flex flex-col gap-2">
         <Field label="ID da conta">
           <TextInput value={accountId} onChange={(e) => setAccountId(e.target.value)} required />
@@ -319,10 +337,14 @@ function TransactionsTab({
   return (
     <div>
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
-        <StatCard label="Total de transações" value={String(totals.count)} />
-        <StatCard label="Despesas" value={totals.expenses} tone="critical" />
-        <StatCard label="Receitas" value={totals.income} tone="good" />
-        <StatCard label="Saldo" value={totals.balance} />
+        <StatCard
+          label="Total de transações"
+          value={String(totals.count)}
+          icon={Calculator}
+        />
+        <StatCard label="Despesas" value={totals.expenses} tone="critical" icon={TrendingDown} />
+        <StatCard label="Receitas" value={totals.income} tone="good" icon={TrendingUp} />
+        <StatCard label="Saldo" value={totals.balance} icon={Scale} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -556,7 +578,7 @@ function CategoriesTab({
         categories={categories}
         onDeleted={() => void categories.run()}
       />
-      <Section title="Gastos por categoria">
+      <Section title="Gastos por categoria" icon={PiggyBank}>
         <CategorySpendBreakdown transactions={transactions} />
       </Section>
     </>
@@ -590,7 +612,7 @@ function RegisterCategory({
   }
 
   return (
-    <Section title="Cadastrar categoria">
+    <Section title="Cadastrar categoria" icon={PlusCircle}>
       <form onSubmit={submit} className="flex items-end gap-2">
         <Field label="Nome">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
@@ -624,7 +646,7 @@ function RegisteredCategoriesList({
   }
 
   return (
-    <Section title="Categorias cadastradas">
+    <Section title="Categorias cadastradas" icon={ListChecks}>
       {categories.status === "error" && (
         <ErrorText>Não foi possível carregar as categorias.</ErrorText>
       )}
@@ -711,25 +733,89 @@ function CategorySpendBreakdown({ transactions }: { transactions: Transaction[] 
 
 // --- Contas a pagar ------------------------------------------------------
 //
-// Three clearly separated areas, per the usability request: (1) cadastro de
-// uma nova conta, (2) as duas listas — contas cadastradas (definições) e
-// faturas/vencimentos (ocorrências, com ação de pagar em um clique em vez de
-// um formulário manual pedindo o id da conta e a data), e (3) preferências
-// de alerta.
+// Quatro telas dedicadas, cada uma com sua própria aba: (1) cadastro de uma
+// nova conta, (2) a lista de contas cadastradas (definições), (3) faturas e
+// pagamento (ocorrências, com ação de pagar em um clique) e (4) preferências
+// de alerta — em vez de tudo empilhado numa única tela. Um resumo com KPIs
+// fica sempre visível no topo, qualquer que seja a tela ativa.
+
+const BILLS_SCREENS: SubTabItem[] = [
+  { id: "register", label: "Cadastrar", icon: PlusCircle },
+  { id: "list", label: "Contas cadastradas", icon: ListChecks },
+  { id: "upcoming", label: "Faturas e pagamento", icon: Receipt },
+  { id: "preferences", label: "Preferências de alerta", icon: Bell },
+];
 
 function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
   const bills = useAsync(() => client.listBills(), [client]);
+  const [screen, setScreen] = useState(BILLS_SCREENS[0].id);
+
   return (
     <>
-      <RegisterBill client={client} accounts={accounts} onRegistered={() => void bills.run()} />
-      <RegisteredBillsList
-        client={client}
-        bills={bills}
-        onCancelled={() => void bills.run()}
-      />
-      <UpcomingBills client={client} />
-      <AlertPreferences client={client} />
+      <BillsSummary client={client} />
+      <SubTabs items={BILLS_SCREENS} active={screen} onChange={setScreen} />
+      {screen === "register" && (
+        <RegisterBill client={client} accounts={accounts} onRegistered={() => void bills.run()} />
+      )}
+      {screen === "list" && (
+        <RegisteredBillsList client={client} bills={bills} onCancelled={() => void bills.run()} />
+      )}
+      {screen === "upcoming" && <UpcomingBills client={client} />}
+      {screen === "preferences" && <AlertPreferences client={client} />}
     </>
+  );
+}
+
+function BillsSummary({ client }: { client: FinanceApi }) {
+  const defaults = useMemo(defaultBillsWindow, []);
+  const report = useAsync(
+    () =>
+      client.billsReport(
+        new Date(defaults.from).toISOString(),
+        new Date(defaults.to).toISOString(),
+      ),
+    [client, defaults.from, defaults.to],
+  );
+
+  const summary = useMemo(() => {
+    const occurrences = report.data ?? [];
+    const dueSoon = occurrences.filter((o) => !o.paid && !o.overdue);
+    const overdue = occurrences.filter((o) => !o.paid && o.overdue);
+    const paid = occurrences.filter((o) => o.paid);
+    return {
+      dueSoonCount: dueSoon.length,
+      dueSoonTotal: moneyByCurrency(dueSoon),
+      overdueCount: overdue.length,
+      overdueTotal: moneyByCurrency(overdue),
+      paidCount: paid.length,
+      paidTotal: moneyByCurrency(paid),
+    };
+  }, [report.data]);
+
+  return (
+    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <StatCard
+        label="A vencer em breve"
+        value={String(summary.dueSoonCount)}
+        hint={summary.dueSoonTotal}
+        tone="warning"
+        icon={Clock}
+      />
+      <StatCard
+        label="Vencidas"
+        value={String(summary.overdueCount)}
+        hint={summary.overdueTotal}
+        tone="critical"
+        icon={AlertTriangle}
+      />
+      <StatCard
+        label="Pagas neste período"
+        value={String(summary.paidCount)}
+        hint={summary.paidTotal}
+        tone="good"
+        icon={CheckCircle2}
+      />
+    </div>
   );
 }
 
@@ -780,7 +866,7 @@ function RegisterBill({
   }
 
   return (
-    <Section title="Cadastrar conta a pagar">
+    <Section title="Cadastrar conta a pagar" icon={PlusCircle}>
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
         <Field label="Conta">
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
@@ -865,16 +951,22 @@ function RegisteredBillsList({
   }
 
   return (
-    <Section title="Contas cadastradas">
+    <Section title="Contas cadastradas" icon={ListChecks}>
       {bills.status === "error" && <ErrorText>Não foi possível carregar as contas.</ErrorText>}
-      <ul className="flex flex-col gap-1 text-sm">
+      <ul className="flex flex-col gap-2 text-sm">
         {(bills.data ?? []).map((bill) => (
           <li
             key={bill.bill_id}
-            className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+            className={
+              "flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-4 py-3 transition-colors hover:bg-gray-50" +
+              (bill.active ? "" : " opacity-60")
+            }
           >
-            <span className="flex items-center gap-2">
-              <span className="font-medium">{bill.payee}</span>
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                <Wallet className="h-4 w-4" />
+              </span>
+              <span className="font-medium text-gray-900">{bill.payee}</span>
               <span className="text-gray-500">
                 · {money(bill.amount_minor, bill.currency)} ·{" "}
                 {bill.recurrence === "monthly"
@@ -888,7 +980,7 @@ function RegisteredBillsList({
               <button
                 type="button"
                 onClick={() => void cancel(bill.bill_id)}
-                className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
               >
                 Cancelar
               </button>
@@ -956,8 +1048,14 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
 
   return (
     <Section
-      title="Faturas e vencimentos"
-      actions={<Button onClick={() => void runAlerts()}>Enviar alertas agora</Button>}
+      title="Faturas e pagamento"
+      icon={CalendarClock}
+      actions={
+        <Button onClick={() => void runAlerts()} className="flex items-center gap-1.5">
+          <Bell className="h-4 w-4" />
+          Enviar alertas agora
+        </Button>
+      }
     >
       <div className="mb-3 flex flex-wrap items-end gap-2">
         <Field label="De">
@@ -987,32 +1085,39 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
       </div>
       {alertStatus && <p className="mb-2 text-sm text-gray-700">{alertStatus}</p>}
       {report.status === "error" && <ErrorText>Não foi possível carregar as faturas.</ErrorText>}
-      <ul className="flex flex-col gap-1 text-sm">
+      <ul className="flex flex-col gap-2 text-sm">
         {(report.data ?? []).map((occurrence) => {
           const key = `${occurrence.bill_id}-${occurrence.period}`;
+          const StatusIcon = occurrence.paid ? CheckCircle2 : occurrence.overdue ? AlertTriangle : Clock;
+          const accent = occurrence.paid
+            ? "border-l-green-500 bg-green-50/40"
+            : occurrence.overdue
+              ? "border-l-red-500 bg-red-50/40"
+              : "border-l-amber-400 bg-amber-50/30";
+          const statusTextClass = occurrence.paid
+            ? "text-green-700"
+            : occurrence.overdue
+              ? "text-red-600"
+              : "text-amber-600";
           return (
             <li
               key={key}
-              className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              className={
+                "flex items-center justify-between gap-2 rounded-lg border border-gray-200 border-l-4 px-4 py-3 transition-colors hover:bg-gray-50 " +
+                accent
+              }
             >
-              <span className="flex items-center gap-2">
-                <span className="font-medium">{occurrence.payee}</span>
+              <span className="flex flex-wrap items-center gap-2">
+                <StatusIcon className={"h-4 w-4 shrink-0 " + statusTextClass} />
+                <span className="font-medium text-gray-900">{occurrence.payee}</span>
                 <span className="text-gray-500">
                   · {money(occurrence.amount_minor, occurrence.currency)} · vence em{" "}
                   {shortDate(occurrence.due_at)}
                 </span>
                 {occurrence.category && <CategoryBadge category={occurrence.category} />}
               </span>
-              <span className="flex items-center gap-2">
-                <span
-                  className={
-                    occurrence.paid
-                      ? "text-green-700"
-                      : occurrence.overdue
-                        ? "text-red-600"
-                        : "text-gray-500"
-                  }
-                >
+              <span className="flex shrink-0 items-center gap-2">
+                <span className={"text-xs font-medium " + statusTextClass}>
                   {occurrence.paid ? "Paga" : occurrence.overdue ? "Vencida" : "A vencer"}
                 </span>
                 {!occurrence.paid && (
@@ -1020,7 +1125,7 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
                     type="button"
                     onClick={() => void markPaid(occurrence.bill_id, occurrence.due_at, key)}
                     disabled={payingKey === key}
-                    className="rounded border border-green-300 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
+                    className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-50 disabled:opacity-50"
                   >
                     {payingKey === key ? "Marcando…" : "Marcar como paga"}
                   </button>
@@ -1068,37 +1173,59 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
   }
 
   return (
-    <Section title="Preferências de alerta de vencimento">
-      <p className="mb-3 text-sm text-gray-500">
+    <Section title="Preferências de alerta de vencimento" icon={Bell}>
+      <p className="mb-4 text-sm text-gray-500">
         Escolha como você quer ser avisado quando uma conta estiver perto de vencer ou vencida.
       </p>
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-        <label className="flex items-center gap-1 text-sm">
-          <input
-            type="checkbox"
-            checked={emailEnabled}
-            onChange={(e) => setEmailEnabled(e.target.checked)}
-          />
-          E-mail
-        </label>
-        <label className="flex items-center gap-1 text-sm">
-          <input
-            type="checkbox"
-            checked={whatsappEnabled}
-            onChange={(e) => setWhatsappEnabled(e.target.checked)}
-          />
-          WhatsApp
-        </label>
-        <Field label="Número do WhatsApp">
-          <TextInput
-            value={whatsappPhone}
-            onChange={(e) => setWhatsappPhone(e.target.value)}
-            placeholder="+5511999999999"
-          />
-        </Field>
-        <Button type="submit">Salvar</Button>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-3">
+          <label
+            className={
+              "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
+              (emailEnabled
+                ? "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50")
+            }
+          >
+            <input
+              type="checkbox"
+              checked={emailEnabled}
+              onChange={(e) => setEmailEnabled(e.target.checked)}
+              className="sr-only"
+            />
+            <Bell className="h-4 w-4" />
+            E-mail
+          </label>
+          <label
+            className={
+              "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
+              (whatsappEnabled
+                ? "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50")
+            }
+          >
+            <input
+              type="checkbox"
+              checked={whatsappEnabled}
+              onChange={(e) => setWhatsappEnabled(e.target.checked)}
+              className="sr-only"
+            />
+            <Bell className="h-4 w-4" />
+            WhatsApp
+          </label>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="Número do WhatsApp">
+            <TextInput
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              placeholder="+5511999999999"
+            />
+          </Field>
+          <Button type="submit">Salvar</Button>
+        </div>
       </form>
-      {status === "ok" && <p className="mt-2 text-sm text-green-700">Preferências salvas.</p>}
+      {status === "ok" && <p className="mt-3 text-sm text-green-700">Preferências salvas.</p>}
       {status === "error" && <ErrorText>Não foi possível salvar as preferências.</ErrorText>}
     </Section>
   );

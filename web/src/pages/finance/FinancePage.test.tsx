@@ -32,8 +32,12 @@ function goToTab(name: string) {
   fireEvent.click(screen.getByRole("tab", { name }));
 }
 
+function goToBillsScreen(name: string) {
+  fireEvent.click(screen.getByRole("tab", { name }));
+}
+
 async function billsSection(heading: string): Promise<HTMLElement> {
-  return (await screen.findByText(heading)).closest("section")!;
+  return (await screen.findByRole("heading", { name: heading })).closest("section")!;
 }
 
 describe("FinancePage", () => {
@@ -220,6 +224,7 @@ describe("FinancePage", () => {
   it("lista as contas cadastradas e cancela uma", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
+    goToBillsScreen("Contas cadastradas");
     const section = await billsSection("Contas cadastradas");
     expect(within(section).getByText("Aluguel")).toBeInTheDocument();
 
@@ -255,7 +260,8 @@ describe("FinancePage", () => {
   it("marca uma fatura como paga direto na lista de vencimentos", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
-    const section = await billsSection("Faturas e vencimentos");
+    goToBillsScreen("Faturas e pagamento");
+    const section = await billsSection("Faturas e pagamento");
 
     fireEvent.click(await within(section).findByText("Marcar como paga"));
 
@@ -267,6 +273,7 @@ describe("FinancePage", () => {
   it("salva as preferências de notificação", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
+    goToBillsScreen("Preferências de alerta");
     const section = await billsSection("Preferências de alerta de vencimento");
 
     fireEvent.click(within(section).getByLabelText("WhatsApp"));
