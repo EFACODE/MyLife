@@ -62,6 +62,7 @@ const TABS: TabItem[] = [
   { id: "transactions", label: "Transações" },
   { id: "bills", label: "Contas a pagar" },
   { id: "categories", label: "Categorias" },
+  { id: "settings", label: "Configurações" },
 ];
 
 export function FinancePage() {
@@ -77,7 +78,9 @@ export function FinancePage() {
         Contas, transações, contas a pagar e categorias.
       </p>
       <Tabs items={TABS} active={tab} onChange={setTab} />
-      {tab === "overview" && <OverviewTab client={client} accounts={accounts} />}
+      {tab === "overview" && (
+        <OverviewTab client={client} transactions={transactions.data ?? []} />
+      )}
       {tab === "transactions" && (
         <TransactionsTab
           client={client}
@@ -86,16 +89,29 @@ export function FinancePage() {
         />
       )}
       {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
-      {tab === "categories" && (
-        <CategoriesTab client={client} transactions={transactions.data ?? []} />
-      )}
+      {tab === "categories" && <CategoriesTab client={client} />}
+      {tab === "settings" && <SettingsTab client={client} accounts={accounts} />}
     </div>
   );
 }
 
 // --- Visão geral ---------------------------------------------------------
 
-function OverviewTab({
+function OverviewTab({ client, transactions }: { client: FinanceApi; transactions: Transaction[] }) {
+  return (
+    <>
+      <NetWorthView client={client} />
+      <CashFlowView client={client} />
+      <Section title="Gastos por categoria" icon={PiggyBank}>
+        <CategorySpendBreakdown transactions={transactions} />
+      </Section>
+    </>
+  );
+}
+
+// --- Configurações ---------------------------------------------------------
+
+function SettingsTab({
   client,
   accounts,
 }: {
@@ -105,9 +121,8 @@ function OverviewTab({
   return (
     <>
       <Accounts client={client} accounts={accounts} />
-      <NetWorthView client={client} />
-      <CashFlowView client={client} />
       <BankImport client={client} />
+      <AlertPreferences client={client} />
     </>
   );
 }
@@ -560,23 +575,15 @@ function TransactionsTable({
 
 // --- Categorias --------------------------------------------------------
 //
-// Duas áreas: (1) cadastro de categorias — um pequeno registro reutilizável,
-// como o de contas — e (2) o resumo de gastos por categoria, derivado das
-// transações já lançadas.
+// Cadastro de categorias — um pequeno registro reutilizável, como o de
+// contas. O resumo de gastos por categoria vive na aba Visão geral.
 
 const CATEGORIES_SCREENS: SubTabItem[] = [
   { id: "register", label: "Cadastrar categoria", icon: PlusCircle },
   { id: "list", label: "Categorias cadastradas", icon: ListChecks },
-  { id: "spend", label: "Gastos por categoria", icon: PiggyBank },
 ];
 
-function CategoriesTab({
-  client,
-  transactions,
-}: {
-  client: FinanceApi;
-  transactions: Transaction[];
-}) {
+function CategoriesTab({ client }: { client: FinanceApi }) {
   const categories = useAsync(() => client.listCategories(), [client]);
   const [screen, setScreen] = useState(CATEGORIES_SCREENS[0].id);
 
@@ -592,11 +599,6 @@ function CategoriesTab({
           categories={categories}
           onDeleted={() => void categories.run()}
         />
-      )}
-      {screen === "spend" && (
-        <Section title="Gastos por categoria" icon={PiggyBank}>
-          <CategorySpendBreakdown transactions={transactions} />
-        </Section>
       )}
     </>
   );
@@ -750,17 +752,17 @@ function CategorySpendBreakdown({ transactions }: { transactions: Transaction[] 
 
 // --- Contas a pagar ------------------------------------------------------
 //
-// Quatro telas dedicadas, cada uma com sua própria aba: (1) cadastro de uma
-// nova conta, (2) a lista de contas cadastradas (definições), (3) faturas e
-// pagamento (ocorrências, com ação de pagar em um clique) e (4) preferências
-// de alerta — em vez de tudo empilhado numa única tela. Um resumo com KPIs
-// fica sempre visível no topo, qualquer que seja a tela ativa.
+// Três telas dedicadas, cada uma com sua própria aba: (1) cadastro de uma
+// nova conta, (2) a lista de contas cadastradas (definições) e (3) faturas e
+// pagamento (ocorrências, com ação de pagar em um clique) — em vez de tudo
+// empilhado numa única tela. Um resumo com KPIs fica sempre visível no
+// topo, qualquer que seja a tela ativa. As preferências de alerta de
+// vencimento vivem na aba Configurações.
 
 const BILLS_SCREENS: SubTabItem[] = [
   { id: "register", label: "Cadastrar", icon: PlusCircle },
   { id: "list", label: "Contas cadastradas", icon: ListChecks },
   { id: "upcoming", label: "Faturas e pagamento", icon: Receipt },
-  { id: "preferences", label: "Preferências de alerta", icon: Bell },
 ];
 
 function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
@@ -789,7 +791,6 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
         />
       )}
       {screen === "upcoming" && <UpcomingBills client={client} />}
-      {screen === "preferences" && <AlertPreferences client={client} />}
     </>
   );
 }

@@ -134,21 +134,23 @@ describe("FinancePage", () => {
     });
   });
 
-  it("mostra a aba Visão geral por padrão, com contas e patrimônio líquido", async () => {
+  it("mostra a aba Visão geral por padrão, com patrimônio líquido e gastos por categoria", async () => {
     render(<FinancePage />);
-    expect(await screen.findByText("Conta Corrente")).toBeInTheDocument();
     expect(await screen.findByText("BRL -253,89")).toBeInTheDocument();
+    expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
   });
 
-  it("cria uma conta", async () => {
+  it("cria uma conta na aba Configurações", async () => {
     render(<FinancePage />);
+    goToTab("Configurações");
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Poupança" } });
     fireEvent.click(screen.getByText("Abrir conta"));
     await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Poupança", "BRL"));
   });
 
-  it("mostra a dica de consentimento em uma importação bancária com 403", async () => {
+  it("mostra a dica de consentimento em uma importação bancária com 403 na aba Configurações", async () => {
     render(<FinancePage />);
+    goToTab("Configurações");
     fireEvent.change(await screen.findByLabelText("ID da conta"), { target: { value: "a1" } });
     fireEvent.change(screen.getByLabelText("CSV"), { target: { value: "a,b" } });
     fireEvent.click(screen.getByText("Importar"));
@@ -201,10 +203,8 @@ describe("FinancePage", () => {
     );
   });
 
-  it("mostra o detalhamento por categoria na aba Categorias", async () => {
+  it("mostra o detalhamento por categoria na aba Visão geral", async () => {
     render(<FinancePage />);
-    goToTab("Categorias");
-    goToBillsScreen("Gastos por categoria");
     const section = await billsSection("Gastos por categoria");
     expect(within(section).getByText("Alimentos e bebidas")).toBeInTheDocument();
     expect(within(section).getByText("Sem categoria")).toBeInTheDocument();
@@ -317,10 +317,9 @@ describe("FinancePage", () => {
     );
   });
 
-  it("salva as preferências de notificação", async () => {
+  it("salva as preferências de notificação na aba Configurações", async () => {
     render(<FinancePage />);
-    goToTab("Contas a pagar");
-    goToBillsScreen("Preferências de alerta");
+    goToTab("Configurações");
     const section = await billsSection("Preferências de alerta de vencimento");
 
     fireEvent.click(within(section).getByLabelText("WhatsApp"));
