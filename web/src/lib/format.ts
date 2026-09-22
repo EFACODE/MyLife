@@ -27,18 +27,3 @@ export function moneyByCurrency(entries: { amount_minor: number; currency: strin
 export function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR");
 }
-
-/** Sum integer minor units per currency, then format each total with `money`. */
-export function moneyByCurrency(entries: { amount_minor: number; currency: string }[]): string {
-  const totals = new Map<string, number>();
-  for (const entry of entries) {
-    totals.set(entry.currency, (totals.get(entry.currency) ?? 0) + entry.amount_minor);
-  }
-  if (totals.size === 0) return "—";
-  return [...totals.entries()].map(([currency, total]) => money(total, currency)).join(" · ");
-}
-
-/** Format an ISO date/datetime string as a short local date (dd/mm/yyyy). */
-export function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR");
-}
