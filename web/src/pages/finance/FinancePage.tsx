@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
-import type { ApiClient } from "../../api/client";
-import type { Account, Bill, BillRecurrence, Transaction } from "../../api/types";
+import { ApiError, type ApiClient } from "../../api/client";
+import type { Account, Bill, BillRecurrence, Category, Transaction } from "../../api/types";
 import { useApiClient } from "../../api/useApiClient";
 import { CategoryAvatar } from "../../components/ui/CategoryAvatar";
 import { CategoryBadge } from "../../components/ui/CategoryBadge";
@@ -20,6 +20,9 @@ type FinanceApi = Pick<
   ApiClient,
   | "listAccounts"
   | "createAccount"
+  | "listCategories"
+  | "createCategory"
+  | "deleteCategory"
   | "recordExpense"
   | "recordTransaction"
   | "listTransactions"
@@ -65,7 +68,9 @@ export function FinancePage() {
         />
       )}
       {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
-      {tab === "categories" && <CategoriesTab transactions={transactions.data ?? []} />}
+      {tab === "categories" && (
+        <CategoriesTab client={client} transactions={transactions.data ?? []} />
+      )}
     </div>
   );
 }
@@ -530,8 +535,125 @@ function TransactionsTable({
 }
 
 // --- Categorias --------------------------------------------------------
+//
+// Duas áreas: (1) cadastro de categorias — um pequeno registro reutilizável,
+// como o de contas — e (2) o resumo de gastos por categoria, derivado das
+// transações já lançadas.
 
-function CategoriesTab({ transactions }: { transactions: Transaction[] }) {
+function CategoriesTab({
+  client,
+  transactions,
+}: {
+  client: FinanceApi;
+  transactions: Transaction[];
+}) {
+  const categories = useAsync(() => client.listCategories(), [client]);
+  return (
+    <>
+      <RegisterCategory client={client} onRegistered={() => void categories.run()} />
+      <RegisteredCategoriesList
+        client={client}
+        categories={categories}
+        onDeleted={() => void categories.run()}
+      />
+      <Section title="Gastos por categoria">
+        <CategorySpendBreakdown transactions={transactions} />
+      </Section>
+    </>
+  );
+}
+
+function RegisterCategory({
+  client,
+  onRegistered,
+}: {
+  client: FinanceApi;
+  onRegistered: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await client.createCategory(name.trim());
+      setName("");
+      onRegistered();
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 409
+          ? "Você já tem uma categoria com esse nome."
+          : "Não foi possível cadastrar a categoria.",
+      );
+    }
+  }
+
+  return (
+    <Section title="Cadastrar categoria">
+      <form onSubmit={submit} className="flex items-end gap-2">
+        <Field label="Nome">
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
+        </Field>
+        <Button type="submit">Cadastrar</Button>
+      </form>
+      {error && <ErrorText>{error}</ErrorText>}
+    </Section>
+  );
+}
+
+function RegisteredCategoriesList({
+  client,
+  categories,
+  onDeleted,
+}: {
+  client: FinanceApi;
+  categories: AsyncResult<Category[]>;
+  onDeleted: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove(categoryId: string) {
+    setError(null);
+    try {
+      await client.deleteCategory(categoryId);
+      onDeleted();
+    } catch {
+      setError("Não foi possível excluir a categoria.");
+    }
+  }
+
+  return (
+    <Section title="Categorias cadastradas">
+      {categories.status === "error" && (
+        <ErrorText>Não foi possível carregar as categorias.</ErrorText>
+      )}
+      {error && <ErrorText>{error}</ErrorText>}
+      {categories.status === "ready" && categories.data?.length === 0 && (
+        <p className="text-sm text-gray-500">Nenhuma categoria cadastrada ainda.</p>
+      )}
+      <ul className="flex flex-col gap-1 text-sm">
+        {(categories.data ?? []).map((category) => (
+          <li
+            key={category.category_id}
+            className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+          >
+            <CategoryBadge category={category.name} />
+            <button
+              type="button"
+              onClick={() => void remove(category.category_id)}
+              className="text-sm text-red-600 hover:underline"
+            >
+              Excluir
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function CategorySpendBreakdown({ transactions }: { transactions: Transaction[] }) {
   const rows = useMemo(() => {
     const byCategory = new Map<string, { total: Map<string, number>; count: number }>();
     for (const t of transactions) {

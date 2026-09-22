@@ -156,6 +156,7 @@ signature narrative.
 | **T4.9** | ⬜ | Open Finance connector (Safra, XP via aggregator) | **Yes** | `OpenFinanceTransactionImported` + `PositionValued(source="openfinance")` for checking + credit-card accounts, via an aggregator-backed `Connector` plugging into the existing `T3.4` `ConnectorRunner`; new `CredentialVault` for encrypted-at-rest third-party tokens; per-institution/product consent scopes on `T2.3`'s `ConsentService`. `specs/domain/finance/openfinance-connector.md`, `specs/domain/identity/third-party-credentials.md`. |
 | **T4.10** | ⬜ | Automatic transaction categorization (editable) | **Yes** | `TransactionCategorized` — rule-based, versioned, evidence-linked classification (moradia/mercado/transporte etc.); user edits recorded as new events (`is_user_override`), never overwriting the original transaction; `POST /finance/transactions/{id}/category`. `specs/domain/finance/transaction-categorization.md`. |
 | **T4.11** | ⬜ | Finance reports (extrato analítico + dashboards) | Yes | Read-time `FinanceReportService`: analytic statement (transactions + resolved category + running balance) and dashboard aggregates (spend by category, income vs. expense, per account/card), filterable by account/period/category/flow-type; `GET /finance/reports/statement`, `/finance/reports/dashboard`. `specs/domain/finance/finance-reports.md`. |
+| **T4.12** | ✅ | Category registry (cadastro de categorias) | **Yes** | `categories` user-scoped registry (plain lookup table, like `accounts`) with case-insensitive duplicate rejection; `FinanceService.create_category`/`list_categories`/`delete_category`; authenticated `POST/GET /finance/categories`, `DELETE /finance/categories/{id}`; erasure/export updated; web console Categorias tab gains a cadastro area. `specs/domain/finance/category-registry.md`. |
 
 ### `T5` — Goals
 
@@ -316,7 +317,7 @@ skip-safe. `specs/domain/platform/cicd.md`.
 | ----- | -------- | ---- | ---------------- |
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
-| 2 | `T4`, `T5` | 11 | 14 |
+| 2 | `T4`, `T5` | 12 | 15 |
 | 3 | `T6` | 4 | 4 |
 | 4 | `T7` | 4 | 4 |
 | 5 | `T8` | 4 | 4 |

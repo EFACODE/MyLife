@@ -35,6 +35,8 @@ from mylife.finance.models import (
     TRANSACTION_IMPORTED,
     Account,
     AccountRow,
+    Category,
+    CategoryRow,
     ExpenseCreated,
     FinancePayload,
     PositionPayload,
@@ -50,7 +52,12 @@ from mylife.finance.net_worth import (
     NetWorth,
     NetWorthService,
 )
-from mylife.finance.service import FinanceService, UnknownAccountError
+from mylife.finance.service import (
+    DuplicateCategoryError,
+    FinanceService,
+    UnknownAccountError,
+    UnknownCategoryError,
+)
 
 __all__ = [
     "BANK_SOURCE",
@@ -80,8 +87,11 @@ __all__ = [
     "BillsReportService",
     "BillsService",
     "CashFlow",
+    "Category",
+    "CategoryRow",
     "CurrencyFlow",
     "CurrencyTotal",
+    "DuplicateCategoryError",
     "ExpenseCreated",
     "FinancePayload",
     "FinanceService",
@@ -94,4 +104,5 @@ __all__ = [
     "TransactionImported",
     "UnknownAccountError",
     "UnknownBillError",
+    "UnknownCategoryError",
 ]

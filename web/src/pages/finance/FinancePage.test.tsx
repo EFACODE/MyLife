@@ -6,6 +6,9 @@ import { ApiError } from "../../api/client";
 const client = vi.hoisted(() => ({
   listAccounts: vi.fn(),
   createAccount: vi.fn(),
+  listCategories: vi.fn(),
+  createCategory: vi.fn(),
+  deleteCategory: vi.fn(),
   recordExpense: vi.fn(),
   recordTransaction: vi.fn(),
   listTransactions: vi.fn(),
@@ -39,6 +42,11 @@ describe("FinancePage", () => {
       { account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" },
     ]);
     client.createAccount.mockResolvedValue({ account_id: "a2" });
+    client.listCategories.mockResolvedValue([
+      { category_id: "c1", name: "Moradia", created_at: "x" },
+    ]);
+    client.createCategory.mockResolvedValue({ category_id: "c2", name: "Mercado", created_at: "x" });
+    client.deleteCategory.mockResolvedValue(undefined);
     client.recordExpense.mockResolvedValue({ event_id: "e1" });
     client.recordTransaction.mockResolvedValue({ event_id: "e2" });
     client.listTransactions.mockResolvedValue([
@@ -187,8 +195,26 @@ describe("FinancePage", () => {
   it("mostra o detalhamento por categoria na aba Categorias", async () => {
     render(<FinancePage />);
     goToTab("Categorias");
-    expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
-    expect(screen.getByText("Sem categoria")).toBeInTheDocument();
+    const section = await billsSection("Gastos por categoria");
+    expect(within(section).getByText("Alimentos e bebidas")).toBeInTheDocument();
+    expect(within(section).getByText("Sem categoria")).toBeInTheDocument();
+  });
+
+  it("lista, cadastra e exclui uma categoria na aba Categorias", async () => {
+    render(<FinancePage />);
+    goToTab("Categorias");
+    const listSection = await billsSection("Categorias cadastradas");
+    expect(within(listSection).getByText("Moradia")).toBeInTheDocument();
+
+    const registerSection = await billsSection("Cadastrar categoria");
+    fireEvent.change(within(registerSection).getByLabelText("Nome"), {
+      target: { value: "Mercado" },
+    });
+    fireEvent.click(within(registerSection).getByText("Cadastrar"));
+    await waitFor(() => expect(client.createCategory).toHaveBeenCalledWith("Mercado"));
+
+    fireEvent.click(within(listSection).getByText("Excluir"));
+    await waitFor(() => expect(client.deleteCategory).toHaveBeenCalledWith("c1"));
   });
 
   it("lista as contas cadastradas e cancela uma", async () => {

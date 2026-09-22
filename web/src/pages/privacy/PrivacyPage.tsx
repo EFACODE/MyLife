@@ -15,6 +15,7 @@ const EXPORT_COUNTS: (keyof ExportBundle)[] = [
   "entities",
   "relationships",
   "accounts",
+  "categories",
   "goals",
   "documents",
 ];
