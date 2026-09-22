@@ -421,6 +421,106 @@ def test_report_caps_occurrences_at_max_occurrences(
     assert all(o.bill_id == bill.bill_id for o in report)
 
 
+def test_report_caps_occurrences_using_explicit_anchor(
+    bills: BillsService, session: Session, account_id: uuid.UUID
+) -> None:
+    # Registered in September but the obligation actually started in March —
+    # the anchor, not the registration month, decides which occurrence is #1.
+    bills.register_bill(
+        USER,
+        account_id,
+        "Financiamento",
+        1000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        max_occurrences=2,
+        occurrence_anchor_year=2026,
+        occurrence_anchor_month=3,
+        now=NOW,
+        correlation_id="c",
+    )
+
+    report = BillsReportService(session).list_occurrences(
+        USER,
+        due_from=datetime(2026, 1, 1, tzinfo=UTC),
+        due_to=datetime(2026, 12, 31, tzinfo=UTC),
+        as_of=NOW,
+    )
+
+    assert [o.due_at for o in report] == [
+        datetime(2026, 3, 5, tzinfo=UTC),
+        datetime(2026, 4, 5, tzinfo=UTC),
+    ]
+
+
+def test_register_bill_defaults_anchor_to_registration_month(
+    bills: BillsService, account_id: uuid.UUID
+) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "Aluguel",
+        1000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        now=NOW,
+        correlation_id="c",
+    )
+
+    assert bill.occurrence_anchor_year == 2026
+    assert bill.occurrence_anchor_month == 9
+
+
+def test_update_bill_keeps_existing_anchor_unless_given(
+    bills: BillsService, account_id: uuid.UUID
+) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "Financiamento",
+        1000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        occurrence_anchor_year=2025,
+        occurrence_anchor_month=1,
+        now=NOW,
+        correlation_id="c",
+    )
+
+    updated = bills.update_bill(
+        USER,
+        bill.bill_id,
+        "Financiamento",
+        2000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        now=NOW,
+        correlation_id="c",
+    )
+    assert updated.occurrence_anchor_year == 2025
+    assert updated.occurrence_anchor_month == 1
+
+    changed = bills.update_bill(
+        USER,
+        bill.bill_id,
+        "Financiamento",
+        2000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        occurrence_anchor_year=2024,
+        occurrence_anchor_month=6,
+        now=NOW,
+        correlation_id="c",
+    )
+    assert changed.occurrence_anchor_year == 2024
+    assert changed.occurrence_anchor_month == 6
+
+
 def test_report_scoped_to_user(
     bills: BillsService, session: Session, account_id: uuid.UUID
 ) -> None:

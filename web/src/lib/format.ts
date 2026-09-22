@@ -7,6 +7,15 @@ export function money(minor: number, currency: string): string {
   return `${currency} ${amount}`;
 }
 
+/** Like `money`, but with the currency after the amount (e.g. "2.500,00 BRL"). */
+export function moneySuffixed(minor: number, currency: string): string {
+  const amount = (minor / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${amount} ${currency}`;
+}
+
 /** Parse a decimal amount (e.g. from a `type="number"` input) into integer minor units. */
 export function parseMoneyInput(value: string): number {
   const amount = Number.parseFloat(value);

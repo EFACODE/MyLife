@@ -82,6 +82,8 @@ def _to_bill(row: BillRow) -> Bill:
         due_day=row.due_day,
         due_at=_stored_utc(row.due_at) if row.due_at is not None else None,
         max_occurrences=row.max_occurrences,
+        occurrence_anchor_year=row.occurrence_anchor_year,
+        occurrence_anchor_month=row.occurrence_anchor_month,
         active=row.active,
         created_at=_stored_utc(row.created_at),
     )
@@ -107,14 +109,20 @@ class BillsService:
         due_day: int | None = None,
         due_at: datetime | None = None,
         max_occurrences: int = 0,
+        occurrence_anchor_year: int | None = None,
+        occurrence_anchor_month: int | None = None,
         now: datetime,
         correlation_id: str,
     ) -> Bill:
         """Register a bill and emit ``BillRegistered``.
 
         ``max_occurrences`` caps how many due occurrences a monthly bill
-        generates (counted from its registration month); ``0`` means
-        unlimited (the default — most bills recur indefinitely).
+        generates; ``0`` means unlimited (the default — most bills recur
+        indefinitely). The cap is counted from ``occurrence_anchor_year``/
+        ``occurrence_anchor_month`` as occurrence 1 — this defaults to the
+        registration month (``now``) but can be set explicitly, since a bill
+        registered today may model an obligation that actually started (or
+        will start) in a different month.
         """
         self._require_account(user_id, account_id)
         if recurrence == "monthly" and due_day is None:
@@ -122,6 +130,12 @@ class BillsService:
         if recurrence == "once" and due_at is None:
             raise InvalidBillRecurrenceError("a one-off bill needs a due_at")
 
+        resolved_anchor_year = (
+            occurrence_anchor_year if occurrence_anchor_year is not None else now.year
+        )
+        resolved_anchor_month = (
+            occurrence_anchor_month if occurrence_anchor_month is not None else now.month
+        )
         bill_id = uuid.uuid4()
         normalized_currency = currency.strip().upper()
         row = BillRow(
@@ -136,6 +150,8 @@ class BillsService:
             due_day=due_day,
             due_at=due_at,
             max_occurrences=max_occurrences,
+            occurrence_anchor_year=resolved_anchor_year,
+            occurrence_anchor_month=resolved_anchor_month,
             active=True,
             created_at=now,
         )
@@ -156,6 +172,8 @@ class BillsService:
                 due_day=due_day,
                 due_at=due_at,
                 max_occurrences=max_occurrences,
+                occurrence_anchor_year=resolved_anchor_year,
+                occurrence_anchor_month=resolved_anchor_month,
             ),
         )
         EventStore(self._session).append(event)
@@ -176,10 +194,16 @@ class BillsService:
         due_day: int | None = None,
         due_at: datetime | None = None,
         max_occurrences: int = 0,
+        occurrence_anchor_year: int | None = None,
+        occurrence_anchor_month: int | None = None,
         now: datetime,
         correlation_id: str,
     ) -> Bill:
-        """Edit a bill's fields and emit ``BillUpdated`` (a correction, not a mutation)."""
+        """Edit a bill's fields and emit ``BillUpdated`` (a correction, not a mutation).
+
+        As with :meth:`register_bill`, an unset occurrence anchor defaults to
+        the bill's existing anchor (left unchanged), not the edit's ``now``.
+        """
         row = self._require_bill(user_id, bill_id)
         assert row is not None  # _require_bill raises otherwise
         if recurrence == "monthly" and due_day is None:
@@ -187,6 +211,16 @@ class BillsService:
         if recurrence == "once" and due_at is None:
             raise InvalidBillRecurrenceError("a one-off bill needs a due_at")
 
+        resolved_anchor_year = (
+            occurrence_anchor_year
+            if occurrence_anchor_year is not None
+            else row.occurrence_anchor_year
+        )
+        resolved_anchor_month = (
+            occurrence_anchor_month
+            if occurrence_anchor_month is not None
+            else row.occurrence_anchor_month
+        )
         normalized_currency = currency.strip().upper()
         row.payee = payee.strip()
         row.amount_minor = abs(amount_minor)
@@ -196,6 +230,8 @@ class BillsService:
         row.due_day = due_day
         row.due_at = due_at
         row.max_occurrences = max_occurrences
+        row.occurrence_anchor_year = resolved_anchor_year
+        row.occurrence_anchor_month = resolved_anchor_month
         event = BillUpdated(
             user_id=user_id,
             occurred_at=now,
@@ -211,6 +247,8 @@ class BillsService:
                 due_day=due_day,
                 due_at=due_at,
                 max_occurrences=max_occurrences,
+                occurrence_anchor_year=resolved_anchor_year,
+                occurrence_anchor_month=resolved_anchor_month,
             ),
         )
         EventStore(self._session).append(event)

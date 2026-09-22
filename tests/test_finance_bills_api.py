@@ -105,6 +105,31 @@ def test_register_bill_with_max_occurrences(client: TestClient) -> None:
     assert response.json()["max_occurrences"] == 12
 
 
+def test_register_bill_with_explicit_occurrence_anchor(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+
+    response = client.post(
+        "/finance/bills",
+        json={
+            "account_id": account_id,
+            "payee": "Financiamento",
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "recurrence": "monthly",
+            "due_day": 5,
+            "max_occurrences": 24,
+            "occurrence_anchor_year": 2025,
+            "occurrence_anchor_month": 3,
+        },
+        headers=auth,
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["occurrence_anchor_year"] == 2025
+    assert body["occurrence_anchor_month"] == 3
+
+
 def test_update_bill(client: TestClient) -> None:
     auth = _auth(client)
     account_id = _account(client, auth)

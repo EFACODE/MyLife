@@ -73,8 +73,11 @@ def _periods_for_bill(row: BillRow, due_from: datetime, due_to: datetime) -> lis
     due-date alert scanner, T4.8) filter those out themselves.
 
     A monthly bill's ``max_occurrences`` (``0`` = unlimited) caps how many
-    due occurrences it ever generates, counted from its registration month
-    (occurrence 1) regardless of which window is queried.
+    due occurrences it ever generates, counted from its
+    ``occurrence_anchor_year``/``occurrence_anchor_month`` as occurrence 1
+    regardless of which window is queried. The anchor defaults to the bill's
+    registration month but can be set explicitly — a bill registered today
+    may model an obligation that actually started in a different month.
     """
     if row.recurrence == "once":
         if row.due_at is not None:
@@ -83,8 +86,7 @@ def _periods_for_bill(row: BillRow, due_from: datetime, due_to: datetime) -> lis
                 return [due_at]
         return []
     if row.recurrence == "monthly" and row.due_day is not None:
-        genesis = _stored_utc(row.created_at)
-        genesis_index = _month_index(genesis.year, genesis.month)
+        genesis_index = _month_index(row.occurrence_anchor_year, row.occurrence_anchor_month)
         occurrences = []
         for year, month in _month_range(due_from, due_to):
             if row.max_occurrences > 0:
