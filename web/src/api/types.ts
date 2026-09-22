@@ -379,6 +379,7 @@ export interface Bill {
   recurrence: BillRecurrence;
   due_day: number | null;
   due_at: string | null;
+  max_occurrences: number;
   active: boolean;
   created_at: string;
 }
@@ -392,6 +393,18 @@ export interface RegisterBillInput {
   recurrence: BillRecurrence;
   due_day?: number | null;
   due_at?: string | null;
+  max_occurrences?: number;
+}
+
+export interface UpdateBillInput {
+  payee: string;
+  amount_minor: number;
+  currency: string;
+  category?: string | null;
+  recurrence: BillRecurrence;
+  due_day?: number | null;
+  due_at?: string | null;
+  max_occurrences?: number;
 }
 
 export interface BillPayment {

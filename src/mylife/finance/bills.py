@@ -1,13 +1,13 @@
 """Recurring bills (contas a pagar).
 
 A ``bills`` registry (like accounts/goals) of recurring or one-off bills a
-user owes, plus the Bills facts — ``BillRegistered``, ``BillPaid`` and
-``BillCancelled`` — immutable Life Events. Due occurrences are **not**
-persisted as events: they are derived read-time from a bill's recurrence rule
-(a monthly due-day or a fixed one-off date) by
-:mod:`mylife.finance.bills_report`, the same way net worth is derived from the
-finance event stream rather than a projection table. See
-``specs/domain/finance/recurring-bills.md`` (T4.7).
+user owes, plus the Bills facts — ``BillRegistered``, ``BillUpdated``,
+``BillPaid`` and ``BillCancelled`` — immutable Life Events. Due occurrences
+are **not** persisted as events: they are derived read-time from a bill's
+recurrence rule (a monthly due-day, optionally capped to a fixed number of
+occurrences, or a fixed one-off date) by :mod:`mylife.finance.bills_report`,
+the same way net worth is derived from the finance event stream rather than
+a projection table. See ``specs/domain/finance/recurring-bills.md`` (T4.7).
 """
 
 import uuid
@@ -22,6 +22,7 @@ from mylife.core.events import LifeEvent
 from mylife.db.base import Base
 
 BILL_REGISTERED: Final = "finance.bill_registered"
+BILL_UPDATED: Final = "finance.bill_updated"
 BILL_PAID: Final = "finance.bill_paid"
 BILL_CANCELLED: Final = "finance.bill_cancelled"
 BILLS_SOURCE = "finance"
@@ -44,6 +45,7 @@ class BillRow(Base):
     recurrence: Mapped[str] = mapped_column(String)
     due_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    max_occurrences: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -62,6 +64,7 @@ class Bill(BaseModel):
     recurrence: Recurrence
     due_day: int | None
     due_at: datetime | None
+    max_occurrences: int
     active: bool
     created_at: datetime
 
@@ -80,6 +83,23 @@ class BillRegisteredPayload(BaseModel):
     recurrence: Recurrence
     due_day: int | None = None
     due_at: datetime | None = None
+    max_occurrences: int = 0
+
+
+class BillUpdatedPayload(BaseModel):
+    """A correction to a bill's editable fields (a new fact, not a mutation)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    bill_id: uuid.UUID
+    payee: str
+    amount_minor: int
+    currency: str
+    category: str | None = None
+    recurrence: Recurrence
+    due_day: int | None = None
+    due_at: datetime | None = None
+    max_occurrences: int = 0
 
 
 class BillPaidPayload(BaseModel):
@@ -107,6 +127,13 @@ class BillRegistered(LifeEvent[BillRegisteredPayload]):
     """Emitted when a user registers a recurring/one-off bill (Finance)."""
 
     event_type: Literal["finance.bill_registered"] = BILL_REGISTERED
+    schema_version: Literal[1] = 1
+
+
+class BillUpdated(LifeEvent[BillUpdatedPayload]):
+    """Emitted when a user edits a bill's fields (Finance) — a correction, not a mutation."""
+
+    event_type: Literal["finance.bill_updated"] = BILL_UPDATED
     schema_version: Literal[1] = 1
 
 
