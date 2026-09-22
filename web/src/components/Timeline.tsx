@@ -30,23 +30,23 @@ export function Timeline({ client, userId }: { client: TimelineApi; userId: stri
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Timeline</h2>
+        <h2 className="text-lg font-semibold">Linha do tempo</h2>
         <input
-          aria-label="Filter by event type"
-          placeholder="event type…"
+          aria-label="Filtrar por tipo de evento"
+          placeholder="tipo de evento…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="rounded border border-gray-300 px-2 py-1 text-sm"
         />
       </div>
-      {status === "loading" && <p className="text-sm text-gray-500">Loading…</p>}
+      {status === "loading" && <p className="text-sm text-gray-500">Carregando…</p>}
       {status === "error" && (
         <p role="alert" className="text-sm text-red-600">
-          Could not load the timeline.
+          Não foi possível carregar a linha do tempo.
         </p>
       )}
       {status === "ready" && events.length === 0 && (
-        <p className="text-sm text-gray-500">No events yet.</p>
+        <p className="text-sm text-gray-500">Nenhum evento ainda.</p>
       )}
       <ul className="flex flex-col gap-2">
         {events.map((event) => (

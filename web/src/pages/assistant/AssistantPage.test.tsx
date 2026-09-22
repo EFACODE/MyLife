@@ -37,15 +37,15 @@ describe("AssistantPage", () => {
 
   it("asks a question and renders the grounded answer", async () => {
     render(<AssistantPage />);
-    fireEvent.change(screen.getByLabelText("Question"), { target: { value: "how much on food?" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+    fireEvent.change(screen.getByLabelText("Pergunta"), { target: { value: "how much on food?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Perguntar" }));
     expect(await screen.findByText("Found 1 record.")).toBeInTheDocument();
     expect(client.assistantQuery).toHaveBeenCalledWith("how much on food?");
   });
 
   it("runs alerts and lists the fired insights", async () => {
     render(<AssistantPage />);
-    fireEvent.click(screen.getByText("Run alerts"));
+    fireEvent.click(screen.getByText("Executar alertas"));
     expect(await screen.findAllByText(/You overspent on food\./)).not.toHaveLength(0);
   });
 });

@@ -29,10 +29,10 @@ describe("HealthPage", () => {
     render(<HealthPage />);
     expect(await screen.findByText(/420 min/)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Activity"), { target: { value: "run" } });
-    const minutes = screen.getAllByLabelText("Duration (minutes)");
+    fireEvent.change(screen.getByLabelText("Atividade"), { target: { value: "run" } });
+    const minutes = screen.getAllByLabelText("Duração (minutos)");
     fireEvent.change(minutes[minutes.length - 1], { target: { value: "30" } });
-    fireEvent.click(screen.getByText("Record workout"));
+    fireEvent.click(screen.getByText("Registrar treino"));
     await waitFor(() =>
       expect(client.recordWorkout).toHaveBeenCalledWith(
         expect.objectContaining({ activity: "run", duration_minutes: 30 }),
@@ -43,7 +43,7 @@ describe("HealthPage", () => {
   it("surfaces a 403 health import as a consent hint", async () => {
     render(<HealthPage />);
     fireEvent.change(screen.getByLabelText("CSV"), { target: { value: "a,b" } });
-    fireEvent.click(screen.getByText("Import"));
-    expect(await screen.findByText(/Grant the 'health' consent first/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Importar"));
+    expect(await screen.findByText(/Conceda o consentimento de 'saúde' primeiro/)).toBeInTheDocument();
   });
 });

@@ -20,9 +20,9 @@ function renderPage() {
 }
 
 function fillForm() {
-  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Ada Lovelace" } });
-  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ada@example.com" } });
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "supersecret1" } });
+  fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Ada Lovelace" } });
+  fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "ada@example.com" } });
+  fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "supersecret1" } });
 }
 
 describe("SignupPage", () => {
@@ -51,7 +51,7 @@ describe("SignupPage", () => {
 
     renderPage();
     fillForm();
-    fireEvent.click(screen.getByText("Sign up"));
+    fireEvent.click(screen.getByText("Cadastrar"));
 
     await waitFor(() => expect(screen.getByText("home page")).toBeInTheDocument());
     expect(localStorage.getItem("mylife.token")).toBe("tok123");
@@ -73,15 +73,15 @@ describe("SignupPage", () => {
 
     renderPage();
     fillForm();
-    fireEvent.click(screen.getByText("Sign up"));
+    fireEvent.click(screen.getByText("Cadastrar"));
 
     await waitFor(() =>
-      expect(screen.getByText("An account with this email already exists.")).toBeInTheDocument(),
+      expect(screen.getByText("Já existe uma conta com este e-mail.")).toBeInTheDocument(),
     );
   });
 
   it("links back to the login page", () => {
     renderPage();
-    expect(screen.getByText("Sign in").closest("a")).toHaveAttribute("href", "/login");
+    expect(screen.getByText("Entrar").closest("a")).toHaveAttribute("href", "/login");
   });
 });

@@ -21,16 +21,16 @@ export function LoginPage() {
       login(token);
       navigate("/");
     } catch {
-      setError("Invalid email or password.");
+      setError("E-mail ou senha inválidos.");
     }
   }
 
   return (
     <main className="mx-auto mt-24 max-w-sm px-4">
-      <h1 className="mb-6 text-2xl font-semibold">Sign in to My Life</h1>
+      <h1 className="mb-6 text-2xl font-semibold">Entrar no My Life</h1>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          Email
+          E-mail
           <input
             type="email"
             value={email}
@@ -40,7 +40,7 @@ export function LoginPage() {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Password
+          Senha
           <input
             type="password"
             value={password}
@@ -54,13 +54,13 @@ export function LoginPage() {
           type="submit"
           className="mt-2 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white"
         >
-          Sign in
+          Entrar
         </button>
       </form>
       <p className="mt-4 text-sm text-gray-600">
-        Don&apos;t have an account?{" "}
+        Ainda não tem uma conta?{" "}
         <Link to="/signup" className="text-blue-600 underline">
-          Sign up
+          Cadastre-se
         </Link>
       </p>
     </main>

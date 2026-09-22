@@ -27,9 +27,9 @@ describe("CapturePage", () => {
 
   it("records an event with the user id and entered fields", async () => {
     render(<CapturePage />);
-    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Ran 5k" } });
-    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "fitness" } });
-    fireEvent.click(screen.getByText("Record event"));
+    fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Ran 5k" } });
+    fireEvent.change(screen.getByLabelText("Categoria"), { target: { value: "fitness" } });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar evento" }));
     await waitFor(() =>
       expect(client.captureEvent).toHaveBeenCalledWith(
         expect.objectContaining({ user_id: "u", title: "Ran 5k", category: "fitness" }),

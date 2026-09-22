@@ -36,8 +36,8 @@ describe("Layout", () => {
         </MemoryRouter>
       </AuthProvider>,
     );
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Log out")).toBeInTheDocument();
+    expect(screen.getByText("Painel")).toBeInTheDocument();
+    expect(screen.getByText("Sair")).toBeInTheDocument();
     expect(await screen.findByText("dashboard content")).toBeInTheDocument();
   });
 });

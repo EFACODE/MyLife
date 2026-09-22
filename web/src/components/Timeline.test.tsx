@@ -39,19 +39,21 @@ describe("Timeline", () => {
     render(<Timeline client={client} userId="u" />);
     await waitFor(() => expect(getTimeline).toHaveBeenCalledWith("u", {}));
 
-    fireEvent.change(screen.getByLabelText("Filter by event type"), {
+    fireEvent.change(screen.getByLabelText("Filtrar por tipo de evento"), {
       target: { value: "health.sleep_recorded" },
     });
     await waitFor(() =>
       expect(getTimeline).toHaveBeenLastCalledWith("u", { eventType: "health.sleep_recorded" }),
     );
-    expect(await screen.findByText("No events yet.")).toBeInTheDocument();
+    expect(await screen.findByText("Nenhum evento ainda.")).toBeInTheDocument();
   });
 
   it("shows an error state when the call fails", async () => {
     const getTimeline = vi.fn().mockRejectedValue(new Error("boom"));
     const client: TimelineApi = { getTimeline };
     render(<Timeline client={client} userId="u" />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the timeline.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar a linha do tempo.",
+    );
   });
 });

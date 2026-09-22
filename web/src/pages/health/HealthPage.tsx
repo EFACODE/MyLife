@@ -49,14 +49,14 @@ function SleepSection({ client }: { client: HealthApi }) {
       setQuality("");
       await sleep.run();
     } catch {
-      setError("Could not record sleep.");
+      setError("Não foi possível registrar o sono.");
     }
   }
 
   return (
-    <Section title="Sleep">
+    <Section title="Sono">
       <form onSubmit={submit} className="mb-3 flex flex-wrap items-end gap-2">
-        <Field label="Occurred at">
+        <Field label="Ocorrido em">
           <TextInput
             type="datetime-local"
             value={occurredAt}
@@ -64,7 +64,7 @@ function SleepSection({ client }: { client: HealthApi }) {
             required
           />
         </Field>
-        <Field label="Duration (minutes)">
+        <Field label="Duração (minutos)">
           <TextInput
             type="number"
             value={minutes}
@@ -72,10 +72,10 @@ function SleepSection({ client }: { client: HealthApi }) {
             required
           />
         </Field>
-        <Field label="Quality">
+        <Field label="Qualidade">
           <TextInput value={quality} onChange={(e) => setQuality(e.target.value)} />
         </Field>
-        <Button type="submit">Record sleep</Button>
+        <Button type="submit">Registrar sono</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
       <ul className="flex flex-col gap-1 text-sm">
@@ -117,14 +117,14 @@ function WorkoutSection({ client }: { client: HealthApi }) {
       setDistance("");
       await workouts.run();
     } catch {
-      setError("Could not record the workout.");
+      setError("Não foi possível registrar o treino.");
     }
   }
 
   return (
-    <Section title="Workouts">
+    <Section title="Treinos">
       <form onSubmit={submit} className="mb-3 flex flex-wrap items-end gap-2">
-        <Field label="Occurred at">
+        <Field label="Ocorrido em">
           <TextInput
             type="datetime-local"
             value={occurredAt}
@@ -132,10 +132,10 @@ function WorkoutSection({ client }: { client: HealthApi }) {
             required
           />
         </Field>
-        <Field label="Activity">
+        <Field label="Atividade">
           <TextInput value={activity} onChange={(e) => setActivity(e.target.value)} required />
         </Field>
-        <Field label="Duration (minutes)">
+        <Field label="Duração (minutos)">
           <TextInput
             type="number"
             value={minutes}
@@ -143,14 +143,14 @@ function WorkoutSection({ client }: { client: HealthApi }) {
             required
           />
         </Field>
-        <Field label="Distance (meters)">
+        <Field label="Distância (metros)">
           <TextInput
             type="number"
             value={distance}
             onChange={(e) => setDistance(e.target.value)}
           />
         </Field>
-        <Button type="submit">Record workout</Button>
+        <Button type="submit">Registrar treino</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
       <ul className="flex flex-col gap-1 text-sm">
@@ -178,19 +178,19 @@ function HealthImport({ client }: { client: HealthApi }) {
     setResult(null);
     try {
       const outcome = await client.importHealth(csv);
-      setResult(`Imported ${outcome.events_created} (skipped ${outcome.skipped_duplicates}).`);
+      setResult(`Importados ${outcome.events_created} (ignorados ${outcome.skipped_duplicates}).`);
     } catch (caught) {
       const status = (caught as { status?: number }).status;
       setError(
         status === 403
-          ? "Grant the 'health' consent first (Consent page)."
-          : "Could not import the CSV.",
+          ? "Conceda o consentimento de 'saúde' primeiro (página Consentimentos)."
+          : "Não foi possível importar o CSV.",
       );
     }
   }
 
   return (
-    <Section title="Health CSV import">
+    <Section title="Importar CSV de saúde">
       <form onSubmit={submit} className="flex flex-col gap-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-gray-700">CSV</span>
@@ -203,7 +203,7 @@ function HealthImport({ client }: { client: HealthApi }) {
           />
         </label>
         <div>
-          <Button type="submit">Import</Button>
+          <Button type="submit">Importar</Button>
         </div>
       </form>
       {result && <p className="mt-2 text-sm text-green-700">{result}</p>}

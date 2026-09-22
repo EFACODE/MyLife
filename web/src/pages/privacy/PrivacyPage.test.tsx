@@ -36,7 +36,7 @@ describe("PrivacyPage", () => {
 
   it("exports data and shows counts", async () => {
     renderPage();
-    fireEvent.click(screen.getByText("Export"));
+    fireEvent.click(screen.getByText("Exportar"));
     const row = await screen.findByText(
       (_, el) => el?.tagName === "LI" && el.textContent === "events: 2",
     );
@@ -46,8 +46,8 @@ describe("PrivacyPage", () => {
   it("erases the account after confirmation", async () => {
     localStorage.setItem("mylife.token", "t");
     renderPage();
-    fireEvent.click(screen.getByText("Erase account"));
-    fireEvent.click(screen.getByText("Confirm erase"));
+    fireEvent.click(screen.getByText("Apagar conta"));
+    fireEvent.click(screen.getByText("Confirmar exclusão"));
     await waitFor(() => expect(client.deleteMe).toHaveBeenCalled());
     expect(localStorage.getItem("mylife.token")).toBeNull();
   });

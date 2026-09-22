@@ -26,17 +26,17 @@ export function ForecastPage() {
       await client.runForecasts(Number(horizon));
       await forecasts.run();
     } catch {
-      setError("Could not run forecasts.");
+      setError("Não foi possível executar as previsões.");
     }
   }
 
   return (
     <>
       <Section
-        title="Forecasts"
+        title="Previsões"
         actions={
           <span className="flex items-end gap-2">
-            <Field label="Horizon (days)">
+            <Field label="Horizonte (dias)">
               <TextInput
                 type="number"
                 value={horizon}
@@ -44,13 +44,13 @@ export function ForecastPage() {
                 className="w-24"
               />
             </Field>
-            <Button onClick={run}>Run models</Button>
+            <Button onClick={run}>Executar modelos</Button>
           </span>
         }
       >
         {error && <ErrorText>{error}</ErrorText>}
         {forecasts.status === "ready" && forecasts.data?.length === 0 && (
-          <p className="text-sm text-gray-500">No forecasts yet — run the models.</p>
+          <p className="text-sm text-gray-500">Nenhuma previsão ainda — execute os modelos.</p>
         )}
         <ul className="flex flex-col gap-2 text-sm">
           {(forecasts.data ?? []).map((forecast) => (
@@ -60,7 +60,7 @@ export function ForecastPage() {
               </span>
               <span className="text-gray-500">
                 {" · conf "}
-                {forecast.confidence.toFixed(2)} · {forecast.points.length} points ·{" "}
+                {forecast.confidence.toFixed(2)} · {forecast.points.length} pontos ·{" "}
                 {forecast.assumptions.map((a) => a.name).join(", ")}
               </span>
               <div className="font-mono text-xs text-gray-400">{forecast.forecast_id}</div>
@@ -88,17 +88,17 @@ function Simulate({ client, onDone }: { client: ForecastApi; onDone: () => void 
       await client.simulateForecast(forecastId.trim(), Number(scale), label.trim() || undefined);
       onDone();
     } catch {
-      setError("Could not simulate (scale ≠ 1 or an override is required).");
+      setError("Não foi possível simular (escala ≠ 1 ou é necessário um override).");
     }
   }
 
   return (
-    <Section title="What-if scenario">
+    <Section title="Cenário hipotético">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Forecast id">
+        <Field label="Id da previsão">
           <TextInput value={forecastId} onChange={(e) => setForecastId(e.target.value)} required />
         </Field>
-        <Field label="Scale">
+        <Field label="Escala">
           <TextInput
             type="number"
             step="0.1"
@@ -107,10 +107,10 @@ function Simulate({ client, onDone }: { client: ForecastApi; onDone: () => void 
             required
           />
         </Field>
-        <Field label="Label">
+        <Field label="Rótulo">
           <TextInput value={label} onChange={(e) => setLabel(e.target.value)} />
         </Field>
-        <Button type="submit">Simulate</Button>
+        <Button type="submit">Simular</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </Section>
@@ -140,12 +140,12 @@ function RecordOutcome({ client }: { client: ForecastApi }) {
   }
 
   return (
-    <Section title="Record outcome">
+    <Section title="Registrar resultado">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Forecast id">
+        <Field label="Id da previsão">
           <TextInput value={forecastId} onChange={(e) => setForecastId(e.target.value)} required />
         </Field>
-        <Field label="Observed value">
+        <Field label="Valor observado">
           <TextInput
             type="number"
             value={value}
@@ -153,7 +153,7 @@ function RecordOutcome({ client }: { client: ForecastApi }) {
             required
           />
         </Field>
-        <Field label="Observed at">
+        <Field label="Observado em">
           <TextInput
             type="datetime-local"
             value={observedAt}
@@ -161,10 +161,10 @@ function RecordOutcome({ client }: { client: ForecastApi }) {
             required
           />
         </Field>
-        <Button type="submit">Record</Button>
+        <Button type="submit">Registrar</Button>
       </form>
-      {status === "ok" && <p className="mt-2 text-sm text-green-700">Recorded.</p>}
-      {status === "error" && <ErrorText>Could not record the outcome.</ErrorText>}
+      {status === "ok" && <p className="mt-2 text-sm text-green-700">Registrado.</p>}
+      {status === "error" && <ErrorText>Não foi possível registrar o resultado.</ErrorText>}
     </Section>
   );
 }
@@ -177,15 +177,16 @@ function CalibrationView({ client }: { client: ForecastApi }) {
   }
 
   return (
-    <Section title="Calibration" actions={<Button onClick={load}>Load</Button>}>
+    <Section title="Calibração" actions={<Button onClick={load}>Carregar</Button>}>
       {calibration ? (
         <p className="text-sm">
-          {calibration.total} outcomes · {calibration.within_interval} within interval · hit rate{" "}
-          {(calibration.hit_rate * 100).toFixed(0)}% · mean abs error {calibration.mean_abs_error}
+          {calibration.total} resultados · {calibration.within_interval} dentro do intervalo · taxa
+          de acerto {(calibration.hit_rate * 100).toFixed(0)}% · erro absoluto médio{" "}
+          {calibration.mean_abs_error}
         </p>
       ) : (
         <p className="text-sm text-gray-500">
-          Load how your forecasts held up against recorded outcomes.
+          Carregue para ver como suas previsões se saíram frente aos resultados registrados.
         </p>
       )}
     </Section>

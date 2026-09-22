@@ -26,8 +26,8 @@ export function CapturePage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   if (status === "loading" || status === "idle")
-    return <p className="text-sm text-gray-500">Loading…</p>;
-  if (status === "error" || !user) return <ErrorText>Could not load your account.</ErrorText>;
+    return <p className="text-sm text-gray-500">Carregando…</p>;
+  if (status === "error" || !user) return <ErrorText>Não foi possível carregar sua conta.</ErrorText>;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -46,24 +46,24 @@ export function CapturePage() {
       setNote("");
       setReloadKey((key) => key + 1);
     } catch {
-      setError("Could not record the event.");
+      setError("Não foi possível registrar o evento.");
     }
   }
 
   return (
     <>
-      <Section title="Capture an event">
+      <Section title="Registrar evento">
         <form onSubmit={submit} className="flex flex-col gap-3">
-          <Field label="Title">
+          <Field label="Título">
             <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required />
           </Field>
-          <Field label="Category">
+          <Field label="Categoria">
             <TextInput value={category} onChange={(e) => setCategory(e.target.value)} required />
           </Field>
-          <Field label="Note (optional)">
+          <Field label="Nota (opcional)">
             <TextInput value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
-          <Field label="Occurred at">
+          <Field label="Ocorrido em">
             <TextInput
               type="datetime-local"
               value={occurredAt}
@@ -73,7 +73,7 @@ export function CapturePage() {
           </Field>
           {error && <ErrorText>{error}</ErrorText>}
           <div>
-            <Button type="submit">Record event</Button>
+            <Button type="submit">Registrar evento</Button>
           </div>
         </form>
       </Section>

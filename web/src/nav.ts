@@ -8,15 +8,15 @@ export interface NavItem {
  * here as their pages land.
  */
 export const NAV: NavItem[] = [
-  { path: "/", label: "Dashboard" },
-  { path: "/capture", label: "Capture" },
-  { path: "/finance", label: "Finance" },
-  { path: "/health", label: "Health" },
-  { path: "/goals", label: "Goals" },
-  { path: "/knowledge", label: "Knowledge" },
-  { path: "/assistant", label: "Assistant" },
-  { path: "/forecast", label: "Forecast" },
-  { path: "/consent", label: "Consent" },
-  { path: "/audit", label: "Audit" },
-  { path: "/privacy", label: "Privacy" },
+  { path: "/", label: "Painel" },
+  { path: "/capture", label: "Registrar" },
+  { path: "/finance", label: "Finanças" },
+  { path: "/health", label: "Saúde" },
+  { path: "/goals", label: "Metas" },
+  { path: "/knowledge", label: "Conhecimento" },
+  { path: "/assistant", label: "Assistente" },
+  { path: "/forecast", label: "Previsões" },
+  { path: "/consent", label: "Consentimentos" },
+  { path: "/audit", label: "Auditoria" },
+  { path: "/privacy", label: "Privacidade" },
 ];
