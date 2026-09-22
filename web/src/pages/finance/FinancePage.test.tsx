@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../api/client";
@@ -7,6 +7,8 @@ const client = vi.hoisted(() => ({
   listAccounts: vi.fn(),
   createAccount: vi.fn(),
   recordExpense: vi.fn(),
+  recordTransaction: vi.fn(),
+  listTransactions: vi.fn(),
   netWorth: vi.fn(),
   cashFlow: vi.fn(),
   importBank: vi.fn(),
@@ -23,6 +25,10 @@ vi.mock("../../api/useApiClient", () => ({ useApiClient: () => client }));
 
 import { FinancePage } from "./FinancePage";
 
+function goToTab(name: string) {
+  fireEvent.click(screen.getByRole("tab", { name }));
+}
+
 describe("FinancePage", () => {
   beforeEach(() => {
     client.listAccounts.mockResolvedValue([
@@ -30,6 +36,29 @@ describe("FinancePage", () => {
     ]);
     client.createAccount.mockResolvedValue({ account_id: "a2" });
     client.recordExpense.mockResolvedValue({ event_id: "e1" });
+    client.recordTransaction.mockResolvedValue({ event_id: "e2" });
+    client.listTransactions.mockResolvedValue([
+      {
+        event_id: "t1",
+        kind: "expense",
+        account_id: "a1",
+        amount_minor: -4599,
+        currency: "BRL",
+        description: "Lunch",
+        category: "Alimentos e bebidas",
+        occurred_at: "2026-09-20T12:00:00Z",
+      },
+      {
+        event_id: "t2",
+        kind: "import",
+        account_id: "a1",
+        amount_minor: 100000,
+        currency: "BRL",
+        description: "Salary",
+        category: null,
+        occurred_at: "2026-09-19T12:00:00Z",
+      },
+    ]);
     client.netWorth.mockResolvedValue({
       currencies: [{ currency: "BRL", total_minor: -25389 }],
       accounts: [],
@@ -70,7 +99,7 @@ describe("FinancePage", () => {
     });
   });
 
-  it("lists accounts and net worth", async () => {
+  it("shows the Visão geral tab by default with accounts and net worth", async () => {
     render(<FinancePage />);
     expect(await screen.findByText("Checking")).toBeInTheDocument();
     expect(await screen.findByText("BRL -253.89")).toBeInTheDocument();
@@ -83,33 +112,72 @@ describe("FinancePage", () => {
     await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Savings", "BRL"));
   });
 
-  it("records an expense in minor units", async () => {
-    render(<FinancePage />);
-    fireEvent.change(screen.getAllByLabelText("Account id")[0], { target: { value: "a1" } });
-    fireEvent.change(screen.getAllByLabelText("Amount (minor units)")[0], {
-      target: { value: "4599" },
-    });
-    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Lunch" } });
-    fireEvent.click(screen.getByText("Record"));
-    await waitFor(() =>
-      expect(client.recordExpense).toHaveBeenCalledWith(
-        expect.objectContaining({ account_id: "a1", amount_minor: 4599, description: "Lunch" }),
-      ),
-    );
-  });
-
   it("surfaces a 403 bank import as a consent hint", async () => {
     render(<FinancePage />);
-    // Field order: Record expense, Bank CSV import, Bills — Bank CSV import is index 1.
-    const accountFields = screen.getAllByLabelText("Account id");
-    fireEvent.change(accountFields[1], { target: { value: "a1" } });
+    fireEvent.change(await screen.findByLabelText("Account id"), { target: { value: "a1" } });
     fireEvent.change(screen.getByLabelText("CSV"), { target: { value: "a,b" } });
     fireEvent.click(screen.getByText("Import"));
     expect(await screen.findByText(/Grant the 'bank' consent first/)).toBeInTheDocument();
   });
 
+  it("shows the transactions table with stat cards and category badges", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+
+    expect(await screen.findByText("Lunch")).toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.getByText("Alimentos e bebidas")).toBeInTheDocument();
+    expect(screen.getByText("Sem categoria")).toBeInTheDocument();
+    // Stat cards: 2 transactions, one expense (R$45.99) and one income (R$1000.00).
+    // Each value also appears once in the table row, so expect two matches.
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getAllByText("BRL -45.99")).toHaveLength(2);
+    expect(screen.getAllByText("BRL 1000.00")).toHaveLength(2);
+  });
+
+  it("filters transactions by search", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    await screen.findByText("Lunch");
+
+    fireEvent.change(screen.getByLabelText("Buscar transações"), {
+      target: { value: "Salary" },
+    });
+
+    expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+  });
+
+  it("records a new transaction from the Transações tab", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    await screen.findByText("Lunch");
+
+    fireEvent.click(screen.getByText("+ Nova Transação"));
+    await waitFor(() => expect(screen.getByLabelText("Account")).toHaveValue("a1"));
+    fireEvent.change(screen.getByLabelText("Amount (minor units)"), {
+      target: { value: "1200" },
+    });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Coffee" } });
+    fireEvent.click(screen.getByText("Save"));
+
+    await waitFor(() =>
+      expect(client.recordExpense).toHaveBeenCalledWith(
+        expect.objectContaining({ account_id: "a1", amount_minor: 1200, description: "Coffee" }),
+      ),
+    );
+  });
+
+  it("shows a category breakdown on the Categorias tab", async () => {
+    render(<FinancePage />);
+    goToTab("Categorias");
+    expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
+    expect(screen.getByText("Sem categoria")).toBeInTheDocument();
+  });
+
   it("lists bills and cancels one", async () => {
     render(<FinancePage />);
+    goToTab("Contas a pagar");
     expect(await screen.findByText("Aluguel")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Cancel"));
     await waitFor(() => expect(client.cancelBill).toHaveBeenCalledWith("b1"));
@@ -117,14 +185,22 @@ describe("FinancePage", () => {
 
   it("registers a monthly bill", async () => {
     render(<FinancePage />);
-    // Field order: Record expense, Bank CSV import, Bills — Bills is index 2.
-    fireEvent.change(screen.getAllByLabelText("Account id")[2], { target: { value: "a1" } });
-    fireEvent.change(screen.getByLabelText("Payee"), { target: { value: "Netflix" } });
-    // "Amount (minor units)" also appears in Record expense — Bills is index 1.
-    fireEvent.change(screen.getAllByLabelText("Amount (minor units)")[1], {
+    goToTab("Contas a pagar");
+    await screen.findByText("Aluguel");
+
+    const billsSection = screen.getByText("Bills (contas a pagar)").closest("section")!;
+    fireEvent.change(
+      within(billsSection).getByLabelText("Account id"),
+      { target: { value: "a1" } },
+    );
+    fireEvent.change(within(billsSection).getByLabelText("Payee"), {
+      target: { value: "Netflix" },
+    });
+    fireEvent.change(within(billsSection).getByLabelText("Amount (minor units)"), {
       target: { value: "4990" },
     });
-    fireEvent.click(screen.getByText("Register bill"));
+    fireEvent.click(within(billsSection).getByText("Register bill"));
+
     await waitFor(() =>
       expect(client.registerBill).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -140,6 +216,9 @@ describe("FinancePage", () => {
 
   it("marks a bill as paid", async () => {
     render(<FinancePage />);
+    goToTab("Contas a pagar");
+    await screen.findByText("Aluguel");
+
     fireEvent.change(screen.getByLabelText("Bill id"), { target: { value: "b1" } });
     fireEvent.change(screen.getByLabelText("Due date (occurrence)"), {
       target: { value: "2026-09-05T00:00" },
@@ -156,6 +235,7 @@ describe("FinancePage", () => {
 
   it("saves notification preferences", async () => {
     render(<FinancePage />);
+    goToTab("Contas a pagar");
     await screen.findByText("Reminder preferences");
     fireEvent.click(screen.getByLabelText("WhatsApp"));
     fireEvent.change(screen.getByLabelText("WhatsApp number"), {

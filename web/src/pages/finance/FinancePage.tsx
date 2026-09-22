@@ -1,20 +1,28 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import type { ApiClient } from "../../api/client";
-import type { BillRecurrence } from "../../api/types";
+import type { Account, BillRecurrence, Transaction } from "../../api/types";
 import { useApiClient } from "../../api/useApiClient";
+import { CategoryAvatar } from "../../components/ui/CategoryAvatar";
+import { CategoryBadge } from "../../components/ui/CategoryBadge";
 import { Button } from "../../components/ui/Button";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { Field, TextInput } from "../../components/ui/Field";
 import { Section } from "../../components/ui/Section";
-import { money } from "../../lib/format";
-import { useAsync } from "../../lib/useAsync";
+import { Select } from "../../components/ui/Select";
+import { StatCard } from "../../components/ui/StatCard";
+import { Tabs, type TabItem } from "../../components/ui/Tabs";
+import { categorySolidClass } from "../../lib/categoryColor";
+import { money, moneyByCurrency, shortDate } from "../../lib/format";
+import { useAsync, type AsyncResult } from "../../lib/useAsync";
 
 type FinanceApi = Pick<
   ApiClient,
   | "listAccounts"
   | "createAccount"
   | "recordExpense"
+  | "recordTransaction"
+  | "listTransactions"
   | "netWorth"
   | "cashFlow"
   | "importBank"
@@ -28,25 +36,66 @@ type FinanceApi = Pick<
   | "setNotificationPreferences"
 >;
 
+const TABS: TabItem[] = [
+  { id: "overview", label: "Visão geral" },
+  { id: "transactions", label: "Transações" },
+  { id: "bills", label: "Contas a pagar" },
+  { id: "categories", label: "Categorias" },
+];
+
 export function FinancePage() {
   const client = useApiClient();
+  const [tab, setTab] = useState(TABS[0].id);
+  const accounts = useAsync(() => client.listAccounts(), [client]);
+  const transactions = useAsync(() => client.listTransactions(undefined, 200), [client]);
+
+  return (
+    <div>
+      <h1 className="mb-1 text-2xl font-semibold text-gray-900">Finanças</h1>
+      <p className="mb-6 text-sm text-gray-500">
+        Contas, transações, contas a pagar e categorias.
+      </p>
+      <Tabs items={TABS} active={tab} onChange={setTab} />
+      {tab === "overview" && <OverviewTab client={client} accounts={accounts} />}
+      {tab === "transactions" && (
+        <TransactionsTab
+          client={client}
+          accounts={accounts.data ?? []}
+          transactions={transactions}
+        />
+      )}
+      {tab === "bills" && <BillsTab client={client} />}
+      {tab === "categories" && <CategoriesTab transactions={transactions.data ?? []} />}
+    </div>
+  );
+}
+
+// --- Visão geral ---------------------------------------------------------
+
+function OverviewTab({
+  client,
+  accounts,
+}: {
+  client: FinanceApi;
+  accounts: AsyncResult<Account[]>;
+}) {
   return (
     <>
-      <Accounts client={client} />
-      <RecordExpense client={client} />
+      <Accounts client={client} accounts={accounts} />
       <NetWorthView client={client} />
       <CashFlowView client={client} />
       <BankImport client={client} />
-      <Bills client={client} />
-      <PayBill client={client} />
-      <BillsReport client={client} />
-      <NotificationPreferences client={client} />
     </>
   );
 }
 
-function Accounts({ client }: { client: FinanceApi }) {
-  const accounts = useAsync(() => client.listAccounts(), [client]);
+function Accounts({
+  client,
+  accounts,
+}: {
+  client: FinanceApi;
+  accounts: AsyncResult<Account[]>;
+}) {
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("BRL");
   const [error, setError] = useState<string | null>(null);
@@ -84,68 +133,6 @@ function Accounts({ client }: { client: FinanceApi }) {
           </li>
         ))}
       </ul>
-    </Section>
-  );
-}
-
-function RecordExpense({ client }: { client: FinanceApi }) {
-  const [accountId, setAccountId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("BRL");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setStatus("idle");
-    try {
-      await client.recordExpense({
-        account_id: accountId.trim(),
-        amount_minor: Number(amount),
-        currency: currency.trim().toUpperCase(),
-        description: description.trim(),
-        category: category.trim() || null,
-      });
-      setAmount("");
-      setDescription("");
-      setStatus("ok");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  return (
-    <Section title="Record expense">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Account id">
-          <TextInput value={accountId} onChange={(e) => setAccountId(e.target.value)} required />
-        </Field>
-        <Field label="Amount (minor units)">
-          <TextInput
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Currency">
-          <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
-        </Field>
-        <Field label="Description">
-          <TextInput
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Category">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
-        </Field>
-        <Button type="submit">Record</Button>
-      </form>
-      {status === "ok" && <p className="mt-2 text-sm text-green-700">Recorded.</p>}
-      {status === "error" && <ErrorText>Could not record the expense.</ErrorText>}
     </Section>
   );
 }
@@ -268,6 +255,338 @@ function BankImport({ client }: { client: FinanceApi }) {
   );
 }
 
+// --- Transações ------------------------------------------------------------
+
+type TxKindFilter = "all" | "expense" | "import";
+
+function TransactionsTab({
+  client,
+  accounts,
+  transactions,
+}: {
+  client: FinanceApi;
+  accounts: Account[];
+  transactions: AsyncResult<Transaction[]>;
+}) {
+  const [accountFilter, setAccountFilter] = useState("");
+  const [kindFilter, setKindFilter] = useState<TxKindFilter>("all");
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+
+  const accountName = useMemo(() => {
+    const byId = new Map(accounts.map((a) => [a.account_id, a.name]));
+    return (id: string) => byId.get(id) ?? id.slice(0, 8);
+  }, [accounts]);
+
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return (transactions.data ?? []).filter((t) => {
+      if (accountFilter && t.account_id !== accountFilter) return false;
+      if (kindFilter !== "all" && t.kind !== kindFilter) return false;
+      if (needle) {
+        const haystack = `${t.description} ${t.category ?? ""}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [transactions.data, accountFilter, kindFilter, search]);
+
+  const totals = useMemo(() => {
+    const expenses = filtered.filter((t) => t.amount_minor < 0);
+    const income = filtered.filter((t) => t.amount_minor >= 0);
+    return {
+      count: filtered.length,
+      expenses: moneyByCurrency(expenses),
+      income: moneyByCurrency(income),
+      balance: moneyByCurrency(filtered),
+    };
+  }, [filtered]);
+
+  return (
+    <div>
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <StatCard label="Total de transações" value={String(totals.count)} />
+        <StatCard label="Despesas" value={totals.expenses} tone="critical" />
+        <StatCard label="Receitas" value={totals.income} tone="good" />
+        <StatCard label="Saldo" value={totals.balance} />
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          aria-label="Buscar transações"
+          placeholder="Buscar transações..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[220px] flex-1 rounded border border-gray-300 px-3 py-1.5 text-sm"
+        />
+        <Select
+          aria-label="Filtrar por conta"
+          value={accountFilter}
+          onChange={(e) => setAccountFilter(e.target.value)}
+        >
+          <option value="">Todas as contas</option>
+          {accounts.map((a) => (
+            <option key={a.account_id} value={a.account_id}>
+              {a.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          aria-label="Filtrar por tipo"
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value as TxKindFilter)}
+        >
+          <option value="all">Todos os tipos</option>
+          <option value="expense">Despesas manuais</option>
+          <option value="import">Importadas</option>
+        </Select>
+        <Button onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Cancelar" : "+ Nova Transação"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <NewTransactionForm
+          client={client}
+          accounts={accounts}
+          onCreated={() => {
+            setShowForm(false);
+            void transactions.run();
+          }}
+        />
+      )}
+
+      {transactions.status === "error" && <ErrorText>Could not load transactions.</ErrorText>}
+      <TransactionsTable
+        transactions={filtered}
+        accountName={accountName}
+        loading={transactions.status === "loading"}
+      />
+    </div>
+  );
+}
+
+function NewTransactionForm({
+  client,
+  accounts,
+  onCreated,
+}: {
+  client: FinanceApi;
+  accounts: Account[];
+  onCreated: () => void;
+}) {
+  const [accountId, setAccountId] = useState("");
+  const [kind, setKind] = useState<"expense" | "income">("expense");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("BRL");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!accountId && accounts.length > 0) setAccountId(accounts[0].account_id);
+  }, [accounts, accountId]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      const input = {
+        account_id: accountId,
+        amount_minor: Number(amount),
+        currency: currency.trim().toUpperCase(),
+        description: description.trim(),
+        category: category.trim() || null,
+      };
+      if (kind === "expense") {
+        await client.recordExpense(input);
+      } else {
+        await client.recordTransaction(input);
+      }
+      onCreated();
+    } catch {
+      setError("Could not record the transaction.");
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <Field label="Account">
+          <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
+            <option value="" disabled>
+              Select an account
+            </option>
+            {accounts.map((a) => (
+              <option key={a.account_id} value={a.account_id}>
+                {a.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Type">
+          <Select value={kind} onChange={(e) => setKind(e.target.value as "expense" | "income")}>
+            <option value="expense">Despesa</option>
+            <option value="income">Receita</option>
+          </Select>
+        </Field>
+        <Field label="Amount (minor units)">
+          <TextInput
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Currency">
+          <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
+        </Field>
+        <Field label="Description">
+          <TextInput
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Category">
+          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+        </Field>
+        <Button type="submit">Save</Button>
+      </form>
+      {error && <ErrorText>{error}</ErrorText>}
+    </div>
+  );
+}
+
+function TransactionsTable({
+  transactions,
+  accountName,
+  loading,
+}: {
+  transactions: Transaction[];
+  accountName: (id: string) => string;
+  loading: boolean;
+}) {
+  if (loading && transactions.length === 0) {
+    return <p className="text-sm text-gray-500">Loading…</p>;
+  }
+  if (transactions.length === 0) {
+    return <p className="text-sm text-gray-500">No transactions found.</p>;
+  }
+  return (
+    <div className="overflow-hidden rounded-lg border border-gray-200">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+          <tr>
+            <th className="px-4 py-2 font-medium">Descrição</th>
+            <th className="px-4 py-2 font-medium">Categoria</th>
+            <th className="px-4 py-2 font-medium">Conta</th>
+            <th className="px-4 py-2 font-medium">Data</th>
+            <th className="px-4 py-2 text-right font-medium">Valor</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {transactions.map((t) => (
+            <tr key={t.event_id} className="hover:bg-gray-50">
+              <td className="px-4 py-2.5">
+                <div className="flex items-center gap-3">
+                  <CategoryAvatar label={t.description} category={t.category} />
+                  <span className="font-medium text-gray-900">{t.description}</span>
+                </div>
+              </td>
+              <td className="px-4 py-2.5">
+                <CategoryBadge category={t.category} />
+              </td>
+              <td className="px-4 py-2.5 text-gray-500">{accountName(t.account_id)}</td>
+              <td className="px-4 py-2.5 text-gray-500">{shortDate(t.occurred_at)}</td>
+              <td
+                className={
+                  "px-4 py-2.5 text-right font-medium " +
+                  (t.amount_minor < 0 ? "text-red-600" : "text-green-700")
+                }
+              >
+                {money(t.amount_minor, t.currency)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// --- Categorias --------------------------------------------------------
+
+function CategoriesTab({ transactions }: { transactions: Transaction[] }) {
+  const rows = useMemo(() => {
+    const byCategory = new Map<string, { total: Map<string, number>; count: number }>();
+    for (const t of transactions) {
+      const key = t.category ?? "Sem categoria";
+      const entry = byCategory.get(key) ?? { total: new Map<string, number>(), count: 0 };
+      entry.total.set(t.currency, (entry.total.get(t.currency) ?? 0) + Math.abs(t.amount_minor));
+      entry.count += 1;
+      byCategory.set(key, entry);
+    }
+    return [...byCategory.entries()]
+      .map(([category, { total, count }]) => ({
+        category,
+        count,
+        formatted: [...total.entries()].map(([c, v]) => money(v, c)).join(" · "),
+        magnitude: [...total.values()].reduce((a, b) => a + b, 0),
+      }))
+      .sort((a, b) => b.magnitude - a.magnitude);
+  }, [transactions]);
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-gray-500">
+        No transactions yet — categories will appear here once you record some.
+      </p>
+    );
+  }
+
+  const max = Math.max(...rows.map((r) => r.magnitude), 1);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((row) => (
+        <div key={row.category} className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <CategoryBadge category={row.category === "Sem categoria" ? null : row.category} />
+            <span className="text-sm font-medium text-gray-900">{row.formatted}</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-gray-100">
+            <div
+              className={
+                "h-1.5 rounded-full " +
+                (row.category === "Sem categoria"
+                  ? "bg-gray-300"
+                  : categorySolidClass(row.category))
+              }
+              style={{ width: `${(row.magnitude / max) * 100}%` }}
+            />
+          </div>
+          <div className="mt-1 text-xs text-gray-400">{row.count} transação(ões)</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Contas a pagar ------------------------------------------------------
+
+function BillsTab({ client }: { client: FinanceApi }) {
+  return (
+    <>
+      <Bills client={client} />
+      <PayBill client={client} />
+      <BillsReport client={client} />
+      <NotificationPreferences client={client} />
+    </>
+  );
+}
+
 function Bills({ client }: { client: FinanceApi }) {
   const bills = useAsync(() => client.listBills(), [client]);
   const [accountId, setAccountId] = useState("");
@@ -331,14 +650,13 @@ function Bills({ client }: { client: FinanceApi }) {
           <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
         </Field>
         <Field label="Recurrence">
-          <select
+          <Select
             value={recurrence}
             onChange={(e) => setRecurrence(e.target.value as BillRecurrence)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
           >
             <option value="monthly">Monthly</option>
             <option value="once">Once</option>
-          </select>
+          </Select>
         </Field>
         {recurrence === "monthly" ? (
           <Field label="Due day">
@@ -371,13 +689,14 @@ function Bills({ client }: { client: FinanceApi }) {
             key={bill.bill_id}
             className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
           >
-            <span>
-              <span className="font-medium">{bill.payee}</span>{" "}
+            <span className="flex items-center gap-2">
+              <span className="font-medium">{bill.payee}</span>
               <span className="text-gray-500">
                 · {money(bill.amount_minor, bill.currency)} ·{" "}
                 {bill.recurrence === "monthly" ? `day ${bill.due_day}` : bill.due_at}
                 {!bill.active && " · cancelled"}
               </span>
+              {bill.category && <CategoryBadge category={bill.category} />}
             </span>
             {bill.active && (
               <button
@@ -477,7 +796,10 @@ function BillsReport({ client }: { client: FinanceApi }) {
   }
 
   return (
-    <Section title="Bills report" actions={<Button onClick={() => void runAlerts()}>Run alerts now</Button>}>
+    <Section
+      title="Bills report"
+      actions={<Button onClick={() => void runAlerts()}>Run alerts now</Button>}
+    >
       <form onSubmit={submit} className="mb-3 flex flex-wrap items-end gap-2">
         <Field label="Due from">
           <TextInput
@@ -496,26 +818,18 @@ function BillsReport({ client }: { client: FinanceApi }) {
           />
         </Field>
         <Field label="Paid">
-          <select
-            value={paid}
-            onChange={(e) => setPaid(e.target.value as typeof paid)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
-          >
+          <Select value={paid} onChange={(e) => setPaid(e.target.value as typeof paid)}>
             <option value="">Any</option>
             <option value="true">Paid</option>
             <option value="false">Unpaid</option>
-          </select>
+          </Select>
         </Field>
         <Field label="Overdue">
-          <select
-            value={overdue}
-            onChange={(e) => setOverdue(e.target.value as typeof overdue)}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
-          >
+          <Select value={overdue} onChange={(e) => setOverdue(e.target.value as typeof overdue)}>
             <option value="">Any</option>
             <option value="true">Overdue</option>
             <option value="false">Not overdue</option>
-          </select>
+          </Select>
         </Field>
         <Button type="submit">Filter</Button>
       </form>
@@ -527,11 +841,13 @@ function BillsReport({ client }: { client: FinanceApi }) {
             key={`${occurrence.bill_id}-${occurrence.period}`}
             className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
           >
-            <span>
-              <span className="font-medium">{occurrence.payee}</span>{" "}
+            <span className="flex items-center gap-2">
+              <span className="font-medium">{occurrence.payee}</span>
               <span className="text-gray-500">
-                · {money(occurrence.amount_minor, occurrence.currency)} · due {occurrence.due_at}
+                · {money(occurrence.amount_minor, occurrence.currency)} · due{" "}
+                {occurrence.due_at}
               </span>
+              {occurrence.category && <CategoryBadge category={occurrence.category} />}
             </span>
             <span
               className={
