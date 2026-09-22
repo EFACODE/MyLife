@@ -59,6 +59,10 @@ def _monthly_due_at(year: int, month: int, due_day: int, *, tzinfo: object) -> d
     return datetime(year, month, day, tzinfo=tzinfo)  # type: ignore[arg-type]
 
 
+def _month_index(year: int, month: int) -> int:
+    return year * 12 + month
+
+
 def _periods_for_bill(row: BillRow, due_from: datetime, due_to: datetime) -> list[datetime]:
     """The bill's due occurrences that fall within ``[due_from, due_to]``.
 
@@ -67,6 +71,10 @@ def _periods_for_bill(row: BillRow, due_from: datetime, due_to: datetime) -> lis
     (e.g. logging rent that was already being paid before they started using
     the report). Callers that must not surface pre-registration periods (the
     due-date alert scanner, T4.8) filter those out themselves.
+
+    A monthly bill's ``max_occurrences`` (``0`` = unlimited) caps how many
+    due occurrences it ever generates, counted from its registration month
+    (occurrence 1) regardless of which window is queried.
     """
     if row.recurrence == "once":
         if row.due_at is not None:
@@ -75,11 +83,18 @@ def _periods_for_bill(row: BillRow, due_from: datetime, due_to: datetime) -> lis
                 return [due_at]
         return []
     if row.recurrence == "monthly" and row.due_day is not None:
-        candidates = (
-            _monthly_due_at(year, month, row.due_day, tzinfo=due_from.tzinfo)
-            for year, month in _month_range(due_from, due_to)
-        )
-        return [due_at for due_at in candidates if due_from <= due_at <= due_to]
+        genesis = _stored_utc(row.created_at)
+        genesis_index = _month_index(genesis.year, genesis.month)
+        occurrences = []
+        for year, month in _month_range(due_from, due_to):
+            if row.max_occurrences > 0:
+                occurrence_number = _month_index(year, month) - genesis_index + 1
+                if not (1 <= occurrence_number <= row.max_occurrences):
+                    continue
+            due_at = _monthly_due_at(year, month, row.due_day, tzinfo=due_from.tzinfo)
+            if due_from <= due_at <= due_to:
+                occurrences.append(due_at)
+        return occurrences
     return []
 
 

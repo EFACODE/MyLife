@@ -157,6 +157,7 @@ signature narrative.
 | **T4.10** | ⬜ | Automatic transaction categorization (editable) | **Yes** | `TransactionCategorized` — rule-based, versioned, evidence-linked classification (moradia/mercado/transporte etc.); user edits recorded as new events (`is_user_override`), never overwriting the original transaction; `POST /finance/transactions/{id}/category`. `specs/domain/finance/transaction-categorization.md`. |
 | **T4.11** | ⬜ | Finance reports (extrato analítico + dashboards) | Yes | Read-time `FinanceReportService`: analytic statement (transactions + resolved category + running balance) and dashboard aggregates (spend by category, income vs. expense, per account/card), filterable by account/period/category/flow-type; `GET /finance/reports/statement`, `/finance/reports/dashboard`. `specs/domain/finance/finance-reports.md`. |
 | **T4.12** | ✅ | Category registry (cadastro de categorias) | **Yes** | `categories` user-scoped registry (plain lookup table, like `accounts`) with case-insensitive duplicate rejection; `FinanceService.create_category`/`list_categories`/`delete_category`; authenticated `POST/GET /finance/categories`, `DELETE /finance/categories/{id}`; erasure/export updated; web console Categorias tab gains a cadastro area. `specs/domain/finance/category-registry.md`. |
+| **T4.13** | ✅ | Bill editing + occurrence cap | **Yes** | `BillUpdated` event + `BillsService.update_bill`; `max_occurrences` on bills (`0` = unlimited, default; `N` caps a monthly bill's generated due occurrences, counted from its registration month) enforced in `BillsReportService`; `PATCH /finance/bills/{id}`; web "Contas cadastradas" becomes a table with an "Editar" action and a "Quantidade de ocorrências" field. `specs/domain/finance/bill-editing-and-occurrence-cap.md`. |
 
 ### `T5` — Goals
 
@@ -317,7 +318,7 @@ skip-safe. `specs/domain/platform/cicd.md`.
 | ----- | -------- | ---- | ---------------- |
 | 0 | `T0`, `T2` | 14 | 14 |
 | 1 | `T1`, `T3` | 11 | 11 |
-| 2 | `T4`, `T5` | 12 | 15 |
+| 2 | `T4`, `T5` | 13 | 16 |
 | 3 | `T6` | 4 | 4 |
 | 4 | `T7` | 4 | 4 |
 | 5 | `T8` | 4 | 4 |

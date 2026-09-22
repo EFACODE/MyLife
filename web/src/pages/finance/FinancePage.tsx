@@ -48,6 +48,7 @@ type FinanceApi = Pick<
   | "importBank"
   | "listBills"
   | "registerBill"
+  | "updateBill"
   | "cancelBill"
   | "payBill"
   | "billsReport"
@@ -836,6 +837,7 @@ function RegisterBill({
   const [recurrence, setRecurrence] = useState<BillRecurrence>("monthly");
   const [dueDay, setDueDay] = useState("5");
   const [dueAt, setDueAt] = useState("");
+  const [maxOccurrences, setMaxOccurrences] = useState("0");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -855,10 +857,12 @@ function RegisterBill({
         recurrence,
         due_day: recurrence === "monthly" ? Number(dueDay) : null,
         due_at: recurrence === "once" && dueAt ? new Date(dueAt).toISOString() : null,
+        max_occurrences: Number(maxOccurrences) || 0,
       });
       setPayee("");
       setAmount("");
       setCategory("");
+      setMaxOccurrences("0");
       onRegistered();
     } catch {
       setError("Não foi possível cadastrar a conta.");
@@ -929,6 +933,14 @@ function RegisterBill({
             />
           </Field>
         )}
+        <Field label="Ocorrências (0 = infinita)">
+          <TextInput
+            type="number"
+            min={0}
+            value={maxOccurrences}
+            onChange={(e) => setMaxOccurrences(e.target.value)}
+          />
+        </Field>
         <Button type="submit">Cadastrar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
@@ -945,53 +957,220 @@ function RegisteredBillsList({
   bills: AsyncResult<Bill[]>;
   onCancelled: () => void;
 }) {
+  const [editingBillId, setEditingBillId] = useState<string | null>(null);
+
   async function cancel(billId: string) {
     await client.cancelBill(billId);
     onCancelled();
   }
 
+  const editingBill = (bills.data ?? []).find((b) => b.bill_id === editingBillId) ?? null;
+
   return (
     <Section title="Contas cadastradas" icon={ListChecks}>
+      {editingBill && (
+        <EditBillForm
+          client={client}
+          bill={editingBill}
+          onSaved={() => {
+            setEditingBillId(null);
+            onCancelled();
+          }}
+          onCancel={() => setEditingBillId(null)}
+        />
+      )}
       {bills.status === "error" && <ErrorText>Não foi possível carregar as contas.</ErrorText>}
-      <ul className="flex flex-col gap-2 text-sm">
-        {(bills.data ?? []).map((bill) => (
-          <li
-            key={bill.bill_id}
-            className={
-              "flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-4 py-3 transition-colors hover:bg-gray-50" +
-              (bill.active ? "" : " opacity-60")
-            }
-          >
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                <Wallet className="h-4 w-4" />
-              </span>
-              <span className="font-medium text-gray-900">{bill.payee}</span>
-              <span className="text-gray-500">
-                · {money(bill.amount_minor, bill.currency)} ·{" "}
-                {bill.recurrence === "monthly"
-                  ? `todo dia ${bill.due_day}`
-                  : bill.due_at && shortDate(bill.due_at)}
-                {!bill.active && " · cancelada"}
-              </span>
-              {bill.category && <CategoryBadge category={bill.category} />}
-            </span>
-            {bill.active && (
-              <button
-                type="button"
-                onClick={() => void cancel(bill.bill_id)}
-                className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
-              >
-                Cancelar
-              </button>
-            )}
-          </li>
-        ))}
-        {bills.status === "ready" && (bills.data ?? []).length === 0 && (
-          <li className="text-gray-500">Nenhuma conta cadastrada ainda.</li>
-        )}
-      </ul>
+      {bills.status === "ready" && (bills.data ?? []).length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhuma conta cadastrada ainda.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+                <th className="py-2 pr-3 font-medium">Beneficiário</th>
+                <th className="py-2 pr-3 font-medium">Valor</th>
+                <th className="py-2 pr-3 font-medium">Vencimento</th>
+                <th className="py-2 pr-3 font-medium">Categoria</th>
+                <th className="py-2 pr-3 font-medium">Ocorrências</th>
+                <th className="py-2 pl-3 text-right font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {(bills.data ?? []).map((bill) => (
+                <tr
+                  key={bill.bill_id}
+                  className={
+                    "transition-colors hover:bg-gray-50" + (bill.active ? "" : " opacity-60")
+                  }
+                >
+                  <td className="py-3 pr-3">
+                    <span className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                        <Wallet className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="font-medium text-gray-900">{bill.payee}</span>
+                      {!bill.active && (
+                        <span className="text-xs text-gray-400">(cancelada)</span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-3 text-gray-700">
+                    {money(bill.amount_minor, bill.currency)}
+                  </td>
+                  <td className="py-3 pr-3 text-gray-700">
+                    {bill.recurrence === "monthly"
+                      ? `todo dia ${bill.due_day}`
+                      : bill.due_at && shortDate(bill.due_at)}
+                  </td>
+                  <td className="py-3 pr-3">
+                    {bill.category ? <CategoryBadge category={bill.category} /> : "—"}
+                  </td>
+                  <td className="py-3 pr-3 text-gray-700">
+                    {bill.max_occurrences > 0 ? bill.max_occurrences : "Ilimitada"}
+                  </td>
+                  <td className="py-3 pl-3">
+                    <span className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingBillId(bill.bill_id)}
+                        className="shrink-0 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                      >
+                        Editar
+                      </button>
+                      {bill.active && (
+                        <button
+                          type="button"
+                          onClick={() => void cancel(bill.bill_id)}
+                          className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Section>
+  );
+}
+
+function EditBillForm({
+  client,
+  bill,
+  onSaved,
+  onCancel,
+}: {
+  client: FinanceApi;
+  bill: Bill;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [payee, setPayee] = useState(bill.payee);
+  const [amount, setAmount] = useState((bill.amount_minor / 100).toFixed(2));
+  const [currency, setCurrency] = useState(bill.currency);
+  const [category, setCategory] = useState(bill.category ?? "");
+  const [recurrence, setRecurrence] = useState<BillRecurrence>(bill.recurrence);
+  const [dueDay, setDueDay] = useState(String(bill.due_day ?? 5));
+  const [dueAt, setDueAt] = useState(bill.due_at ? toDatetimeLocal(new Date(bill.due_at)) : "");
+  const [maxOccurrences, setMaxOccurrences] = useState(String(bill.max_occurrences));
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await client.updateBill(bill.bill_id, {
+        payee: payee.trim(),
+        amount_minor: parseMoneyInput(amount),
+        currency: currency.trim().toUpperCase(),
+        category: category.trim() || null,
+        recurrence,
+        due_day: recurrence === "monthly" ? Number(dueDay) : null,
+        due_at: recurrence === "once" && dueAt ? new Date(dueAt).toISOString() : null,
+        max_occurrences: Number(maxOccurrences) || 0,
+      });
+      onSaved();
+    } catch {
+      setError("Não foi possível salvar as alterações.");
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+      <h3 className="mb-3 text-sm font-semibold text-gray-900">Editar conta a pagar</h3>
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <Field label="Beneficiário">
+          <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
+        </Field>
+        <Field label="Valor (R$)">
+          <TextInput
+            type="number"
+            step="0.01"
+            min="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Moeda">
+          <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
+        </Field>
+        <Field label="Categoria">
+          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+        </Field>
+        <Field label="Recorrência">
+          <Select
+            value={recurrence}
+            onChange={(e) => setRecurrence(e.target.value as BillRecurrence)}
+          >
+            <option value="monthly">Mensal</option>
+            <option value="once">Única</option>
+          </Select>
+        </Field>
+        {recurrence === "monthly" ? (
+          <Field label="Dia do vencimento">
+            <TextInput
+              type="number"
+              min={1}
+              max={31}
+              value={dueDay}
+              onChange={(e) => setDueDay(e.target.value)}
+              required
+            />
+          </Field>
+        ) : (
+          <Field label="Data de vencimento">
+            <TextInput
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+              required
+            />
+          </Field>
+        )}
+        <Field label="Ocorrências (0 = infinita)">
+          <TextInput
+            type="number"
+            min={0}
+            value={maxOccurrences}
+            onChange={(e) => setMaxOccurrences(e.target.value)}
+          />
+        </Field>
+        <Button type="submit">Salvar</Button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+        >
+          Cancelar edição
+        </button>
+      </form>
+      {error && <ErrorText>{error}</ErrorText>}
+    </div>
   );
 }
 

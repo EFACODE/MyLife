@@ -13,6 +13,7 @@ from mylife.finance.bills import (
     BILL_CANCELLED,
     BILL_PAID,
     BILL_REGISTERED,
+    BILL_UPDATED,
     Bill,
     BillCancelled,
     BillCancelledPayload,
@@ -21,6 +22,8 @@ from mylife.finance.bills import (
     BillRegistered,
     BillRegisteredPayload,
     BillRow,
+    BillUpdated,
+    BillUpdatedPayload,
 )
 from mylife.finance.bills_report import BillOccurrence, BillsReportService
 from mylife.finance.bills_service import (
@@ -64,6 +67,7 @@ __all__ = [
     "BILL_CANCELLED",
     "BILL_PAID",
     "BILL_REGISTERED",
+    "BILL_UPDATED",
     "EXPENSE_CREATED",
     "POSITION_VALUED",
     "TRANSACTION_IMPORTED",
@@ -84,6 +88,8 @@ __all__ = [
     "BillRegistered",
     "BillRegisteredPayload",
     "BillRow",
+    "BillUpdated",
+    "BillUpdatedPayload",
     "BillsReportService",
     "BillsService",
     "CashFlow",

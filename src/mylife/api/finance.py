@@ -120,6 +120,20 @@ class RegisterBillRequest(BaseModel):
     recurrence: Recurrence
     due_day: int | None = Field(default=None, ge=1, le=31)
     due_at: datetime | None = None
+    max_occurrences: int = Field(default=0, ge=0)
+
+
+class UpdateBillRequest(BaseModel):
+    """Request to edit a bill's fields (the account it's billed against is fixed)."""
+
+    payee: str = Field(min_length=1)
+    amount_minor: int = Field(gt=0)
+    currency: str = Field(min_length=3, max_length=3)
+    category: str | None = None
+    recurrence: Recurrence
+    due_day: int | None = Field(default=None, ge=1, le=31)
+    due_at: datetime | None = None
+    max_occurrences: int = Field(default=0, ge=0)
 
 
 class PayBillRequest(BaseModel):
@@ -374,11 +388,43 @@ def register_bill(
             category=request.category,
             due_day=request.due_day,
             due_at=ensure_utc(request.due_at) if request.due_at is not None else None,
+            max_occurrences=request.max_occurrences,
             now=utcnow(),
             correlation_id=correlation_id,
         )
     except UnknownAccountError as exc:
         raise HTTPException(status_code=404, detail="account not found") from exc
+    except InvalidBillRecurrenceError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.patch("/finance/bills/{bill_id}", response_model=Bill)
+def update_bill(
+    bill_id: uuid.UUID,
+    request: UpdateBillRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Bill:
+    """Edit one of the user's bills."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        return BillsService(session, bus).update_bill(
+            current_user.user_id,
+            bill_id,
+            request.payee,
+            request.amount_minor,
+            request.currency,
+            recurrence=request.recurrence,
+            category=request.category,
+            due_day=request.due_day,
+            due_at=ensure_utc(request.due_at) if request.due_at is not None else None,
+            max_occurrences=request.max_occurrences,
+            now=utcnow(),
+            correlation_id=correlation_id,
+        )
+    except UnknownBillError as exc:
+        raise HTTPException(status_code=404, detail="bill not found") from exc
     except InvalidBillRecurrenceError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

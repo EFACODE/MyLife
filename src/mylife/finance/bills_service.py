@@ -30,6 +30,8 @@ from mylife.finance.bills import (
     BillRegistered,
     BillRegisteredPayload,
     BillRow,
+    BillUpdated,
+    BillUpdatedPayload,
     Recurrence,
 )
 from mylife.finance.models import AccountRow
@@ -79,6 +81,7 @@ def _to_bill(row: BillRow) -> Bill:
         recurrence=row.recurrence,
         due_day=row.due_day,
         due_at=_stored_utc(row.due_at) if row.due_at is not None else None,
+        max_occurrences=row.max_occurrences,
         active=row.active,
         created_at=_stored_utc(row.created_at),
     )
@@ -103,10 +106,16 @@ class BillsService:
         category: str | None = None,
         due_day: int | None = None,
         due_at: datetime | None = None,
+        max_occurrences: int = 0,
         now: datetime,
         correlation_id: str,
     ) -> Bill:
-        """Register a bill and emit ``BillRegistered``."""
+        """Register a bill and emit ``BillRegistered``.
+
+        ``max_occurrences`` caps how many due occurrences a monthly bill
+        generates (counted from its registration month); ``0`` means
+        unlimited (the default — most bills recur indefinitely).
+        """
         self._require_account(user_id, account_id)
         if recurrence == "monthly" and due_day is None:
             raise InvalidBillRecurrenceError("a monthly bill needs a due_day (1-31)")
@@ -126,6 +135,7 @@ class BillsService:
             recurrence=recurrence,
             due_day=due_day,
             due_at=due_at,
+            max_occurrences=max_occurrences,
             active=True,
             created_at=now,
         )
@@ -145,6 +155,62 @@ class BillsService:
                 recurrence=recurrence,
                 due_day=due_day,
                 due_at=due_at,
+                max_occurrences=max_occurrences,
+            ),
+        )
+        EventStore(self._session).append(event)
+        self._session.commit()
+        self._publish(event)
+        return _to_bill(row)
+
+    def update_bill(
+        self,
+        user_id: uuid.UUID,
+        bill_id: uuid.UUID,
+        payee: str,
+        amount_minor: int,
+        currency: str,
+        *,
+        recurrence: Recurrence,
+        category: str | None = None,
+        due_day: int | None = None,
+        due_at: datetime | None = None,
+        max_occurrences: int = 0,
+        now: datetime,
+        correlation_id: str,
+    ) -> Bill:
+        """Edit a bill's fields and emit ``BillUpdated`` (a correction, not a mutation)."""
+        row = self._require_bill(user_id, bill_id)
+        assert row is not None  # _require_bill raises otherwise
+        if recurrence == "monthly" and due_day is None:
+            raise InvalidBillRecurrenceError("a monthly bill needs a due_day (1-31)")
+        if recurrence == "once" and due_at is None:
+            raise InvalidBillRecurrenceError("a one-off bill needs a due_at")
+
+        normalized_currency = currency.strip().upper()
+        row.payee = payee.strip()
+        row.amount_minor = abs(amount_minor)
+        row.currency = normalized_currency
+        row.category = category
+        row.recurrence = recurrence
+        row.due_day = due_day
+        row.due_at = due_at
+        row.max_occurrences = max_occurrences
+        event = BillUpdated(
+            user_id=user_id,
+            occurred_at=now,
+            source=BILLS_SOURCE,
+            correlation_id=correlation_id,
+            payload=BillUpdatedPayload(
+                bill_id=bill_id,
+                payee=row.payee,
+                amount_minor=row.amount_minor,
+                currency=normalized_currency,
+                category=category,
+                recurrence=recurrence,
+                due_day=due_day,
+                due_at=due_at,
+                max_occurrences=max_occurrences,
             ),
         )
         EventStore(self._session).append(event)
@@ -249,7 +315,7 @@ class BillsService:
             raise UnknownBillError(bill_id)
         return row
 
-    def _publish(self, event: BillRegistered | BillCancelled | BillPaid) -> None:
+    def _publish(self, event: BillRegistered | BillUpdated | BillCancelled | BillPaid) -> None:
         try:
             self._bus.publish(event)
         except EventDispatchError:

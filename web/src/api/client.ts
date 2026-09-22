@@ -41,6 +41,7 @@ import type {
   RegisterBillInput,
   SetNotificationPreferenceInput,
   SleepInput,
+  UpdateBillInput,
   SleepSession,
   TimelineEvent,
   TimelinePage,
@@ -261,6 +262,10 @@ export class ApiClient {
 
   registerBill(input: RegisterBillInput): Promise<Bill> {
     return this.request<Bill>("/finance/bills", { method: "POST", body: input });
+  }
+
+  updateBill(billId: string, input: UpdateBillInput): Promise<Bill> {
+    return this.request<Bill>(`/finance/bills/${billId}`, { method: "PATCH", body: input });
   }
 
   cancelBill(billId: string): Promise<void> {

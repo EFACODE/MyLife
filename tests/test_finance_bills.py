@@ -15,6 +15,7 @@ from mylife.finance import (
     BILL_CANCELLED,
     BILL_PAID,
     BILL_REGISTERED,
+    BILL_UPDATED,
     BillsReportService,
     BillsService,
     FinanceService,
@@ -103,6 +104,95 @@ def test_register_unknown_account_raises(bills: BillsService) -> None:
         bills.register_bill(
             USER,
             uuid.uuid4(),
+            "Aluguel",
+            1000,
+            "BRL",
+            recurrence="monthly",
+            due_day=5,
+            now=NOW,
+            correlation_id="c",
+        )
+
+
+def test_update_bill_emits_event_and_changes_fields(
+    bills: BillsService, session: Session, account_id: uuid.UUID
+) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "Netflix",
+        4990,
+        "BRL",
+        recurrence="monthly",
+        due_day=10,
+        now=NOW,
+        correlation_id="c",
+    )
+
+    updated = bills.update_bill(
+        USER,
+        bill.bill_id,
+        "Netflix Premium",
+        5990,
+        "BRL",
+        recurrence="monthly",
+        due_day=15,
+        max_occurrences=6,
+        now=NOW,
+        correlation_id="c",
+    )
+
+    assert updated.payee == "Netflix Premium"
+    assert updated.amount_minor == 5990
+    assert updated.due_day == 15
+    assert updated.max_occurrences == 6
+    assert bills.get_bill(USER, bill.bill_id) == updated
+    events = [e.event_type for e in EventStore(session).read_stream(USER)]
+    assert events == [BILL_REGISTERED, BILL_UPDATED]
+
+
+def test_update_requires_consistent_recurrence(bills: BillsService, account_id: uuid.UUID) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "Aluguel",
+        1000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        now=NOW,
+        correlation_id="c",
+    )
+    with pytest.raises(InvalidBillRecurrenceError):
+        bills.update_bill(
+            USER,
+            bill.bill_id,
+            "Aluguel",
+            1000,
+            "BRL",
+            recurrence="monthly",
+            now=NOW,
+            correlation_id="c",
+        )
+
+
+def test_update_foreign_bill_raises(bills: BillsService, account_id: uuid.UUID) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "Aluguel",
+        1000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        now=NOW,
+        correlation_id="c",
+    )
+    other = uuid.uuid4()
+    with pytest.raises(UnknownBillError):
+        bills.update_bill(
+            other,
+            bill.bill_id,
             "Aluguel",
             1000,
             "BRL",
@@ -299,6 +389,36 @@ def test_report_filters_by_account_paid_and_overdue(
 
     overdue = BillsReportService(session).list_occurrences(USER, overdue=True, **window)
     assert len(overdue) == 2
+
+
+def test_report_caps_occurrences_at_max_occurrences(
+    bills: BillsService, session: Session, account_id: uuid.UUID
+) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "Parcela",
+        1000,
+        "BRL",
+        recurrence="monthly",
+        due_day=5,
+        max_occurrences=2,
+        now=NOW,  # September 2026 is the genesis month.
+        correlation_id="c",
+    )
+
+    report = BillsReportService(session).list_occurrences(
+        USER,
+        due_from=datetime(2026, 9, 1, tzinfo=UTC),
+        due_to=datetime(2026, 12, 31, tzinfo=UTC),
+        as_of=NOW,
+    )
+
+    assert [o.due_at for o in report] == [
+        datetime(2026, 9, 5, tzinfo=UTC),
+        datetime(2026, 10, 5, tzinfo=UTC),
+    ]
+    assert all(o.bill_id == bill.bill_id for o in report)
 
 
 def test_report_scoped_to_user(

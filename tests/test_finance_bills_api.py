@@ -84,6 +84,92 @@ def test_register_and_list_bill(client: TestClient) -> None:
     assert [b["bill_id"] for b in listed.json()] == [bill["bill_id"]]
 
 
+def test_register_bill_with_max_occurrences(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+
+    response = client.post(
+        "/finance/bills",
+        json={
+            "account_id": account_id,
+            "payee": "Parcela",
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "recurrence": "monthly",
+            "due_day": 5,
+            "max_occurrences": 12,
+        },
+        headers=auth,
+    )
+    assert response.status_code == 201
+    assert response.json()["max_occurrences"] == 12
+
+
+def test_update_bill(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    bill = _bill(client, auth, account_id)
+
+    response = client.patch(
+        f"/finance/bills/{bill['bill_id']}",
+        json={
+            "payee": "Aluguel novo",
+            "amount_minor": 300000,
+            "currency": "BRL",
+            "category": "moradia",
+            "recurrence": "monthly",
+            "due_day": 10,
+            "max_occurrences": 24,
+        },
+        headers=auth,
+    )
+    assert response.status_code == 200
+    updated = response.json()
+    assert updated["payee"] == "Aluguel novo"
+    assert updated["amount_minor"] == 300000
+    assert updated["due_day"] == 10
+    assert updated["max_occurrences"] == 24
+
+    listed = client.get("/finance/bills", headers=auth).json()
+    assert listed[0]["payee"] == "Aluguel novo"
+
+
+def test_update_unknown_bill_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    response = client.patch(
+        "/finance/bills/00000000-0000-0000-0000-000000000000",
+        json={
+            "payee": "Aluguel",
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "recurrence": "monthly",
+            "due_day": 5,
+        },
+        headers=auth,
+    )
+    assert response.status_code == 404
+
+
+def test_update_foreign_bill_is_404(client: TestClient) -> None:
+    owner_auth = _auth(client, "owner@example.com")
+    account_id = _account(client, owner_auth)
+    bill = _bill(client, owner_auth, account_id)
+
+    intruder_auth = _auth(client, "intruder@example.com")
+    response = client.patch(
+        f"/finance/bills/{bill['bill_id']}",
+        json={
+            "payee": "Aluguel",
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "recurrence": "monthly",
+            "due_day": 5,
+        },
+        headers=intruder_auth,
+    )
+    assert response.status_code == 404
+
+
 def test_register_bill_invalid_recurrence_is_422(client: TestClient) -> None:
     auth = _auth(client)
     account_id = _account(client, auth)

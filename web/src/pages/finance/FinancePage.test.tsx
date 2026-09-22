@@ -17,6 +17,7 @@ const client = vi.hoisted(() => ({
   importBank: vi.fn(),
   listBills: vi.fn(),
   registerBill: vi.fn(),
+  updateBill: vi.fn(),
   cancelBill: vi.fn(),
   payBill: vi.fn(),
   billsReport: vi.fn(),
@@ -92,11 +93,13 @@ describe("FinancePage", () => {
         recurrence: "monthly",
         due_day: 5,
         due_at: null,
+        max_occurrences: 0,
         active: true,
         created_at: "x",
       },
     ]);
     client.registerBill.mockResolvedValue({ bill_id: "b2" });
+    client.updateBill.mockResolvedValue({ bill_id: "b1" });
     client.cancelBill.mockResolvedValue(undefined);
     client.payBill.mockResolvedValue({ event_id: "p1" });
     client.billsReport.mockResolvedValue([
@@ -221,15 +224,40 @@ describe("FinancePage", () => {
     await waitFor(() => expect(client.deleteCategory).toHaveBeenCalledWith("c1"));
   });
 
-  it("lista as contas cadastradas e cancela uma", async () => {
+  it("lista as contas cadastradas em tabela e cancela uma", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
     goToBillsScreen("Contas cadastradas");
     const section = await billsSection("Contas cadastradas");
     expect(within(section).getByText("Aluguel")).toBeInTheDocument();
+    expect(within(section).getByText("Ilimitada")).toBeInTheDocument();
 
     fireEvent.click(within(section).getByText("Cancelar"));
     await waitFor(() => expect(client.cancelBill).toHaveBeenCalledWith("b1"));
+  });
+
+  it("edita uma conta cadastrada", async () => {
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    goToBillsScreen("Contas cadastradas");
+    const section = await billsSection("Contas cadastradas");
+    fireEvent.click(within(section).getByText("Editar"));
+
+    await within(section).findByText("Editar conta a pagar");
+    fireEvent.change(within(section).getByLabelText("Beneficiário"), {
+      target: { value: "Aluguel novo" },
+    });
+    fireEvent.change(within(section).getByLabelText("Ocorrências (0 = infinita)"), {
+      target: { value: "12" },
+    });
+    fireEvent.click(within(section).getByText("Salvar"));
+
+    await waitFor(() =>
+      expect(client.updateBill).toHaveBeenCalledWith(
+        "b1",
+        expect.objectContaining({ payee: "Aluguel novo", max_occurrences: 12 }),
+      ),
+    );
   });
 
   it("cadastra uma conta mensal", async () => {
