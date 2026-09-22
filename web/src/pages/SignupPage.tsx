@@ -26,11 +26,11 @@ export function SignupPage() {
       navigate("/");
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setError("An account with this email already exists.");
+        setError("Já existe uma conta com este e-mail.");
       } else if (err instanceof ApiError && err.status === 422) {
-        setError("Please check your email and use a password of at least 8 characters.");
+        setError("Verifique seu e-mail e use uma senha com pelo menos 8 caracteres.");
       } else {
-        setError("Sign up failed. Please try again.");
+        setError("Não foi possível cadastrar. Tente novamente.");
       }
     } finally {
       setSubmitting(false);
@@ -39,10 +39,10 @@ export function SignupPage() {
 
   return (
     <main className="mx-auto mt-24 max-w-sm px-4">
-      <h1 className="mb-6 text-2xl font-semibold">Create your My Life account</h1>
+      <h1 className="mb-6 text-2xl font-semibold">Crie sua conta My Life</h1>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          Name
+          Nome
           <input
             type="text"
             value={displayName}
@@ -52,7 +52,7 @@ export function SignupPage() {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Email
+          E-mail
           <input
             type="email"
             value={email}
@@ -62,7 +62,7 @@ export function SignupPage() {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Password
+          Senha
           <input
             type="password"
             value={password}
@@ -82,13 +82,13 @@ export function SignupPage() {
           disabled={submitting}
           className="mt-2 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          Sign up
+          Cadastrar
         </button>
       </form>
       <p className="mt-4 text-sm text-gray-600">
-        Already have an account?{" "}
+        Já tem uma conta?{" "}
         <Link to="/login" className="text-blue-600 underline">
-          Sign in
+          Entrar
         </Link>
       </p>
     </main>

@@ -29,17 +29,17 @@ export function GoalsPage() {
   return (
     <>
       <CreateGoal client={client} onCreated={reload} />
-      <Section title="Progress">
-        {progress.status === "error" && <ErrorText>Could not load progress.</ErrorText>}
+      <Section title="Progresso">
+        {progress.status === "error" && <ErrorText>Não foi possível carregar o progresso.</ErrorText>}
         {progress.status === "ready" && progress.data?.length === 0 && (
-          <p className="text-sm text-gray-500">No goals yet.</p>
+          <p className="text-sm text-gray-500">Nenhuma meta ainda.</p>
         )}
         <ul className="flex flex-col gap-2">
           {(progress.data ?? []).map((row) => (
             <li key={row.goal_id} className="rounded border border-gray-200 px-3 py-2 text-sm">
               <span className="font-medium">{titles.get(row.goal_id) ?? row.metric}</span> ·{" "}
               {row.current_value}/{row.target_value} {row.metric} (
-              {Math.round(row.progress_ratio * 100)}%){row.achieved && " · ✅ achieved"}
+              {Math.round(row.progress_ratio * 100)}%){row.achieved && " · ✅ atingida"}
             </li>
           ))}
         </ul>
@@ -72,20 +72,20 @@ function CreateGoal({ client, onCreated }: { client: GoalsApi; onCreated: () => 
       setUnit("");
       onCreated();
     } catch {
-      setError("Could not create the goal.");
+      setError("Não foi possível criar a meta.");
     }
   }
 
   return (
-    <Section title="Create goal">
+    <Section title="Criar meta">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Title">
+        <Field label="Título">
           <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required />
         </Field>
-        <Field label="Metric">
+        <Field label="Métrica">
           <TextInput value={metric} onChange={(e) => setMetric(e.target.value)} required />
         </Field>
-        <Field label="Target value">
+        <Field label="Valor alvo">
           <TextInput
             type="number"
             value={target}
@@ -93,10 +93,10 @@ function CreateGoal({ client, onCreated }: { client: GoalsApi; onCreated: () => 
             required
           />
         </Field>
-        <Field label="Unit">
+        <Field label="Unidade">
           <TextInput value={unit} onChange={(e) => setUnit(e.target.value)} required />
         </Field>
-        <Button type="submit">Create</Button>
+        <Button type="submit">Criar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </Section>
@@ -118,17 +118,17 @@ function RecordMilestone({ client, onRecorded }: { client: GoalsApi; onRecorded:
       setNote("");
       onRecorded();
     } catch {
-      setError("Could not record the milestone.");
+      setError("Não foi possível registrar o marco.");
     }
   }
 
   return (
-    <Section title="Record milestone">
+    <Section title="Registrar marco">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Goal id">
+        <Field label="Id da meta">
           <TextInput value={goalId} onChange={(e) => setGoalId(e.target.value)} required />
         </Field>
-        <Field label="Value">
+        <Field label="Valor">
           <TextInput
             type="number"
             value={value}
@@ -136,10 +136,10 @@ function RecordMilestone({ client, onRecorded }: { client: GoalsApi; onRecorded:
             required
           />
         </Field>
-        <Field label="Note">
+        <Field label="Nota">
           <TextInput value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
-        <Button type="submit">Record</Button>
+        <Button type="submit">Registrar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </Section>

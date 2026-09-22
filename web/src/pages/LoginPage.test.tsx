@@ -17,6 +17,6 @@ describe("LoginPage", () => {
         </MemoryRouter>
       </AuthProvider>,
     );
-    expect(screen.getByText("Sign up").closest("a")).toHaveAttribute("href", "/signup");
+    expect(screen.getByText("Cadastre-se").closest("a")).toHaveAttribute("href", "/signup");
   });
 });

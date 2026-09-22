@@ -35,22 +35,22 @@ describe("KnowledgePage", () => {
   it("uploads a document", async () => {
     render(<KnowledgePage />);
     const file = new File(["hi"], "note.txt", { type: "text/plain" });
-    fireEvent.change(screen.getByLabelText("Document file"), { target: { files: [file] } });
-    fireEvent.click(screen.getByText("Upload"));
+    fireEvent.change(screen.getByLabelText("Arquivo do documento"), { target: { files: [file] } });
+    fireEvent.click(screen.getByText("Enviar"));
     await waitFor(() => expect(client.uploadDocument).toHaveBeenCalledWith(file));
   });
 
   it("searches memory and renders hits", async () => {
     render(<KnowledgePage />);
-    fireEvent.change(screen.getByLabelText("Query"), { target: { value: "hello" } });
-    fireEvent.click(screen.getByText("Search"));
+    fireEvent.change(screen.getByLabelText("Consulta"), { target: { value: "hello" } });
+    fireEvent.click(screen.getByText("Buscar"));
     expect(await screen.findByText(/hello/)).toBeInTheDocument();
     expect(client.memorySearch).toHaveBeenCalledWith("hello");
   });
 
   it("consolidates the graph", async () => {
     render(<KnowledgePage />);
-    fireEvent.click(screen.getByText("Consolidate"));
-    expect(await screen.findByText(/3 entities, 2 relationships/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Consolidar"));
+    expect(await screen.findByText(/3 entidades, 2 relações/)).toBeInTheDocument();
   });
 });

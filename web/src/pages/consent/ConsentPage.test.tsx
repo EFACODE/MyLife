@@ -25,14 +25,14 @@ describe("ConsentPage", () => {
   it("grants a consent for the entered scope", async () => {
     render(<ConsentPage />);
     await screen.findByText("bank");
-    fireEvent.change(screen.getByLabelText(/Scope/), { target: { value: "health" } });
-    fireEvent.click(screen.getByText("Grant"));
+    fireEvent.change(screen.getByLabelText(/Escopo/), { target: { value: "health" } });
+    fireEvent.click(screen.getByText("Conceder"));
     await waitFor(() => expect(client.grantConsent).toHaveBeenCalledWith("health"));
   });
 
   it("revokes a granted consent", async () => {
     render(<ConsentPage />);
-    fireEvent.click(await screen.findByText("Revoke"));
+    fireEvent.click(await screen.findByText("Revogar"));
     await waitFor(() => expect(client.revokeConsent).toHaveBeenCalledWith("bank"));
   });
 });

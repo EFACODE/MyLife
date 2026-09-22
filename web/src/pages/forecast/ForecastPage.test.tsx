@@ -44,14 +44,14 @@ describe("ForecastPage", () => {
   it("lists forecasts and runs the models", async () => {
     render(<ForecastPage />);
     expect(await screen.findByText(/cash_flow \(BRL_minor\)/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Run models"));
+    fireEvent.click(screen.getByText("Executar modelos"));
     await waitFor(() => expect(client.runForecasts).toHaveBeenCalledWith(30));
   });
 
   it("simulates a what-if scenario", async () => {
     render(<ForecastPage />);
-    fireEvent.change(screen.getAllByLabelText("Forecast id")[0], { target: { value: "f1" } });
-    fireEvent.click(screen.getByText("Simulate"));
+    fireEvent.change(screen.getAllByLabelText("Id da previsão")[0], { target: { value: "f1" } });
+    fireEvent.click(screen.getByText("Simular"));
     await waitFor(() =>
       expect(client.simulateForecast).toHaveBeenCalledWith("f1", 1.2, undefined),
     );
@@ -59,7 +59,9 @@ describe("ForecastPage", () => {
 
   it("loads calibration", async () => {
     render(<ForecastPage />);
-    fireEvent.click(screen.getByText("Load"));
-    expect(await screen.findByText(/hit rate 100% · mean abs error 5000/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Carregar"));
+    expect(
+      await screen.findByText(/taxa de acerto 100% · erro absoluto médio 5000/),
+    ).toBeInTheDocument();
   });
 });

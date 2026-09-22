@@ -24,28 +24,28 @@ export function Briefing({ client, userId }: { client: BriefingApi; userId: stri
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Daily briefing</h2>
+        <h2 className="text-lg font-semibold">Resumo diário</h2>
         <button
           type="button"
           onClick={() => void deliver()}
           disabled={status === "loading"}
           className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-50"
         >
-          {status === "loading" ? "Delivering…" : "Deliver briefing"}
+          {status === "loading" ? "Enviando…" : "Enviar resumo"}
         </button>
       </div>
       {status === "error" && (
         <p role="alert" className="text-sm text-red-600">
-          Could not deliver the briefing.
+          Não foi possível enviar o resumo.
         </p>
       )}
       {briefing && (
         <div>
           <p className="text-sm text-gray-500">
-            {briefing.event_count} events in the last {briefing.window_hours}h
+            {briefing.event_count} eventos nas últimas {briefing.window_hours}h
           </p>
           {briefing.lines.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">Nothing notable in this window.</p>
+            <p className="mt-2 text-sm text-gray-500">Nada notável nesse período.</p>
           ) : (
             <ul className="mt-2 flex flex-col gap-2">
               {briefing.lines.map((line, index) => (
@@ -54,7 +54,7 @@ export function Briefing({ client, userId }: { client: BriefingApi; userId: stri
                   className="rounded border border-gray-200 px-3 py-2 text-sm"
                 >
                   <span className="font-medium">{line.kind}</span>: {line.summary}
-                  <span className="text-gray-500"> ({line.evidence.length} evidence)</span>
+                  <span className="text-gray-500"> ({line.evidence.length} evidências)</span>
                 </li>
               ))}
             </ul>

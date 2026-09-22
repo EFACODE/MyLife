@@ -29,10 +29,14 @@ function goToTab(name: string) {
   fireEvent.click(screen.getByRole("tab", { name }));
 }
 
+async function billsSection(heading: string): Promise<HTMLElement> {
+  return (await screen.findByText(heading)).closest("section")!;
+}
+
 describe("FinancePage", () => {
   beforeEach(() => {
     client.listAccounts.mockResolvedValue([
-      { account_id: "a1", name: "Checking", currency: "BRL", created_at: "x" },
+      { account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" },
     ]);
     client.createAccount.mockResolvedValue({ account_id: "a2" });
     client.recordExpense.mockResolvedValue({ event_id: "e1" });
@@ -44,7 +48,7 @@ describe("FinancePage", () => {
         account_id: "a1",
         amount_minor: -4599,
         currency: "BRL",
-        description: "Lunch",
+        description: "Almoço",
         category: "Alimentos e bebidas",
         occurred_at: "2026-09-20T12:00:00Z",
       },
@@ -54,7 +58,7 @@ describe("FinancePage", () => {
         account_id: "a1",
         amount_minor: 100000,
         currency: "BRL",
-        description: "Salary",
+        description: "Salário",
         category: null,
         occurred_at: "2026-09-19T12:00:00Z",
       },
@@ -83,7 +87,21 @@ describe("FinancePage", () => {
     client.registerBill.mockResolvedValue({ bill_id: "b2" });
     client.cancelBill.mockResolvedValue(undefined);
     client.payBill.mockResolvedValue({ event_id: "p1" });
-    client.billsReport.mockResolvedValue([]);
+    client.billsReport.mockResolvedValue([
+      {
+        bill_id: "b1",
+        account_id: "a1",
+        payee: "Aluguel",
+        category: "moradia",
+        currency: "BRL",
+        amount_minor: 250000,
+        period: "2026-09-05",
+        due_at: "2026-09-05T00:00:00Z",
+        paid: false,
+        paid_at: null,
+        overdue: false,
+      },
+    ]);
     client.runBillAlerts.mockResolvedValue([]);
     client.getNotificationPreferences.mockResolvedValue({
       email_enabled: true,
@@ -99,107 +117,101 @@ describe("FinancePage", () => {
     });
   });
 
-  it("shows the Visão geral tab by default with accounts and net worth", async () => {
+  it("mostra a aba Visão geral por padrão, com contas e patrimônio líquido", async () => {
     render(<FinancePage />);
-    expect(await screen.findByText("Checking")).toBeInTheDocument();
-    expect(await screen.findByText("BRL -253.89")).toBeInTheDocument();
+    expect(await screen.findByText("Conta Corrente")).toBeInTheDocument();
+    expect(await screen.findByText("BRL -253,89")).toBeInTheDocument();
   });
 
-  it("creates an account", async () => {
+  it("cria uma conta", async () => {
     render(<FinancePage />);
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Savings" } });
-    fireEvent.click(screen.getByText("Open account"));
-    await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Savings", "BRL"));
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Poupança" } });
+    fireEvent.click(screen.getByText("Abrir conta"));
+    await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Poupança", "BRL"));
   });
 
-  it("surfaces a 403 bank import as a consent hint", async () => {
+  it("mostra a dica de consentimento em uma importação bancária com 403", async () => {
     render(<FinancePage />);
-    fireEvent.change(await screen.findByLabelText("Account id"), { target: { value: "a1" } });
+    fireEvent.change(await screen.findByLabelText("ID da conta"), { target: { value: "a1" } });
     fireEvent.change(screen.getByLabelText("CSV"), { target: { value: "a,b" } });
-    fireEvent.click(screen.getByText("Import"));
-    expect(await screen.findByText(/Grant the 'bank' consent first/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Importar"));
+    expect(await screen.findByText(/Conceda o consentimento 'bank' primeiro/)).toBeInTheDocument();
   });
 
-  it("shows the transactions table with stat cards and category badges", async () => {
+  it("mostra a tabela de transações com cards e categorias", async () => {
     render(<FinancePage />);
     goToTab("Transações");
 
-    expect(await screen.findByText("Lunch")).toBeInTheDocument();
-    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(await screen.findByText("Almoço")).toBeInTheDocument();
+    expect(screen.getByText("Salário")).toBeInTheDocument();
     expect(screen.getByText("Alimentos e bebidas")).toBeInTheDocument();
     expect(screen.getByText("Sem categoria")).toBeInTheDocument();
-    // Stat cards: 2 transactions, one expense (R$45.99) and one income (R$1000.00).
-    // Each value also appears once in the table row, so expect two matches.
+    // Cards: 2 transações, uma despesa (R$45,99) e uma receita (R$1.000,00).
+    // Cada valor também aparece na linha da tabela — duas ocorrências.
     expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getAllByText("BRL -45.99")).toHaveLength(2);
-    expect(screen.getAllByText("BRL 1000.00")).toHaveLength(2);
+    expect(screen.getAllByText("BRL -45,99")).toHaveLength(2);
+    expect(screen.getAllByText("BRL 1.000,00")).toHaveLength(2);
   });
 
-  it("filters transactions by search", async () => {
+  it("filtra transações pela busca", async () => {
     render(<FinancePage />);
     goToTab("Transações");
-    await screen.findByText("Lunch");
+    await screen.findByText("Almoço");
 
     fireEvent.change(screen.getByLabelText("Buscar transações"), {
-      target: { value: "Salary" },
+      target: { value: "Salário" },
     });
 
-    expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
-    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.queryByText("Almoço")).not.toBeInTheDocument();
+    expect(screen.getByText("Salário")).toBeInTheDocument();
   });
 
-  it("records a new transaction from the Transações tab", async () => {
+  it("registra uma nova transação a partir da aba Transações", async () => {
     render(<FinancePage />);
     goToTab("Transações");
-    await screen.findByText("Lunch");
+    await screen.findByText("Almoço");
 
     fireEvent.click(screen.getByText("+ Nova Transação"));
-    await waitFor(() => expect(screen.getByLabelText("Account")).toHaveValue("a1"));
-    fireEvent.change(screen.getByLabelText("Amount (minor units)"), {
-      target: { value: "1200" },
-    });
-    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Coffee" } });
-    fireEvent.click(screen.getByText("Save"));
+    await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
+    fireEvent.change(screen.getByLabelText("Valor (R$)"), { target: { value: "12.00" } });
+    fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Café" } });
+    fireEvent.click(screen.getByText("Salvar"));
 
     await waitFor(() =>
       expect(client.recordExpense).toHaveBeenCalledWith(
-        expect.objectContaining({ account_id: "a1", amount_minor: 1200, description: "Coffee" }),
+        expect.objectContaining({ account_id: "a1", amount_minor: 1200, description: "Café" }),
       ),
     );
   });
 
-  it("shows a category breakdown on the Categorias tab", async () => {
+  it("mostra o detalhamento por categoria na aba Categorias", async () => {
     render(<FinancePage />);
     goToTab("Categorias");
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
     expect(screen.getByText("Sem categoria")).toBeInTheDocument();
   });
 
-  it("lists bills and cancels one", async () => {
+  it("lista as contas cadastradas e cancela uma", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
-    expect(await screen.findByText("Aluguel")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Cancel"));
+    const section = await billsSection("Contas cadastradas");
+    expect(within(section).getByText("Aluguel")).toBeInTheDocument();
+
+    fireEvent.click(within(section).getByText("Cancelar"));
     await waitFor(() => expect(client.cancelBill).toHaveBeenCalledWith("b1"));
   });
 
-  it("registers a monthly bill", async () => {
+  it("cadastra uma conta mensal", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
-    await screen.findByText("Aluguel");
+    const section = await billsSection("Cadastrar conta a pagar");
 
-    const billsSection = screen.getByText("Bills (contas a pagar)").closest("section")!;
-    fireEvent.change(
-      within(billsSection).getByLabelText("Account id"),
-      { target: { value: "a1" } },
-    );
-    fireEvent.change(within(billsSection).getByLabelText("Payee"), {
+    fireEvent.change(within(section).getByLabelText("Conta"), { target: { value: "a1" } });
+    fireEvent.change(within(section).getByLabelText("Beneficiário"), {
       target: { value: "Netflix" },
     });
-    fireEvent.change(within(billsSection).getByLabelText("Amount (minor units)"), {
-      target: { value: "4990" },
-    });
-    fireEvent.click(within(billsSection).getByText("Register bill"));
+    fireEvent.change(within(section).getByLabelText("Valor (R$)"), { target: { value: "49.90" } });
+    fireEvent.click(within(section).getByText("Cadastrar"));
 
     await waitFor(() =>
       expect(client.registerBill).toHaveBeenCalledWith(
@@ -214,34 +226,29 @@ describe("FinancePage", () => {
     );
   });
 
-  it("marks a bill as paid", async () => {
+  it("marca uma fatura como paga direto na lista de vencimentos", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
-    await screen.findByText("Aluguel");
+    const section = await billsSection("Faturas e vencimentos");
 
-    fireEvent.change(screen.getByLabelText("Bill id"), { target: { value: "b1" } });
-    fireEvent.change(screen.getByLabelText("Due date (occurrence)"), {
-      target: { value: "2026-09-05T00:00" },
-    });
-    fireEvent.click(screen.getByText("Mark as paid"));
+    fireEvent.click(await within(section).findByText("Marcar como paga"));
+
     await waitFor(() =>
-      expect(client.payBill).toHaveBeenCalledWith(
-        "b1",
-        new Date("2026-09-05T00:00").toISOString(),
-        undefined,
-      ),
+      expect(client.payBill).toHaveBeenCalledWith("b1", "2026-09-05T00:00:00Z"),
     );
   });
 
-  it("saves notification preferences", async () => {
+  it("salva as preferências de notificação", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
-    await screen.findByText("Reminder preferences");
-    fireEvent.click(screen.getByLabelText("WhatsApp"));
-    fireEvent.change(screen.getByLabelText("WhatsApp number"), {
+    const section = await billsSection("Preferências de alerta de vencimento");
+
+    fireEvent.click(within(section).getByLabelText("WhatsApp"));
+    fireEvent.change(within(section).getByLabelText("Número do WhatsApp"), {
       target: { value: "+5511999999999" },
     });
-    fireEvent.click(screen.getByText("Save"));
+    fireEvent.click(within(section).getByText("Salvar"));
+
     await waitFor(() =>
       expect(client.setNotificationPreferences).toHaveBeenCalledWith({
         email_enabled: true,

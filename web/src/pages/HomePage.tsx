@@ -9,12 +9,12 @@ export function HomePage() {
   const { user, status } = useMe();
 
   if (status === "loading" || status === "idle")
-    return <p className="text-sm text-gray-500">Loading…</p>;
-  if (status === "error" || !user) return <ErrorText>Could not load your account.</ErrorText>;
+    return <p className="text-sm text-gray-500">Carregando…</p>;
+  if (status === "error" || !user) return <ErrorText>Não foi possível carregar sua conta.</ErrorText>;
 
   return (
     <>
-      <h1 className="mb-6 text-xl font-semibold">Welcome, {user.display_name}</h1>
+      <h1 className="mb-6 text-xl font-semibold">Bem-vindo(a), {user.display_name}</h1>
       <Briefing client={client} userId={user.user_id} />
       <Timeline client={client} userId={user.user_id} />
     </>

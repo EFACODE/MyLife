@@ -50,28 +50,28 @@ function Documents({ client }: { client: KnowledgeApi }) {
       setFile(null);
       await documents.run();
     } catch {
-      setError("Could not upload the document.");
+      setError("Não foi possível enviar o documento.");
     }
   }
 
   async function extract(id: string) {
     setNote(null);
     const result = await client.extractDocument(id);
-    setNote(`Extracted ${result.char_count} chars from ${id.slice(0, 8)}…`);
+    setNote(`Extraídos ${result.char_count} caracteres de ${id.slice(0, 8)}…`);
   }
 
   async function index(id: string) {
     setNote(null);
     const memory = await client.indexDocument(id);
-    setNote(`Indexed ${id.slice(0, 8)}… (dim ${memory.dimension}).`);
+    setNote(`Indexado ${id.slice(0, 8)}… (dim ${memory.dimension}).`);
   }
 
   return (
-    <Section title="Documents">
+    <Section title="Documentos">
       <form onSubmit={upload} className="mb-3 flex items-center gap-2">
-        <input aria-label="Document file" type="file" onChange={pick} />
+        <input aria-label="Arquivo do documento" type="file" onChange={pick} />
         <Button type="submit" disabled={!file}>
-          Upload
+          Enviar
         </Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
@@ -92,14 +92,14 @@ function Documents({ client }: { client: KnowledgeApi }) {
                 onClick={() => extract(doc.document_id)}
                 className="text-blue-600 hover:underline"
               >
-                Extract
+                Extrair
               </button>
               <button
                 type="button"
                 onClick={() => index(doc.document_id)}
                 className="text-blue-600 hover:underline"
               >
-                Index
+                Indexar
               </button>
             </span>
           </li>
@@ -120,20 +120,20 @@ function MemorySearch({ client }: { client: KnowledgeApi }) {
     try {
       setHits(await client.memorySearch(query.trim()));
     } catch {
-      setError("Could not search.");
+      setError("Não foi possível buscar.");
     }
   }
 
   return (
-    <Section title="Memory search">
+    <Section title="Busca na memória">
       <form onSubmit={submit} className="mb-3 flex items-end gap-2">
-        <Field label="Query">
+        <Field label="Consulta">
           <TextInput value={query} onChange={(e) => setQuery(e.target.value)} required />
         </Field>
-        <Button type="submit">Search</Button>
+        <Button type="submit">Buscar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
-      {hits && hits.length === 0 && <p className="text-sm text-gray-500">No matches.</p>}
+      {hits && hits.length === 0 && <p className="text-sm text-gray-500">Nenhum resultado.</p>}
       <ul className="flex flex-col gap-1 text-sm">
         {(hits ?? []).map((hit) => (
           <li key={hit.document_id} className="rounded border border-gray-200 px-3 py-2">
@@ -152,12 +152,15 @@ function Graph({ client }: { client: KnowledgeApi }) {
 
   async function consolidate() {
     const result = await client.consolidateGraph();
-    setNote(`${result.entities} entities, ${result.relationships} relationships.`);
+    setNote(`${result.entities} entidades, ${result.relationships} relações.`);
     await entities.run();
   }
 
   return (
-    <Section title="Knowledge graph" actions={<Button onClick={consolidate}>Consolidate</Button>}>
+    <Section
+      title="Grafo de conhecimento"
+      actions={<Button onClick={consolidate}>Consolidar</Button>}
+    >
       {note && <p className="mb-2 text-sm text-green-700">{note}</p>}
       <ul className="flex flex-col gap-1 text-sm">
         {(entities.data ?? []).map((entity) => (

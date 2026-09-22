@@ -1,6 +1,16 @@
 /** Format integer minor units (e.g. cents) as a decimal amount with its currency. */
 export function money(minor: number, currency: string): string {
-  return `${currency} ${(minor / 100).toFixed(2)}`;
+  const amount = (minor / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${currency} ${amount}`;
+}
+
+/** Parse a decimal amount (e.g. from a `type="number"` input) into integer minor units. */
+export function parseMoneyInput(value: string): number {
+  const amount = Number.parseFloat(value);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
 }
 
 /** Sum integer minor units per currency, then format each total with `money`. */

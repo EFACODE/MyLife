@@ -49,11 +49,11 @@ describe("GoalsPage", () => {
 
   it("creates a goal", async () => {
     render(<GoalsPage />);
-    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Run" } });
-    fireEvent.change(screen.getByLabelText("Metric"), { target: { value: "workout_minutes" } });
-    fireEvent.change(screen.getByLabelText("Target value"), { target: { value: "1000" } });
-    fireEvent.change(screen.getByLabelText("Unit"), { target: { value: "minutes" } });
-    fireEvent.click(screen.getByText("Create"));
+    fireEvent.change(screen.getByLabelText("Título"), { target: { value: "Run" } });
+    fireEvent.change(screen.getByLabelText("Métrica"), { target: { value: "workout_minutes" } });
+    fireEvent.change(screen.getByLabelText("Valor alvo"), { target: { value: "1000" } });
+    fireEvent.change(screen.getByLabelText("Unidade"), { target: { value: "minutes" } });
+    fireEvent.click(screen.getByText("Criar"));
     await waitFor(() =>
       expect(client.createGoal).toHaveBeenCalledWith(
         expect.objectContaining({ title: "Run", metric: "workout_minutes", target_value: 1000 }),
@@ -63,9 +63,9 @@ describe("GoalsPage", () => {
 
   it("records a milestone", async () => {
     render(<GoalsPage />);
-    fireEvent.change(screen.getByLabelText("Goal id"), { target: { value: "g1" } });
-    fireEvent.change(screen.getByLabelText("Value"), { target: { value: "50" } });
-    fireEvent.click(screen.getByText("Record"));
+    fireEvent.change(screen.getByLabelText("Id da meta"), { target: { value: "g1" } });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "50" } });
+    fireEvent.click(screen.getByText("Registrar"));
     await waitFor(() => expect(client.recordMilestone).toHaveBeenCalledWith("g1", 50, null));
   });
 });

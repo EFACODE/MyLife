@@ -8,11 +8,11 @@ export function AuditPage() {
   const audit = useAsync(() => client.getAudit(), [client]);
 
   return (
-    <Section title="Audit log">
-      {audit.status === "loading" && <p className="text-sm text-gray-500">Loading…</p>}
-      {audit.status === "error" && <ErrorText>Could not load the audit log.</ErrorText>}
+    <Section title="Log de auditoria">
+      {audit.status === "loading" && <p className="text-sm text-gray-500">Carregando…</p>}
+      {audit.status === "error" && <ErrorText>Não foi possível carregar o log de auditoria.</ErrorText>}
       {audit.status === "ready" && audit.data && audit.data.length === 0 && (
-        <p className="text-sm text-gray-500">No audit entries yet.</p>
+        <p className="text-sm text-gray-500">Nenhum registro de auditoria ainda.</p>
       )}
       <ul className="flex flex-col gap-2">
         {(audit.data ?? []).map((entry) => (

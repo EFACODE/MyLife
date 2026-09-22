@@ -21,7 +21,7 @@ export function ConsentPage() {
       setScope("");
       await consents.run();
     } catch {
-      setError("Could not grant consent.");
+      setError("Não foi possível conceder o consentimento.");
     }
   }
 
@@ -31,23 +31,23 @@ export function ConsentPage() {
       await client.revokeConsent(target);
       await consents.run();
     } catch {
-      setError("Could not revoke consent.");
+      setError("Não foi possível revogar o consentimento.");
     }
   }
 
   return (
-    <Section title="Consent">
+    <Section title="Consentimentos">
       <form onSubmit={grant} className="mb-4 flex items-end gap-2">
-        <Field label="Scope (e.g. bank, health)">
+        <Field label="Escopo (ex.: banco, saúde)">
           <TextInput value={scope} onChange={(e) => setScope(e.target.value)} required />
         </Field>
-        <Button type="submit">Grant</Button>
+        <Button type="submit">Conceder</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
-      {consents.status === "loading" && <p className="text-sm text-gray-500">Loading…</p>}
-      {consents.status === "error" && <ErrorText>Could not load consents.</ErrorText>}
+      {consents.status === "loading" && <p className="text-sm text-gray-500">Carregando…</p>}
+      {consents.status === "error" && <ErrorText>Não foi possível carregar os consentimentos.</ErrorText>}
       {consents.status === "ready" && consents.data && consents.data.length === 0 && (
-        <p className="text-sm text-gray-500">No consents granted yet.</p>
+        <p className="text-sm text-gray-500">Nenhum consentimento concedido ainda.</p>
       )}
       <ul className="flex flex-col gap-2">
         {(consents.data ?? []).map((consent) => (
@@ -57,7 +57,10 @@ export function ConsentPage() {
           >
             <span>
               <span className="font-medium">{consent.scope}</span>
-              <span className="text-gray-500"> · {consent.granted ? "granted" : "revoked"}</span>
+              <span className="text-gray-500">
+                {" · "}
+                {consent.granted ? "concedido" : "revogado"}
+              </span>
             </span>
             {consent.granted && (
               <button
@@ -65,7 +68,7 @@ export function ConsentPage() {
                 onClick={() => revoke(consent.scope)}
                 className="text-sm text-red-600 hover:underline"
               >
-                Revoke
+                Revogar
               </button>
             )}
           </li>

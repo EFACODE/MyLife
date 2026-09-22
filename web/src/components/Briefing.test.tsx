@@ -18,10 +18,10 @@ describe("Briefing", () => {
     const client: BriefingApi = { deliverBriefing };
     render(<Briefing client={client} userId="u" />);
 
-    fireEvent.click(screen.getByText("Deliver briefing"));
+    fireEvent.click(screen.getByText("Enviar resumo"));
 
     expect(await screen.findByText(/You spent BRL 45.99 on food\./)).toBeInTheDocument();
-    expect(screen.getByText(/2 evidence/)).toBeInTheDocument();
+    expect(screen.getByText(/2 evidências/)).toBeInTheDocument();
     expect(deliverBriefing).toHaveBeenCalledWith("u");
   });
 
@@ -30,7 +30,7 @@ describe("Briefing", () => {
     const client: BriefingApi = { deliverBriefing };
     render(<Briefing client={client} userId="u" />);
 
-    fireEvent.click(screen.getByText("Deliver briefing"));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not deliver the briefing.");
+    fireEvent.click(screen.getByText("Enviar resumo"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível enviar o resumo.");
   });
 });

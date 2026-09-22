@@ -30,7 +30,7 @@ export function Layout() {
           onClick={logout}
           className="border-t border-gray-200 px-4 py-3 text-left text-sm text-blue-600 hover:underline"
         >
-          Log out
+          Sair
         </button>
       </aside>
       <MeProvider>

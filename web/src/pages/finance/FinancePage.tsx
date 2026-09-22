@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import type { ApiClient } from "../../api/client";
-import type { Account, BillRecurrence, Transaction } from "../../api/types";
+import type { Account, Bill, BillRecurrence, Transaction } from "../../api/types";
 import { useApiClient } from "../../api/useApiClient";
 import { CategoryAvatar } from "../../components/ui/CategoryAvatar";
 import { CategoryBadge } from "../../components/ui/CategoryBadge";
@@ -13,7 +13,7 @@ import { Select } from "../../components/ui/Select";
 import { StatCard } from "../../components/ui/StatCard";
 import { Tabs, type TabItem } from "../../components/ui/Tabs";
 import { categorySolidClass } from "../../lib/categoryColor";
-import { money, moneyByCurrency, shortDate } from "../../lib/format";
+import { money, moneyByCurrency, parseMoneyInput, shortDate } from "../../lib/format";
 import { useAsync, type AsyncResult } from "../../lib/useAsync";
 
 type FinanceApi = Pick<
@@ -64,7 +64,7 @@ export function FinancePage() {
           transactions={transactions}
         />
       )}
-      {tab === "bills" && <BillsTab client={client} />}
+      {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
       {tab === "categories" && <CategoriesTab transactions={transactions.data ?? []} />}
     </div>
   );
@@ -108,23 +108,23 @@ function Accounts({
       setName("");
       await accounts.run();
     } catch {
-      setError("Could not create the account.");
+      setError("Não foi possível criar a conta.");
     }
   }
 
   return (
-    <Section title="Accounts">
+    <Section title="Contas">
       <form onSubmit={create} className="mb-4 flex items-end gap-2">
-        <Field label="Name">
+        <Field label="Nome">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
-        <Field label="Currency">
+        <Field label="Moeda">
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
-        <Button type="submit">Open account</Button>
+        <Button type="submit">Abrir conta</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
-      {accounts.status === "error" && <ErrorText>Could not load accounts.</ErrorText>}
+      {accounts.status === "error" && <ErrorText>Não foi possível carregar as contas.</ErrorText>}
       <ul className="flex flex-col gap-1 text-sm">
         {(accounts.data ?? []).map((account) => (
           <li key={account.account_id} className="rounded border border-gray-200 px-3 py-2">
@@ -140,8 +140,13 @@ function Accounts({
 function NetWorthView({ client }: { client: FinanceApi }) {
   const netWorth = useAsync(() => client.netWorth(), [client]);
   return (
-    <Section title="Net worth" actions={<Button onClick={() => netWorth.run()}>Refresh</Button>}>
-      {netWorth.status === "error" && <ErrorText>Could not load net worth.</ErrorText>}
+    <Section
+      title="Patrimônio líquido"
+      actions={<Button onClick={() => netWorth.run()}>Atualizar</Button>}
+    >
+      {netWorth.status === "error" && (
+        <ErrorText>Não foi possível carregar o patrimônio líquido.</ErrorText>
+      )}
       <ul className="flex flex-col gap-1 text-sm">
         {(netWorth.data?.currencies ?? []).map((total) => (
           <li key={total.currency}>
@@ -149,7 +154,7 @@ function NetWorthView({ client }: { client: FinanceApi }) {
           </li>
         ))}
         {netWorth.status === "ready" && netWorth.data?.currencies.length === 0 && (
-          <li className="text-gray-500">No balances yet.</li>
+          <li className="text-gray-500">Nenhum saldo ainda.</li>
         )}
       </ul>
     </Section>
@@ -171,9 +176,9 @@ function CashFlowView({ client }: { client: FinanceApi }) {
   }
 
   return (
-    <Section title="Cash flow">
+    <Section title="Fluxo de caixa">
       <form onSubmit={submit} className="mb-3 flex items-end gap-2">
-        <Field label="From">
+        <Field label="De">
           <TextInput
             type="datetime-local"
             value={from}
@@ -181,7 +186,7 @@ function CashFlowView({ client }: { client: FinanceApi }) {
             required
           />
         </Field>
-        <Field label="To">
+        <Field label="Até">
           <TextInput
             type="datetime-local"
             value={to}
@@ -189,15 +194,17 @@ function CashFlowView({ client }: { client: FinanceApi }) {
             required
           />
         </Field>
-        <Button type="submit">Compute</Button>
+        <Button type="submit">Calcular</Button>
       </form>
-      {flow.status === "error" && <ErrorText>Could not compute cash flow.</ErrorText>}
+      {flow.status === "error" && (
+        <ErrorText>Não foi possível calcular o fluxo de caixa.</ErrorText>
+      )}
       <ul className="flex flex-col gap-1 text-sm">
         {(flow.data?.flows ?? []).map((currencyFlow) => (
           <li key={currencyFlow.currency}>
-            <span className="font-medium">{currencyFlow.currency}</span>: in{" "}
-            {money(currencyFlow.inflow_minor, currencyFlow.currency)}, out{" "}
-            {money(currencyFlow.outflow_minor, currencyFlow.currency)}, net{" "}
+            <span className="font-medium">{currencyFlow.currency}</span>: entradas{" "}
+            {money(currencyFlow.inflow_minor, currencyFlow.currency)}, saídas{" "}
+            {money(currencyFlow.outflow_minor, currencyFlow.currency)}, líquido{" "}
             {money(currencyFlow.net_minor, currencyFlow.currency)}
           </li>
         ))}
@@ -218,21 +225,23 @@ function BankImport({ client }: { client: FinanceApi }) {
     setResult(null);
     try {
       const outcome = await client.importBank(accountId.trim(), csv);
-      setResult(`Imported ${outcome.events_created} (skipped ${outcome.skipped_duplicates}).`);
+      setResult(
+        `${outcome.events_created} transação(ões) importada(s) (${outcome.skipped_duplicates} duplicada(s) ignorada(s)).`,
+      );
     } catch (caught) {
       const status = (caught as { status?: number }).status;
       setError(
         status === 403
-          ? "Grant the 'bank' consent first (Consent page)."
-          : "Could not import the CSV.",
+          ? "Conceda o consentimento 'bank' primeiro (página Consentimentos)."
+          : "Não foi possível importar o CSV.",
       );
     }
   }
 
   return (
-    <Section title="Bank CSV import">
+    <Section title="Importar extrato bancário (CSV)">
       <form onSubmit={submit} className="flex flex-col gap-2">
-        <Field label="Account id">
+        <Field label="ID da conta">
           <TextInput value={accountId} onChange={(e) => setAccountId(e.target.value)} required />
         </Field>
         <label className="flex flex-col gap-1 text-sm">
@@ -246,7 +255,7 @@ function BankImport({ client }: { client: FinanceApi }) {
           />
         </label>
         <div>
-          <Button type="submit">Import</Button>
+          <Button type="submit">Importar</Button>
         </div>
       </form>
       {result && <p className="mt-2 text-sm text-green-700">{result}</p>}
@@ -357,7 +366,9 @@ function TransactionsTab({
         />
       )}
 
-      {transactions.status === "error" && <ErrorText>Could not load transactions.</ErrorText>}
+      {transactions.status === "error" && (
+        <ErrorText>Não foi possível carregar as transações.</ErrorText>
+      )}
       <TransactionsTable
         transactions={filtered}
         accountName={accountName}
@@ -394,7 +405,7 @@ function NewTransactionForm({
     try {
       const input = {
         account_id: accountId,
-        amount_minor: Number(amount),
+        amount_minor: parseMoneyInput(amount),
         currency: currency.trim().toUpperCase(),
         description: description.trim(),
         category: category.trim() || null,
@@ -406,17 +417,17 @@ function NewTransactionForm({
       }
       onCreated();
     } catch {
-      setError("Could not record the transaction.");
+      setError("Não foi possível registrar a transação.");
     }
   }
 
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Account">
+        <Field label="Conta">
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
             <option value="" disabled>
-              Select an account
+              Selecione uma conta
             </option>
             {accounts.map((a) => (
               <option key={a.account_id} value={a.account_id}>
@@ -425,34 +436,36 @@ function NewTransactionForm({
             ))}
           </Select>
         </Field>
-        <Field label="Type">
+        <Field label="Tipo">
           <Select value={kind} onChange={(e) => setKind(e.target.value as "expense" | "income")}>
             <option value="expense">Despesa</option>
             <option value="income">Receita</option>
           </Select>
         </Field>
-        <Field label="Amount (minor units)">
+        <Field label="Valor (R$)">
           <TextInput
             type="number"
+            step="0.01"
+            min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
           />
         </Field>
-        <Field label="Currency">
+        <Field label="Moeda">
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
-        <Field label="Description">
+        <Field label="Descrição">
           <TextInput
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
           />
         </Field>
-        <Field label="Category">
+        <Field label="Categoria">
           <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
         </Field>
-        <Button type="submit">Save</Button>
+        <Button type="submit">Salvar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </div>
@@ -469,10 +482,10 @@ function TransactionsTable({
   loading: boolean;
 }) {
   if (loading && transactions.length === 0) {
-    return <p className="text-sm text-gray-500">Loading…</p>;
+    return <p className="text-sm text-gray-500">Carregando…</p>;
   }
   if (transactions.length === 0) {
-    return <p className="text-sm text-gray-500">No transactions found.</p>;
+    return <p className="text-sm text-gray-500">Nenhuma transação encontrada.</p>;
   }
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200">
@@ -541,7 +554,7 @@ function CategoriesTab({ transactions }: { transactions: Transaction[] }) {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-gray-500">
-        No transactions yet — categories will appear here once you record some.
+        Nenhuma transação ainda — as categorias aparecerão aqui assim que você registrar alguma.
       </p>
     );
   }
@@ -575,20 +588,38 @@ function CategoriesTab({ transactions }: { transactions: Transaction[] }) {
 }
 
 // --- Contas a pagar ------------------------------------------------------
+//
+// Three clearly separated areas, per the usability request: (1) cadastro de
+// uma nova conta, (2) as duas listas — contas cadastradas (definições) e
+// faturas/vencimentos (ocorrências, com ação de pagar em um clique em vez de
+// um formulário manual pedindo o id da conta e a data), e (3) preferências
+// de alerta.
 
-function BillsTab({ client }: { client: FinanceApi }) {
+function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
+  const bills = useAsync(() => client.listBills(), [client]);
   return (
     <>
-      <Bills client={client} />
-      <PayBill client={client} />
-      <BillsReport client={client} />
-      <NotificationPreferences client={client} />
+      <RegisterBill client={client} accounts={accounts} onRegistered={() => void bills.run()} />
+      <RegisteredBillsList
+        client={client}
+        bills={bills}
+        onCancelled={() => void bills.run()}
+      />
+      <UpcomingBills client={client} />
+      <AlertPreferences client={client} />
     </>
   );
 }
 
-function Bills({ client }: { client: FinanceApi }) {
-  const bills = useAsync(() => client.listBills(), [client]);
+function RegisterBill({
+  client,
+  accounts,
+  onRegistered,
+}: {
+  client: FinanceApi;
+  accounts: Account[];
+  onRegistered: () => void;
+}) {
   const [accountId, setAccountId] = useState("");
   const [payee, setPayee] = useState("");
   const [amount, setAmount] = useState("");
@@ -599,14 +630,18 @@ function Bills({ client }: { client: FinanceApi }) {
   const [dueAt, setDueAt] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function register(event: FormEvent) {
+  useEffect(() => {
+    if (!accountId && accounts.length > 0) setAccountId(accounts[0].account_id);
+  }, [accounts, accountId]);
+
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     try {
       await client.registerBill({
-        account_id: accountId.trim(),
+        account_id: accountId,
         payee: payee.trim(),
-        amount_minor: Number(amount),
+        amount_minor: parseMoneyInput(amount),
         currency: currency.trim().toUpperCase(),
         category: category.trim() || null,
         recurrence,
@@ -615,51 +650,58 @@ function Bills({ client }: { client: FinanceApi }) {
       });
       setPayee("");
       setAmount("");
-      await bills.run();
+      setCategory("");
+      onRegistered();
     } catch {
-      setError("Could not register the bill.");
+      setError("Não foi possível cadastrar a conta.");
     }
   }
 
-  async function cancel(billId: string) {
-    await client.cancelBill(billId);
-    await bills.run();
-  }
-
   return (
-    <Section title="Bills (contas a pagar)">
-      <form onSubmit={register} className="mb-4 flex flex-wrap items-end gap-2">
-        <Field label="Account id">
-          <TextInput value={accountId} onChange={(e) => setAccountId(e.target.value)} required />
+    <Section title="Cadastrar conta a pagar">
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <Field label="Conta">
+          <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
+            <option value="" disabled>
+              Selecione uma conta
+            </option>
+            {accounts.map((a) => (
+              <option key={a.account_id} value={a.account_id}>
+                {a.name}
+              </option>
+            ))}
+          </Select>
         </Field>
-        <Field label="Payee">
+        <Field label="Beneficiário">
           <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
         </Field>
-        <Field label="Amount (minor units)">
+        <Field label="Valor (R$)">
           <TextInput
             type="number"
+            step="0.01"
+            min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
           />
         </Field>
-        <Field label="Currency">
+        <Field label="Moeda">
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
-        <Field label="Category">
+        <Field label="Categoria">
           <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
         </Field>
-        <Field label="Recurrence">
+        <Field label="Recorrência">
           <Select
             value={recurrence}
             onChange={(e) => setRecurrence(e.target.value as BillRecurrence)}
           >
-            <option value="monthly">Monthly</option>
-            <option value="once">Once</option>
+            <option value="monthly">Mensal</option>
+            <option value="once">Única</option>
           </Select>
         </Field>
         {recurrence === "monthly" ? (
-          <Field label="Due day">
+          <Field label="Dia do vencimento">
             <TextInput
               type="number"
               min={1}
@@ -670,7 +712,7 @@ function Bills({ client }: { client: FinanceApi }) {
             />
           </Field>
         ) : (
-          <Field label="Due date">
+          <Field label="Data de vencimento">
             <TextInput
               type="datetime-local"
               value={dueAt}
@@ -679,10 +721,30 @@ function Bills({ client }: { client: FinanceApi }) {
             />
           </Field>
         )}
-        <Button type="submit">Register bill</Button>
+        <Button type="submit">Cadastrar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
-      {bills.status === "error" && <ErrorText>Could not load bills.</ErrorText>}
+    </Section>
+  );
+}
+
+function RegisteredBillsList({
+  client,
+  bills,
+  onCancelled,
+}: {
+  client: FinanceApi;
+  bills: AsyncResult<Bill[]>;
+  onCancelled: () => void;
+}) {
+  async function cancel(billId: string) {
+    await client.cancelBill(billId);
+    onCancelled();
+  }
+
+  return (
+    <Section title="Contas cadastradas">
+      {bills.status === "error" && <ErrorText>Não foi possível carregar as contas.</ErrorText>}
       <ul className="flex flex-col gap-1 text-sm">
         {(bills.data ?? []).map((bill) => (
           <li
@@ -693,8 +755,10 @@ function Bills({ client }: { client: FinanceApi }) {
               <span className="font-medium">{bill.payee}</span>
               <span className="text-gray-500">
                 · {money(bill.amount_minor, bill.currency)} ·{" "}
-                {bill.recurrence === "monthly" ? `day ${bill.due_day}` : bill.due_at}
-                {!bill.active && " · cancelled"}
+                {bill.recurrence === "monthly"
+                  ? `todo dia ${bill.due_day}`
+                  : bill.due_at && shortDate(bill.due_at)}
+                {!bill.active && " · cancelada"}
               </span>
               {bill.category && <CategoryBadge category={bill.category} />}
             </span>
@@ -704,68 +768,36 @@ function Bills({ client }: { client: FinanceApi }) {
                 onClick={() => void cancel(bill.bill_id)}
                 className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
               >
-                Cancel
+                Cancelar
               </button>
             )}
           </li>
         ))}
         {bills.status === "ready" && (bills.data ?? []).length === 0 && (
-          <li className="text-gray-500">No bills yet.</li>
+          <li className="text-gray-500">Nenhuma conta cadastrada ainda.</li>
         )}
       </ul>
     </Section>
   );
 }
 
-function PayBill({ client }: { client: FinanceApi }) {
-  const [billId, setBillId] = useState("");
-  const [dueAt, setDueAt] = useState("");
-  const [amount, setAmount] = useState("");
-  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setStatus("idle");
-    try {
-      await client.payBill(
-        billId.trim(),
-        new Date(dueAt).toISOString(),
-        amount.trim() ? Number(amount) : undefined,
-      );
-      setStatus("ok");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  return (
-    <Section title="Pay a bill">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <Field label="Bill id">
-          <TextInput value={billId} onChange={(e) => setBillId(e.target.value)} required />
-        </Field>
-        <Field label="Due date (occurrence)">
-          <TextInput
-            type="datetime-local"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Amount (minor units, optional)">
-          <TextInput type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        </Field>
-        <Button type="submit">Mark as paid</Button>
-      </form>
-      {status === "ok" && <p className="mt-2 text-sm text-green-700">Paid.</p>}
-      {status === "error" && <ErrorText>Could not record the payment.</ErrorText>}
-    </Section>
-  );
+function toDatetimeLocal(date: Date): string {
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
-function BillsReport({ client }: { client: FinanceApi }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+/** Do início do mês atual até o fim do próximo — uma janela útil por padrão. */
+function defaultBillsWindow(): { from: string; to: string } {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59);
+  return { from: toDatetimeLocal(from), to: toDatetimeLocal(to) };
+}
+
+function UpcomingBills({ client }: { client: FinanceApi }) {
+  const defaults = useMemo(defaultBillsWindow, []);
+  const [from, setFrom] = useState(defaults.from);
+  const [to, setTo] = useState(defaults.to);
   const [paid, setPaid] = useState<"" | "true" | "false">("");
   const [overdue, setOverdue] = useState<"" | "true" | "false">("");
   const report = useAsync(
@@ -775,102 +807,115 @@ function BillsReport({ client }: { client: FinanceApi }) {
         overdue: overdue === "" ? undefined : overdue === "true",
       }),
     [client, from, to, paid, overdue],
-    { immediate: false },
   );
   const [alertStatus, setAlertStatus] = useState<string | null>(null);
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    void report.run();
-  }
+  const [payingKey, setPayingKey] = useState<string | null>(null);
 
   async function runAlerts() {
     setAlertStatus(null);
     try {
       const outcomes = await client.runBillAlerts();
       const sent = outcomes.filter((outcome) => outcome.delivered).length;
-      setAlertStatus(`${sent}/${outcomes.length} reminder(s) delivered.`);
+      setAlertStatus(`${sent} de ${outcomes.length} lembrete(s) enviado(s).`);
     } catch {
-      setAlertStatus("Could not run the alert scan.");
+      setAlertStatus("Não foi possível executar os alertas.");
+    }
+  }
+
+  async function markPaid(billId: string, dueAt: string, key: string) {
+    setPayingKey(key);
+    try {
+      await client.payBill(billId, dueAt);
+      await report.run();
+    } finally {
+      setPayingKey(null);
     }
   }
 
   return (
     <Section
-      title="Bills report"
-      actions={<Button onClick={() => void runAlerts()}>Run alerts now</Button>}
+      title="Faturas e vencimentos"
+      actions={<Button onClick={() => void runAlerts()}>Enviar alertas agora</Button>}
     >
-      <form onSubmit={submit} className="mb-3 flex flex-wrap items-end gap-2">
-        <Field label="Due from">
+      <div className="mb-3 flex flex-wrap items-end gap-2">
+        <Field label="De">
           <TextInput
             type="datetime-local"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            required
           />
         </Field>
-        <Field label="Due to">
-          <TextInput
-            type="datetime-local"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            required
-          />
+        <Field label="Até">
+          <TextInput type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
         </Field>
-        <Field label="Paid">
+        <Field label="Status">
           <Select value={paid} onChange={(e) => setPaid(e.target.value as typeof paid)}>
-            <option value="">Any</option>
-            <option value="true">Paid</option>
-            <option value="false">Unpaid</option>
+            <option value="">Todas</option>
+            <option value="true">Pagas</option>
+            <option value="false">Não pagas</option>
           </Select>
         </Field>
-        <Field label="Overdue">
+        <Field label="Vencimento">
           <Select value={overdue} onChange={(e) => setOverdue(e.target.value as typeof overdue)}>
-            <option value="">Any</option>
-            <option value="true">Overdue</option>
-            <option value="false">Not overdue</option>
+            <option value="">Todas</option>
+            <option value="true">Vencidas</option>
+            <option value="false">Não vencidas</option>
           </Select>
         </Field>
-        <Button type="submit">Filter</Button>
-      </form>
+      </div>
       {alertStatus && <p className="mb-2 text-sm text-gray-700">{alertStatus}</p>}
-      {report.status === "error" && <ErrorText>Could not load the report.</ErrorText>}
+      {report.status === "error" && <ErrorText>Não foi possível carregar as faturas.</ErrorText>}
       <ul className="flex flex-col gap-1 text-sm">
-        {(report.data ?? []).map((occurrence) => (
-          <li
-            key={`${occurrence.bill_id}-${occurrence.period}`}
-            className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
-          >
-            <span className="flex items-center gap-2">
-              <span className="font-medium">{occurrence.payee}</span>
-              <span className="text-gray-500">
-                · {money(occurrence.amount_minor, occurrence.currency)} · due{" "}
-                {occurrence.due_at}
-              </span>
-              {occurrence.category && <CategoryBadge category={occurrence.category} />}
-            </span>
-            <span
-              className={
-                occurrence.paid
-                  ? "text-green-700"
-                  : occurrence.overdue
-                    ? "text-red-600"
-                    : "text-gray-500"
-              }
+        {(report.data ?? []).map((occurrence) => {
+          const key = `${occurrence.bill_id}-${occurrence.period}`;
+          return (
+            <li
+              key={key}
+              className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
             >
-              {occurrence.paid ? "Paid" : occurrence.overdue ? "Overdue" : "Unpaid"}
-            </span>
-          </li>
-        ))}
+              <span className="flex items-center gap-2">
+                <span className="font-medium">{occurrence.payee}</span>
+                <span className="text-gray-500">
+                  · {money(occurrence.amount_minor, occurrence.currency)} · vence em{" "}
+                  {shortDate(occurrence.due_at)}
+                </span>
+                {occurrence.category && <CategoryBadge category={occurrence.category} />}
+              </span>
+              <span className="flex items-center gap-2">
+                <span
+                  className={
+                    occurrence.paid
+                      ? "text-green-700"
+                      : occurrence.overdue
+                        ? "text-red-600"
+                        : "text-gray-500"
+                  }
+                >
+                  {occurrence.paid ? "Paga" : occurrence.overdue ? "Vencida" : "A vencer"}
+                </span>
+                {!occurrence.paid && (
+                  <button
+                    type="button"
+                    onClick={() => void markPaid(occurrence.bill_id, occurrence.due_at, key)}
+                    disabled={payingKey === key}
+                    className="rounded border border-green-300 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
+                  >
+                    {payingKey === key ? "Marcando…" : "Marcar como paga"}
+                  </button>
+                )}
+              </span>
+            </li>
+          );
+        })}
         {report.status === "ready" && (report.data ?? []).length === 0 && (
-          <li className="text-gray-500">No occurrences in range.</li>
+          <li className="text-gray-500">Nenhuma fatura no período selecionado.</li>
         )}
       </ul>
     </Section>
   );
 }
 
-function NotificationPreferences({ client }: { client: FinanceApi }) {
+function AlertPreferences({ client }: { client: FinanceApi }) {
   const preference = useAsync(() => client.getNotificationPreferences(), [client]);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
@@ -901,7 +946,10 @@ function NotificationPreferences({ client }: { client: FinanceApi }) {
   }
 
   return (
-    <Section title="Reminder preferences">
+    <Section title="Preferências de alerta de vencimento">
+      <p className="mb-3 text-sm text-gray-500">
+        Escolha como você quer ser avisado quando uma conta estiver perto de vencer ou vencida.
+      </p>
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
         <label className="flex items-center gap-1 text-sm">
           <input
@@ -909,7 +957,7 @@ function NotificationPreferences({ client }: { client: FinanceApi }) {
             checked={emailEnabled}
             onChange={(e) => setEmailEnabled(e.target.checked)}
           />
-          Email
+          E-mail
         </label>
         <label className="flex items-center gap-1 text-sm">
           <input
@@ -919,17 +967,17 @@ function NotificationPreferences({ client }: { client: FinanceApi }) {
           />
           WhatsApp
         </label>
-        <Field label="WhatsApp number">
+        <Field label="Número do WhatsApp">
           <TextInput
             value={whatsappPhone}
             onChange={(e) => setWhatsappPhone(e.target.value)}
             placeholder="+5511999999999"
           />
         </Field>
-        <Button type="submit">Save</Button>
+        <Button type="submit">Salvar</Button>
       </form>
-      {status === "ok" && <p className="mt-2 text-sm text-green-700">Saved.</p>}
-      {status === "error" && <ErrorText>Could not save preferences.</ErrorText>}
+      {status === "ok" && <p className="mt-2 text-sm text-green-700">Preferências salvas.</p>}
+      {status === "error" && <ErrorText>Não foi possível salvar as preferências.</ErrorText>}
     </Section>
   );
 }
