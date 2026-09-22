@@ -28,6 +28,7 @@ describe("PrivacyPage", () => {
       entities: [],
       relationships: [],
       accounts: [],
+      categories: [],
       goals: [],
       documents: [],
     });

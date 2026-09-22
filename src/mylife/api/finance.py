@@ -30,6 +30,8 @@ from mylife.finance import (
     BillsReportService,
     BillsService,
     CashFlow,
+    Category,
+    DuplicateCategoryError,
     FinanceService,
     InvalidBillRecurrenceError,
     NetWorth,
@@ -37,6 +39,7 @@ from mylife.finance import (
     Transaction,
     UnknownAccountError,
     UnknownBillError,
+    UnknownCategoryError,
 )
 from mylife.finance.bank_csv import BankCsvConnector
 from mylife.finance.bill_alerts import BillAlertsService
@@ -53,6 +56,12 @@ class CreateAccountRequest(BaseModel):
 
     name: str = Field(min_length=1)
     currency: str = Field(min_length=3, max_length=3)
+
+
+class CreateCategoryRequest(BaseModel):
+    """Request to register a category."""
+
+    name: str = Field(min_length=1)
 
 
 class ExpenseRequest(BaseModel):
@@ -143,6 +152,46 @@ def list_accounts(
 ) -> list[Account]:
     """List the authenticated user's accounts."""
     return FinanceService(session, bus).list_accounts(current_user.user_id)
+
+
+@router.post("/finance/categories", response_model=Category, status_code=201)
+def create_category(
+    request: CreateCategoryRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Category:
+    """Register a category for the authenticated user."""
+    try:
+        return FinanceService(session, bus).create_category(
+            current_user.user_id, request.name, now=utcnow()
+        )
+    except DuplicateCategoryError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/finance/categories", response_model=list[Category])
+def list_categories(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> list[Category]:
+    """List the authenticated user's categories."""
+    return FinanceService(session, bus).list_categories(current_user.user_id)
+
+
+@router.delete("/finance/categories/{category_id}", status_code=204)
+def delete_category(
+    category_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> None:
+    """Remove one of the user's categories."""
+    try:
+        FinanceService(session, bus).delete_category(current_user.user_id, category_id)
+    except UnknownCategoryError as exc:
+        raise HTTPException(status_code=404, detail="category not found") from exc
 
 
 @router.post("/finance/expenses", response_model=Transaction, status_code=201)

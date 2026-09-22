@@ -14,8 +14,10 @@ from mylife.db.base import Base
 from mylife.finance import (
     EXPENSE_CREATED,
     TRANSACTION_IMPORTED,
+    DuplicateCategoryError,
     FinanceService,
     UnknownAccountError,
+    UnknownCategoryError,
 )
 
 NOW = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
@@ -147,3 +149,34 @@ def test_list_transactions_scoped_to_user(service: FinanceService) -> None:
     )
 
     assert service.list_transactions(other) == []
+
+
+def test_create_and_list_categories_scoped(service: FinanceService) -> None:
+    user = uuid.uuid4()
+    other = uuid.uuid4()
+    category = service.create_category(user, "Moradia", now=NOW)
+    service.create_category(other, "Mercado", now=NOW)
+
+    assert category.name == "Moradia"
+    listed = service.list_categories(user)
+    assert [c.category_id for c in listed] == [category.category_id]
+
+
+def test_create_category_rejects_case_insensitive_duplicate(service: FinanceService) -> None:
+    user = uuid.uuid4()
+    service.create_category(user, "Moradia", now=NOW)
+
+    with pytest.raises(DuplicateCategoryError):
+        service.create_category(user, "moradia", now=NOW)
+
+
+def test_delete_category(service: FinanceService) -> None:
+    user = uuid.uuid4()
+    other = uuid.uuid4()
+    category = service.create_category(user, "Moradia", now=NOW)
+
+    with pytest.raises(UnknownCategoryError):
+        service.delete_category(other, category.category_id)
+
+    service.delete_category(user, category.category_id)
+    assert service.list_categories(user) == []

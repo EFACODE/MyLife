@@ -9,6 +9,7 @@ import type {
   BillPayment,
   Briefing,
   Calibration,
+  Category,
   Forecast,
   Insight,
   InsightInput,
@@ -195,6 +196,18 @@ export class ApiClient {
 
   createAccount(name: string, currency: string): Promise<Account> {
     return this.request<Account>("/accounts", { method: "POST", body: { name, currency } });
+  }
+
+  listCategories(): Promise<Category[]> {
+    return this.request<Category[]>("/finance/categories");
+  }
+
+  createCategory(name: string): Promise<Category> {
+    return this.request<Category>("/finance/categories", { method: "POST", body: { name } });
+  }
+
+  deleteCategory(categoryId: string): Promise<void> {
+    return this.request<void>(`/finance/categories/${categoryId}`, { method: "DELETE" });
   }
 
   recordExpense(input: ExpenseInput): Promise<Transaction> {

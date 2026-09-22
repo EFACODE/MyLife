@@ -126,3 +126,24 @@ class CreateAccountCommand(BaseModel):
 
     name: str = Field(min_length=1)
     currency: str = Field(min_length=3, max_length=3)
+
+
+class CategoryRow(Base):
+    """A user-scoped category name transactions and bills can be tagged with."""
+
+    __tablename__ = "categories"
+
+    category_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    name: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Category(BaseModel):
+    """A category as read back from the category registry."""
+
+    model_config = ConfigDict(frozen=True)
+
+    category_id: uuid.UUID
+    name: str
+    created_at: datetime

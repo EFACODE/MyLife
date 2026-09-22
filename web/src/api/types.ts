@@ -293,6 +293,12 @@ export interface Account {
   created_at: string;
 }
 
+export interface Category {
+  category_id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Transaction {
   event_id: string;
   kind: string;
@@ -481,6 +487,7 @@ export interface ExportBundle {
   entities: unknown[];
   relationships: unknown[];
   accounts: unknown[];
+  categories: unknown[];
   goals: unknown[];
   documents: unknown[];
 }

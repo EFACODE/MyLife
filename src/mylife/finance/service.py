@@ -23,6 +23,8 @@ from mylife.finance.models import (
     TRANSACTION_IMPORTED,
     Account,
     AccountRow,
+    Category,
+    CategoryRow,
     ExpenseCreated,
     FinancePayload,
     PositionPayload,
@@ -45,6 +47,22 @@ class UnknownAccountError(Exception):
     def __init__(self, account_id: uuid.UUID) -> None:
         super().__init__(f"account {account_id} not found")
         self.account_id = account_id
+
+
+class UnknownCategoryError(Exception):
+    """Raised when a category is missing or not owned by the acting user."""
+
+    def __init__(self, category_id: uuid.UUID) -> None:
+        super().__init__(f"category {category_id} not found")
+        self.category_id = category_id
+
+
+class DuplicateCategoryError(Exception):
+    """Raised when a user already has a category with the given name."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"category {name!r} already exists")
+        self.name = name
 
 
 def _to_transaction(event: TimelineEvent) -> Transaction:
@@ -115,6 +133,43 @@ class FinanceService:
             )
             for row in rows
         ]
+
+    def create_category(self, user_id: uuid.UUID, name: str, *, now: datetime) -> Category:
+        """Register a category for ``user_id``, rejecting a case-insensitive duplicate."""
+        normalized = name.strip()
+        existing = self._session.scalars(select(CategoryRow).where(CategoryRow.user_id == user_id))
+        if any(row.name.casefold() == normalized.casefold() for row in existing):
+            raise DuplicateCategoryError(normalized)
+        row = CategoryRow(
+            category_id=uuid.uuid4(), user_id=user_id, name=normalized, created_at=now
+        )
+        self._session.add(row)
+        self._session.commit()
+        return Category(category_id=row.category_id, name=row.name, created_at=now)
+
+    def list_categories(self, user_id: uuid.UUID) -> list[Category]:
+        """Return all of a user's categories, alphabetically."""
+        rows = self._session.scalars(
+            select(CategoryRow).where(CategoryRow.user_id == user_id).order_by(CategoryRow.name)
+        )
+        return [
+            Category(
+                category_id=row.category_id, name=row.name, created_at=_stored_utc(row.created_at)
+            )
+            for row in rows
+        ]
+
+    def delete_category(self, user_id: uuid.UUID, category_id: uuid.UUID) -> None:
+        """Remove a user's category; raises :class:`UnknownCategoryError` if not theirs."""
+        row = self._session.scalars(
+            select(CategoryRow).where(
+                CategoryRow.category_id == category_id, CategoryRow.user_id == user_id
+            )
+        ).one_or_none()
+        if row is None:
+            raise UnknownCategoryError(category_id)
+        self._session.delete(row)
+        self._session.commit()
 
     def record_expense(
         self,

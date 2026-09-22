@@ -139,3 +139,46 @@ def test_endpoints_require_auth(client: TestClient) -> None:
     assert client.get("/accounts").status_code == 401
     assert client.get("/finance/transactions").status_code == 401
     assert client.post("/accounts", json={"name": "x", "currency": "BRL"}).status_code == 401
+
+
+def test_create_category_list_and_delete(client: TestClient) -> None:
+    auth = _auth(client)
+
+    created = client.post("/finance/categories", json={"name": "Moradia"}, headers=auth)
+    assert created.status_code == 201
+    category_id = created.json()["category_id"]
+    assert created.json()["name"] == "Moradia"
+
+    listed = client.get("/finance/categories", headers=auth)
+    assert listed.status_code == 200
+    assert [c["name"] for c in listed.json()] == ["Moradia"]
+
+    deleted = client.delete(f"/finance/categories/{category_id}", headers=auth)
+    assert deleted.status_code == 204
+    assert client.get("/finance/categories", headers=auth).json() == []
+
+
+def test_create_category_duplicate_is_409(client: TestClient) -> None:
+    auth = _auth(client)
+    client.post("/finance/categories", json={"name": "Moradia"}, headers=auth)
+
+    response = client.post("/finance/categories", json={"name": "moradia"}, headers=auth)
+    assert response.status_code == 409
+
+
+def test_categories_scoped_to_user(client: TestClient) -> None:
+    owner_auth = _auth(client, "owner@example.com")
+    created = client.post("/finance/categories", json={"name": "Moradia"}, headers=owner_auth)
+    category_id = created.json()["category_id"]
+
+    intruder_auth = _auth(client, "intruder@example.com")
+    assert client.get("/finance/categories", headers=intruder_auth).json() == []
+    assert (
+        client.delete(f"/finance/categories/{category_id}", headers=intruder_auth).status_code
+        == 404
+    )
+
+
+def test_category_endpoints_require_auth(client: TestClient) -> None:
+    assert client.get("/finance/categories").status_code == 401
+    assert client.post("/finance/categories", json={"name": "x"}).status_code == 401
