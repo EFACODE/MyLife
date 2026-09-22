@@ -380,6 +380,8 @@ export interface Bill {
   due_day: number | null;
   due_at: string | null;
   max_occurrences: number;
+  occurrence_anchor_year: number;
+  occurrence_anchor_month: number;
   active: boolean;
   created_at: string;
 }
@@ -394,6 +396,8 @@ export interface RegisterBillInput {
   due_day?: number | null;
   due_at?: string | null;
   max_occurrences?: number;
+  occurrence_anchor_year?: number | null;
+  occurrence_anchor_month?: number | null;
 }
 
 export interface UpdateBillInput {
@@ -405,6 +409,8 @@ export interface UpdateBillInput {
   due_day?: number | null;
   due_at?: string | null;
   max_occurrences?: number;
+  occurrence_anchor_year?: number | null;
+  occurrence_anchor_month?: number | null;
 }
 
 export interface BillPayment {

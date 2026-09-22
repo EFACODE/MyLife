@@ -94,6 +94,8 @@ describe("FinancePage", () => {
         due_day: 5,
         due_at: null,
         max_occurrences: 0,
+        occurrence_anchor_year: 2026,
+        occurrence_anchor_month: 9,
         active: true,
         created_at: "x",
       },
@@ -231,6 +233,7 @@ describe("FinancePage", () => {
     const section = await billsSection("Contas cadastradas");
     expect(within(section).getByText("Aluguel")).toBeInTheDocument();
     expect(within(section).getByText("Ilimitada")).toBeInTheDocument();
+    expect(within(section).getByText("2.500,00 BRL")).toBeInTheDocument();
 
     fireEvent.click(within(section).getByText("Cancelar"));
     await waitFor(() => expect(client.cancelBill).toHaveBeenCalledWith("b1"));
@@ -244,6 +247,7 @@ describe("FinancePage", () => {
     fireEvent.click(within(section).getByText("Editar"));
 
     await within(section).findByText("Editar conta a pagar");
+    expect(within(section).getByLabelText("Mês/ano base das ocorrências")).toHaveValue("2026-09");
     fireEvent.change(within(section).getByLabelText("Beneficiário"), {
       target: { value: "Aluguel novo" },
     });
@@ -255,7 +259,12 @@ describe("FinancePage", () => {
     await waitFor(() =>
       expect(client.updateBill).toHaveBeenCalledWith(
         "b1",
-        expect.objectContaining({ payee: "Aluguel novo", max_occurrences: 12 }),
+        expect.objectContaining({
+          payee: "Aluguel novo",
+          max_occurrences: 12,
+          occurrence_anchor_year: 2026,
+          occurrence_anchor_month: 9,
+        }),
       ),
     );
   });
@@ -270,6 +279,7 @@ describe("FinancePage", () => {
       target: { value: "Netflix" },
     });
     fireEvent.change(within(section).getByLabelText("Valor (R$)"), { target: { value: "49.90" } });
+    expect(within(section).getByLabelText("Mês/ano base das ocorrências")).toBeInTheDocument();
     fireEvent.click(within(section).getByText("Cadastrar"));
 
     await waitFor(() =>
@@ -280,6 +290,8 @@ describe("FinancePage", () => {
           amount_minor: 4990,
           recurrence: "monthly",
           due_day: 5,
+          occurrence_anchor_year: expect.any(Number),
+          occurrence_anchor_month: expect.any(Number),
         }),
       ),
     );

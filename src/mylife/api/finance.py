@@ -121,6 +121,8 @@ class RegisterBillRequest(BaseModel):
     due_day: int | None = Field(default=None, ge=1, le=31)
     due_at: datetime | None = None
     max_occurrences: int = Field(default=0, ge=0)
+    occurrence_anchor_year: int | None = Field(default=None, ge=1900)
+    occurrence_anchor_month: int | None = Field(default=None, ge=1, le=12)
 
 
 class UpdateBillRequest(BaseModel):
@@ -134,6 +136,8 @@ class UpdateBillRequest(BaseModel):
     due_day: int | None = Field(default=None, ge=1, le=31)
     due_at: datetime | None = None
     max_occurrences: int = Field(default=0, ge=0)
+    occurrence_anchor_year: int | None = Field(default=None, ge=1900)
+    occurrence_anchor_month: int | None = Field(default=None, ge=1, le=12)
 
 
 class PayBillRequest(BaseModel):
@@ -389,6 +393,8 @@ def register_bill(
             due_day=request.due_day,
             due_at=ensure_utc(request.due_at) if request.due_at is not None else None,
             max_occurrences=request.max_occurrences,
+            occurrence_anchor_year=request.occurrence_anchor_year,
+            occurrence_anchor_month=request.occurrence_anchor_month,
             now=utcnow(),
             correlation_id=correlation_id,
         )
@@ -420,6 +426,8 @@ def update_bill(
             due_day=request.due_day,
             due_at=ensure_utc(request.due_at) if request.due_at is not None else None,
             max_occurrences=request.max_occurrences,
+            occurrence_anchor_year=request.occurrence_anchor_year,
+            occurrence_anchor_month=request.occurrence_anchor_month,
             now=utcnow(),
             correlation_id=correlation_id,
         )

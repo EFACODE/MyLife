@@ -46,6 +46,8 @@ class BillRow(Base):
     due_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_occurrences: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    occurrence_anchor_year: Mapped[int] = mapped_column(Integer)
+    occurrence_anchor_month: Mapped[int] = mapped_column(Integer)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -65,6 +67,8 @@ class Bill(BaseModel):
     due_day: int | None
     due_at: datetime | None
     max_occurrences: int
+    occurrence_anchor_year: int
+    occurrence_anchor_month: int
     active: bool
     created_at: datetime
 
@@ -84,6 +88,8 @@ class BillRegisteredPayload(BaseModel):
     due_day: int | None = None
     due_at: datetime | None = None
     max_occurrences: int = 0
+    occurrence_anchor_year: int
+    occurrence_anchor_month: int
 
 
 class BillUpdatedPayload(BaseModel):
@@ -100,6 +106,8 @@ class BillUpdatedPayload(BaseModel):
     due_day: int | None = None
     due_at: datetime | None = None
     max_occurrences: int = 0
+    occurrence_anchor_year: int
+    occurrence_anchor_month: int
 
 
 class BillPaidPayload(BaseModel):

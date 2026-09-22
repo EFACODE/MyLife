@@ -30,7 +30,7 @@ import { StatCard } from "../../components/ui/StatCard";
 import { SubTabs, type SubTabItem } from "../../components/ui/SubTabs";
 import { Tabs, type TabItem } from "../../components/ui/Tabs";
 import { categorySolidClass } from "../../lib/categoryColor";
-import { money, moneyByCurrency, parseMoneyInput, shortDate } from "../../lib/format";
+import { money, moneyByCurrency, moneySuffixed, parseMoneyInput, shortDate } from "../../lib/format";
 import { useAsync, type AsyncResult } from "../../lib/useAsync";
 
 type FinanceApi = Pick<
@@ -838,6 +838,7 @@ function RegisterBill({
   const [dueDay, setDueDay] = useState("5");
   const [dueAt, setDueAt] = useState("");
   const [maxOccurrences, setMaxOccurrences] = useState("0");
+  const [occurrenceAnchor, setOccurrenceAnchor] = useState(currentYearMonth);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -847,6 +848,7 @@ function RegisterBill({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const anchor = parseYearMonth(occurrenceAnchor);
     try {
       await client.registerBill({
         account_id: accountId,
@@ -858,11 +860,14 @@ function RegisterBill({
         due_day: recurrence === "monthly" ? Number(dueDay) : null,
         due_at: recurrence === "once" && dueAt ? new Date(dueAt).toISOString() : null,
         max_occurrences: Number(maxOccurrences) || 0,
+        occurrence_anchor_year: anchor?.year ?? null,
+        occurrence_anchor_month: anchor?.month ?? null,
       });
       setPayee("");
       setAmount("");
       setCategory("");
       setMaxOccurrences("0");
+      setOccurrenceAnchor(currentYearMonth());
       onRegistered();
     } catch {
       setError("Não foi possível cadastrar a conta.");
@@ -941,6 +946,15 @@ function RegisterBill({
             onChange={(e) => setMaxOccurrences(e.target.value)}
           />
         </Field>
+        {recurrence === "monthly" && (
+          <Field label="Mês/ano base das ocorrências">
+            <TextInput
+              type="month"
+              value={occurrenceAnchor}
+              onChange={(e) => setOccurrenceAnchor(e.target.value)}
+            />
+          </Field>
+        )}
         <Button type="submit">Cadastrar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
@@ -988,7 +1002,7 @@ function RegisteredBillsList({
             <thead>
               <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                 <th className="py-2 pr-3 font-medium">Beneficiário</th>
-                <th className="py-2 pr-3 font-medium">Valor</th>
+                <th className="py-2 pr-3 text-right font-medium">Valor</th>
                 <th className="py-2 pr-3 font-medium">Vencimento</th>
                 <th className="py-2 pr-3 font-medium">Categoria</th>
                 <th className="py-2 pr-3 font-medium">Ocorrências</th>
@@ -1014,8 +1028,8 @@ function RegisteredBillsList({
                       )}
                     </span>
                   </td>
-                  <td className="py-3 pr-3 text-gray-700">
-                    {money(bill.amount_minor, bill.currency)}
+                  <td className="py-3 pr-3 text-right tabular-nums text-gray-700">
+                    {moneySuffixed(bill.amount_minor, bill.currency)}
                   </td>
                   <td className="py-3 pr-3 text-gray-700">
                     {bill.recurrence === "monthly"
@@ -1077,11 +1091,15 @@ function EditBillForm({
   const [dueDay, setDueDay] = useState(String(bill.due_day ?? 5));
   const [dueAt, setDueAt] = useState(bill.due_at ? toDatetimeLocal(new Date(bill.due_at)) : "");
   const [maxOccurrences, setMaxOccurrences] = useState(String(bill.max_occurrences));
+  const [occurrenceAnchor, setOccurrenceAnchor] = useState(
+    `${bill.occurrence_anchor_year}-${String(bill.occurrence_anchor_month).padStart(2, "0")}`,
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const anchor = parseYearMonth(occurrenceAnchor);
     try {
       await client.updateBill(bill.bill_id, {
         payee: payee.trim(),
@@ -1092,6 +1110,8 @@ function EditBillForm({
         due_day: recurrence === "monthly" ? Number(dueDay) : null,
         due_at: recurrence === "once" && dueAt ? new Date(dueAt).toISOString() : null,
         max_occurrences: Number(maxOccurrences) || 0,
+        occurrence_anchor_year: anchor?.year ?? null,
+        occurrence_anchor_month: anchor?.month ?? null,
       });
       onSaved();
     } catch {
@@ -1160,6 +1180,15 @@ function EditBillForm({
             onChange={(e) => setMaxOccurrences(e.target.value)}
           />
         </Field>
+        {recurrence === "monthly" && (
+          <Field label="Mês/ano base das ocorrências">
+            <TextInput
+              type="month"
+              value={occurrenceAnchor}
+              onChange={(e) => setOccurrenceAnchor(e.target.value)}
+            />
+          </Field>
+        )}
         <Button type="submit">Salvar</Button>
         <button
           type="button"
@@ -1177,6 +1206,19 @@ function EditBillForm({
 function toDatetimeLocal(date: Date): string {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+/** "YYYY-MM" for the current month — the default `type="month"` field value. */
+function currentYearMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Parses a `type="month"` value ("YYYY-MM") into { year, month }. */
+function parseYearMonth(value: string): { year: number; month: number } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  return { year: Number(match[1]), month: Number(match[2]) };
 }
 
 /** Do início do mês atual até o fim do próximo — uma janela útil por padrão. */
