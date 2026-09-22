@@ -4,6 +4,9 @@ import type {
   AuditEntry,
   Balance,
   BankImportResult,
+  Bill,
+  BillOccurrence,
+  BillPayment,
   Briefing,
   Calibration,
   Forecast,
@@ -28,10 +31,14 @@ import type {
   LoginResponse,
   Memory,
   Milestone,
+  NotificationOutcome,
+  NotificationPreference,
   RelationshipRecord,
   SearchHit,
   NetWorth,
   PositionInput,
+  RegisterBillInput,
+  SetNotificationPreferenceInput,
   SleepInput,
   SleepSession,
   TimelineEvent,
@@ -227,6 +234,61 @@ export class ApiClient {
     return this.request<BankImportResult>("/finance/connectors/bank/import", {
       method: "POST",
       body: { account_id: accountId, csv },
+    });
+  }
+
+  // --- Bills (T4.7) ---
+
+  listBills(accountId?: string): Promise<Bill[]> {
+    const params = new URLSearchParams();
+    if (accountId) params.set("account_id", accountId);
+    const query = params.toString();
+    return this.request<Bill[]>(`/finance/bills${query ? `?${query}` : ""}`);
+  }
+
+  registerBill(input: RegisterBillInput): Promise<Bill> {
+    return this.request<Bill>("/finance/bills", { method: "POST", body: input });
+  }
+
+  cancelBill(billId: string): Promise<void> {
+    return this.request<void>(`/finance/bills/${billId}`, { method: "DELETE" });
+  }
+
+  payBill(billId: string, dueAt: string, amountMinor?: number): Promise<BillPayment> {
+    return this.request<BillPayment>(`/finance/bills/${billId}/pay`, {
+      method: "POST",
+      body: { due_at: dueAt, amount_minor: amountMinor },
+    });
+  }
+
+  billsReport(
+    dueFrom: string,
+    dueTo: string,
+    options: { accountId?: string; paid?: boolean; overdue?: boolean } = {},
+  ): Promise<BillOccurrence[]> {
+    const params = new URLSearchParams({ due_from: dueFrom, due_to: dueTo });
+    if (options.accountId) params.set("account_id", options.accountId);
+    if (options.paid !== undefined) params.set("paid", String(options.paid));
+    if (options.overdue !== undefined) params.set("overdue", String(options.overdue));
+    return this.request<BillOccurrence[]>(`/finance/bills/report?${params.toString()}`);
+  }
+
+  runBillAlerts(): Promise<NotificationOutcome[]> {
+    return this.request<NotificationOutcome[]>("/finance/bills/alerts/run", { method: "POST" });
+  }
+
+  // --- Notifications (T4.8) ---
+
+  getNotificationPreferences(): Promise<NotificationPreference> {
+    return this.request<NotificationPreference>("/notifications/preferences");
+  }
+
+  setNotificationPreferences(
+    input: SetNotificationPreferenceInput,
+  ): Promise<NotificationPreference> {
+    return this.request<NotificationPreference>("/notifications/preferences", {
+      method: "PUT",
+      body: input,
     });
   }
 

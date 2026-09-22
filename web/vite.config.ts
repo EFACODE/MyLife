@@ -25,6 +25,7 @@ const API_PREFIXES = [
   "/insights",
   "/briefing",
   "/forecasts",
+  "/notifications",
 ];
 
 export default defineConfig({
