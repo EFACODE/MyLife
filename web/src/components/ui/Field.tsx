@@ -10,5 +10,8 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 }
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className="rounded border border-gray-300 px-2 py-1 text-sm" />;
+  const { className = "", ...rest } = props;
+  return (
+    <input {...rest} className={"rounded border border-gray-300 px-2 py-1 text-sm " + className} />
+  );
 }

@@ -62,6 +62,7 @@ const TABS: TabItem[] = [
   { id: "transactions", label: "Transações" },
   { id: "bills", label: "Contas a pagar" },
   { id: "categories", label: "Categorias" },
+  { id: "settings", label: "Configurações" },
 ];
 
 export function FinancePage() {
@@ -77,7 +78,9 @@ export function FinancePage() {
         Contas, transações, contas a pagar e categorias.
       </p>
       <Tabs items={TABS} active={tab} onChange={setTab} />
-      {tab === "overview" && <OverviewTab client={client} accounts={accounts} />}
+      {tab === "overview" && (
+        <OverviewTab client={client} transactions={transactions.data ?? []} />
+      )}
       {tab === "transactions" && (
         <TransactionsTab
           client={client}
@@ -86,16 +89,29 @@ export function FinancePage() {
         />
       )}
       {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
-      {tab === "categories" && (
-        <CategoriesTab client={client} transactions={transactions.data ?? []} />
-      )}
+      {tab === "categories" && <CategoriesTab client={client} />}
+      {tab === "settings" && <SettingsTab client={client} accounts={accounts} />}
     </div>
   );
 }
 
 // --- Visão geral ---------------------------------------------------------
 
-function OverviewTab({
+function OverviewTab({ client, transactions }: { client: FinanceApi; transactions: Transaction[] }) {
+  return (
+    <>
+      <NetWorthView client={client} />
+      <CashFlowView client={client} />
+      <Section title="Gastos por categoria" icon={PiggyBank}>
+        <CategorySpendBreakdown transactions={transactions} />
+      </Section>
+    </>
+  );
+}
+
+// --- Configurações ---------------------------------------------------------
+
+function SettingsTab({
   client,
   accounts,
 }: {
@@ -105,9 +121,8 @@ function OverviewTab({
   return (
     <>
       <Accounts client={client} accounts={accounts} />
-      <NetWorthView client={client} />
-      <CashFlowView client={client} />
       <BankImport client={client} />
+      <AlertPreferences client={client} />
     </>
   );
 }
@@ -470,13 +485,14 @@ function NewTransactionForm({
             <option value="income">Receita</option>
           </Select>
         </Field>
-        <Field label="Valor (R$)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="text-right tabular-nums"
             required
           />
         </Field>
@@ -559,29 +575,31 @@ function TransactionsTable({
 
 // --- Categorias --------------------------------------------------------
 //
-// Duas áreas: (1) cadastro de categorias — um pequeno registro reutilizável,
-// como o de contas — e (2) o resumo de gastos por categoria, derivado das
-// transações já lançadas.
+// Cadastro de categorias — um pequeno registro reutilizável, como o de
+// contas. O resumo de gastos por categoria vive na aba Visão geral.
 
-function CategoriesTab({
-  client,
-  transactions,
-}: {
-  client: FinanceApi;
-  transactions: Transaction[];
-}) {
+const CATEGORIES_SCREENS: SubTabItem[] = [
+  { id: "register", label: "Cadastrar categoria", icon: PlusCircle },
+  { id: "list", label: "Categorias cadastradas", icon: ListChecks },
+];
+
+function CategoriesTab({ client }: { client: FinanceApi }) {
   const categories = useAsync(() => client.listCategories(), [client]);
+  const [screen, setScreen] = useState(CATEGORIES_SCREENS[0].id);
+
   return (
     <>
-      <RegisterCategory client={client} onRegistered={() => void categories.run()} />
-      <RegisteredCategoriesList
-        client={client}
-        categories={categories}
-        onDeleted={() => void categories.run()}
-      />
-      <Section title="Gastos por categoria" icon={PiggyBank}>
-        <CategorySpendBreakdown transactions={transactions} />
-      </Section>
+      <SubTabs items={CATEGORIES_SCREENS} active={screen} onChange={setScreen} />
+      {screen === "register" && (
+        <RegisterCategory client={client} onRegistered={() => void categories.run()} />
+      )}
+      {screen === "list" && (
+        <RegisteredCategoriesList
+          client={client}
+          categories={categories}
+          onDeleted={() => void categories.run()}
+        />
+      )}
     </>
   );
 }
@@ -734,21 +752,22 @@ function CategorySpendBreakdown({ transactions }: { transactions: Transaction[] 
 
 // --- Contas a pagar ------------------------------------------------------
 //
-// Quatro telas dedicadas, cada uma com sua própria aba: (1) cadastro de uma
-// nova conta, (2) a lista de contas cadastradas (definições), (3) faturas e
-// pagamento (ocorrências, com ação de pagar em um clique) e (4) preferências
-// de alerta — em vez de tudo empilhado numa única tela. Um resumo com KPIs
-// fica sempre visível no topo, qualquer que seja a tela ativa.
+// Três telas dedicadas, cada uma com sua própria aba: (1) cadastro de uma
+// nova conta, (2) a lista de contas cadastradas (definições) e (3) faturas e
+// pagamento (ocorrências, com ação de pagar em um clique) — em vez de tudo
+// empilhado numa única tela. Um resumo com KPIs fica sempre visível no
+// topo, qualquer que seja a tela ativa. As preferências de alerta de
+// vencimento vivem na aba Configurações.
 
 const BILLS_SCREENS: SubTabItem[] = [
   { id: "register", label: "Cadastrar", icon: PlusCircle },
   { id: "list", label: "Contas cadastradas", icon: ListChecks },
   { id: "upcoming", label: "Faturas e pagamento", icon: Receipt },
-  { id: "preferences", label: "Preferências de alerta", icon: Bell },
 ];
 
 function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
   const bills = useAsync(() => client.listBills(), [client]);
+  const categories = useAsync(() => client.listCategories(), [client]);
   const [screen, setScreen] = useState(BILLS_SCREENS[0].id);
 
   return (
@@ -756,13 +775,22 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
       <BillsSummary client={client} />
       <SubTabs items={BILLS_SCREENS} active={screen} onChange={setScreen} />
       {screen === "register" && (
-        <RegisterBill client={client} accounts={accounts} onRegistered={() => void bills.run()} />
+        <RegisterBill
+          client={client}
+          accounts={accounts}
+          categories={categories.data ?? []}
+          onRegistered={() => void bills.run()}
+        />
       )}
       {screen === "list" && (
-        <RegisteredBillsList client={client} bills={bills} onCancelled={() => void bills.run()} />
+        <RegisteredBillsList
+          client={client}
+          bills={bills}
+          categories={categories.data ?? []}
+          onCancelled={() => void bills.run()}
+        />
       )}
       {screen === "upcoming" && <UpcomingBills client={client} />}
-      {screen === "preferences" && <AlertPreferences client={client} />}
     </>
   );
 }
@@ -823,10 +851,12 @@ function BillsSummary({ client }: { client: FinanceApi }) {
 function RegisterBill({
   client,
   accounts,
+  categories,
   onRegistered,
 }: {
   client: FinanceApi;
   accounts: Account[];
+  categories: Category[];
   onRegistered: () => void;
 }) {
   const [accountId, setAccountId] = useState("");
@@ -892,13 +922,14 @@ function RegisterBill({
         <Field label="Beneficiário">
           <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
         </Field>
-        <Field label="Valor (R$)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="text-right tabular-nums"
             required
           />
         </Field>
@@ -906,7 +937,14 @@ function RegisterBill({
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
         <Field label="Categoria">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="Recorrência">
           <Select
@@ -965,10 +1003,12 @@ function RegisterBill({
 function RegisteredBillsList({
   client,
   bills,
+  categories,
   onCancelled,
 }: {
   client: FinanceApi;
   bills: AsyncResult<Bill[]>;
+  categories: Category[];
   onCancelled: () => void;
 }) {
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
@@ -986,6 +1026,7 @@ function RegisteredBillsList({
         <EditBillForm
           client={client}
           bill={editingBill}
+          categories={categories}
           onSaved={() => {
             setEditingBillId(null);
             onCancelled();
@@ -1075,11 +1116,13 @@ function RegisteredBillsList({
 function EditBillForm({
   client,
   bill,
+  categories,
   onSaved,
   onCancel,
 }: {
   client: FinanceApi;
   bill: Bill;
+  categories: Category[];
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -1126,13 +1169,14 @@ function EditBillForm({
         <Field label="Beneficiário">
           <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
         </Field>
-        <Field label="Valor (R$)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="text-right tabular-nums"
             required
           />
         </Field>
@@ -1140,7 +1184,14 @@ function EditBillForm({
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
         <Field label="Categoria">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="Recorrência">
           <Select
