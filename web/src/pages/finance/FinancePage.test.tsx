@@ -190,7 +190,7 @@ describe("FinancePage", () => {
 
     fireEvent.click(screen.getByText("+ Nova Transação"));
     await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
-    fireEvent.change(screen.getByLabelText("Valor (R$)"), { target: { value: "12.00" } });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "12.00" } });
     fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Café" } });
     fireEvent.click(screen.getByText("Salvar"));
 
@@ -204,6 +204,7 @@ describe("FinancePage", () => {
   it("mostra o detalhamento por categoria na aba Categorias", async () => {
     render(<FinancePage />);
     goToTab("Categorias");
+    goToBillsScreen("Gastos por categoria");
     const section = await billsSection("Gastos por categoria");
     expect(within(section).getByText("Alimentos e bebidas")).toBeInTheDocument();
     expect(within(section).getByText("Sem categoria")).toBeInTheDocument();
@@ -212,9 +213,11 @@ describe("FinancePage", () => {
   it("lista, cadastra e exclui uma categoria na aba Categorias", async () => {
     render(<FinancePage />);
     goToTab("Categorias");
+    goToBillsScreen("Categorias cadastradas");
     const listSection = await billsSection("Categorias cadastradas");
     expect(within(listSection).getByText("Moradia")).toBeInTheDocument();
 
+    goToBillsScreen("Cadastrar categoria");
     const registerSection = await billsSection("Cadastrar categoria");
     fireEvent.change(within(registerSection).getByLabelText("Nome"), {
       target: { value: "Mercado" },
@@ -222,7 +225,9 @@ describe("FinancePage", () => {
     fireEvent.click(within(registerSection).getByText("Cadastrar"));
     await waitFor(() => expect(client.createCategory).toHaveBeenCalledWith("Mercado"));
 
-    fireEvent.click(within(listSection).getByText("Excluir"));
+    goToBillsScreen("Categorias cadastradas");
+    const listSectionAgain = await billsSection("Categorias cadastradas");
+    fireEvent.click(within(listSectionAgain).getByText("Excluir"));
     await waitFor(() => expect(client.deleteCategory).toHaveBeenCalledWith("c1"));
   });
 
@@ -278,8 +283,9 @@ describe("FinancePage", () => {
     fireEvent.change(within(section).getByLabelText("Beneficiário"), {
       target: { value: "Netflix" },
     });
-    fireEvent.change(within(section).getByLabelText("Valor (R$)"), { target: { value: "49.90" } });
+    fireEvent.change(within(section).getByLabelText("Valor"), { target: { value: "49.90" } });
     expect(within(section).getByLabelText("Mês/ano base das ocorrências")).toBeInTheDocument();
+    fireEvent.change(within(section).getByLabelText("Categoria"), { target: { value: "Moradia" } });
     fireEvent.click(within(section).getByText("Cadastrar"));
 
     await waitFor(() =>
@@ -288,6 +294,7 @@ describe("FinancePage", () => {
           account_id: "a1",
           payee: "Netflix",
           amount_minor: 4990,
+          category: "Moradia",
           recurrence: "monthly",
           due_day: 5,
           occurrence_anchor_year: expect.any(Number),

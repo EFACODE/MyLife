@@ -470,13 +470,14 @@ function NewTransactionForm({
             <option value="income">Receita</option>
           </Select>
         </Field>
-        <Field label="Valor (R$)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="text-right tabular-nums"
             required
           />
         </Field>
@@ -563,6 +564,12 @@ function TransactionsTable({
 // como o de contas — e (2) o resumo de gastos por categoria, derivado das
 // transações já lançadas.
 
+const CATEGORIES_SCREENS: SubTabItem[] = [
+  { id: "register", label: "Cadastrar categoria", icon: PlusCircle },
+  { id: "list", label: "Categorias cadastradas", icon: ListChecks },
+  { id: "spend", label: "Gastos por categoria", icon: PiggyBank },
+];
+
 function CategoriesTab({
   client,
   transactions,
@@ -571,17 +578,26 @@ function CategoriesTab({
   transactions: Transaction[];
 }) {
   const categories = useAsync(() => client.listCategories(), [client]);
+  const [screen, setScreen] = useState(CATEGORIES_SCREENS[0].id);
+
   return (
     <>
-      <RegisterCategory client={client} onRegistered={() => void categories.run()} />
-      <RegisteredCategoriesList
-        client={client}
-        categories={categories}
-        onDeleted={() => void categories.run()}
-      />
-      <Section title="Gastos por categoria" icon={PiggyBank}>
-        <CategorySpendBreakdown transactions={transactions} />
-      </Section>
+      <SubTabs items={CATEGORIES_SCREENS} active={screen} onChange={setScreen} />
+      {screen === "register" && (
+        <RegisterCategory client={client} onRegistered={() => void categories.run()} />
+      )}
+      {screen === "list" && (
+        <RegisteredCategoriesList
+          client={client}
+          categories={categories}
+          onDeleted={() => void categories.run()}
+        />
+      )}
+      {screen === "spend" && (
+        <Section title="Gastos por categoria" icon={PiggyBank}>
+          <CategorySpendBreakdown transactions={transactions} />
+        </Section>
+      )}
     </>
   );
 }
@@ -749,6 +765,7 @@ const BILLS_SCREENS: SubTabItem[] = [
 
 function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
   const bills = useAsync(() => client.listBills(), [client]);
+  const categories = useAsync(() => client.listCategories(), [client]);
   const [screen, setScreen] = useState(BILLS_SCREENS[0].id);
 
   return (
@@ -756,10 +773,20 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
       <BillsSummary client={client} />
       <SubTabs items={BILLS_SCREENS} active={screen} onChange={setScreen} />
       {screen === "register" && (
-        <RegisterBill client={client} accounts={accounts} onRegistered={() => void bills.run()} />
+        <RegisterBill
+          client={client}
+          accounts={accounts}
+          categories={categories.data ?? []}
+          onRegistered={() => void bills.run()}
+        />
       )}
       {screen === "list" && (
-        <RegisteredBillsList client={client} bills={bills} onCancelled={() => void bills.run()} />
+        <RegisteredBillsList
+          client={client}
+          bills={bills}
+          categories={categories.data ?? []}
+          onCancelled={() => void bills.run()}
+        />
       )}
       {screen === "upcoming" && <UpcomingBills client={client} />}
       {screen === "preferences" && <AlertPreferences client={client} />}
@@ -823,10 +850,12 @@ function BillsSummary({ client }: { client: FinanceApi }) {
 function RegisterBill({
   client,
   accounts,
+  categories,
   onRegistered,
 }: {
   client: FinanceApi;
   accounts: Account[];
+  categories: Category[];
   onRegistered: () => void;
 }) {
   const [accountId, setAccountId] = useState("");
@@ -892,13 +921,14 @@ function RegisterBill({
         <Field label="Beneficiário">
           <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
         </Field>
-        <Field label="Valor (R$)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="text-right tabular-nums"
             required
           />
         </Field>
@@ -906,7 +936,14 @@ function RegisterBill({
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
         <Field label="Categoria">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="Recorrência">
           <Select
@@ -965,10 +1002,12 @@ function RegisterBill({
 function RegisteredBillsList({
   client,
   bills,
+  categories,
   onCancelled,
 }: {
   client: FinanceApi;
   bills: AsyncResult<Bill[]>;
+  categories: Category[];
   onCancelled: () => void;
 }) {
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
@@ -986,6 +1025,7 @@ function RegisteredBillsList({
         <EditBillForm
           client={client}
           bill={editingBill}
+          categories={categories}
           onSaved={() => {
             setEditingBillId(null);
             onCancelled();
@@ -1075,11 +1115,13 @@ function RegisteredBillsList({
 function EditBillForm({
   client,
   bill,
+  categories,
   onSaved,
   onCancel,
 }: {
   client: FinanceApi;
   bill: Bill;
+  categories: Category[];
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -1126,13 +1168,14 @@ function EditBillForm({
         <Field label="Beneficiário">
           <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
         </Field>
-        <Field label="Valor (R$)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="text-right tabular-nums"
             required
           />
         </Field>
@@ -1140,7 +1183,14 @@ function EditBillForm({
           <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
         </Field>
         <Field label="Categoria">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
         <Field label="Recorrência">
           <Select
