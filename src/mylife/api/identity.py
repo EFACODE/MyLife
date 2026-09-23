@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from mylife.api.auth import get_current_user
 from mylife.api.deps import get_event_bus
 from mylife.core.context import get_correlation_id, new_correlation_id
 from mylife.core.events import EventBus
@@ -44,6 +45,15 @@ class CreateHouseholdRequest(BaseModel):
     name: str = Field(min_length=1)
 
 
+class UpdateUserRequest(BaseModel):
+    """Request to edit the authenticated user's editable profile fields.
+
+    The account email is immutable and not included here.
+    """
+
+    display_name: str = Field(min_length=1)
+
+
 @router.post("/users", response_model=User, status_code=201)
 def register_user(
     request: RegisterUserRequest,
@@ -67,6 +77,23 @@ def register_user(
         raise HTTPException(status_code=422, detail="unknown household") from exc
     except InvalidEmailError as exc:
         raise HTTPException(status_code=422, detail="invalid email") from exc
+
+
+@router.patch("/users/me", response_model=User)
+def update_current_user(
+    request: UpdateUserRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> User:
+    """Edit the authenticated user's display name (email cannot be changed)."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    return IdentityService(session, bus).update_display_name(
+        current_user.user_id,
+        request.display_name,
+        now=utcnow(),
+        correlation_id=correlation_id,
+    )
 
 
 @router.get("/users/{user_id}", response_model=User)

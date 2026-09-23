@@ -74,6 +74,28 @@ def test_invalid_email_rejected(session: Session) -> None:
         service.register_user("not-an-email", "X", password="s3cretpw", now=NOW, correlation_id="c")
 
 
+def test_update_display_name_changes_name_keeps_email(session: Session) -> None:
+    bus = InProcessEventBus()
+    published: list[LifeEvent[object]] = []
+    bus.subscribe(published.append)
+    service = IdentityService(session, bus)
+    user = service.register_user(
+        "ada@example.com", "Ada", password="s3cretpw", now=NOW, correlation_id="cid"
+    )
+
+    updated = service.update_display_name(
+        user.user_id, "  Ada Lovelace  ", now=NOW, correlation_id="cid2"
+    )
+
+    assert updated.display_name == "Ada Lovelace"
+    assert updated.email == "ada@example.com"  # unchanged
+    assert service.get_user(user.user_id) == updated
+    assert [e.event_type for e in published] == [
+        "identity.user_registered",
+        "identity.user_updated",
+    ]
+
+
 def test_household_link_and_unknown(session: Session) -> None:
     service = IdentityService(session, InProcessEventBus())
     household = service.create_household("Home", now=NOW)

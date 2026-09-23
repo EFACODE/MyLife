@@ -10,6 +10,8 @@ from mylife.identity.models import (
     User,
     UserRegistered,
     UserRegisteredPayload,
+    UserUpdated,
+    UserUpdatedPayload,
 )
 from mylife.identity.service import (
     DuplicateUserError,
@@ -27,4 +29,6 @@ __all__ = [
     "User",
     "UserRegistered",
     "UserRegisteredPayload",
+    "UserUpdated",
+    "UserUpdatedPayload",
 ]

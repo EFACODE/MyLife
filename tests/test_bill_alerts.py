@@ -159,19 +159,15 @@ def test_alerts_service_sends_email_by_default(
     assert len(email_channel.calls) == 1
 
 
-def test_alerts_service_sends_whatsapp_only_when_enabled_and_phone_set(
+def test_alerts_service_sends_whatsapp_only_when_enabled_and_phone_registered(
     session: Session, bus: InProcessEventBus, user_id: uuid.UUID, account_id: uuid.UUID
 ) -> None:
     _register_bill(
         session, bus, user_id, account_id, due_day=5, registered_at=_REGISTERED_BEFORE_SEP
     )
-    NotificationPreferenceService(session).set(
-        user_id,
-        email_enabled=False,
-        whatsapp_enabled=True,
-        whatsapp_phone="+5511999999999",
-        now=NOW,
-    )
+    preferences = NotificationPreferenceService(session)
+    preferences.set(user_id, email_enabled=False, whatsapp_enabled=True, now=NOW)
+    preferences.add_alert_phone(user_id, "+5511999999999", now=NOW)
     whatsapp_channel = _RecordingChannel()
 
     outcomes = BillAlertsService(session, bus, {"whatsapp": whatsapp_channel}).run(
@@ -181,6 +177,31 @@ def test_alerts_service_sends_whatsapp_only_when_enabled_and_phone_set(
     assert len(outcomes) == 1
     assert outcomes[0].channel == "whatsapp"
     assert outcomes[0].recipient == "+5511999999999"
+
+
+def test_alerts_service_sends_to_multiple_alert_emails_and_phones(
+    session: Session, bus: InProcessEventBus, user_id: uuid.UUID, account_id: uuid.UUID
+) -> None:
+    _register_bill(
+        session, bus, user_id, account_id, due_day=5, registered_at=_REGISTERED_BEFORE_SEP
+    )
+    preferences = NotificationPreferenceService(session)
+    preferences.set(user_id, email_enabled=True, whatsapp_enabled=True, now=NOW)
+    preferences.add_alert_email(user_id, "spouse@example.com", now=NOW)
+    preferences.add_alert_phone(user_id, "+5511999999999", now=NOW)
+    preferences.add_alert_phone(user_id, "+5511888888888", now=NOW)
+    email_channel = _RecordingChannel()
+    whatsapp_channel = _RecordingChannel()
+
+    outcomes = BillAlertsService(
+        session, bus, {"email": email_channel, "whatsapp": whatsapp_channel}
+    ).run(user_id, now=NOW, correlation_id="c")
+
+    email_recipients = [o.recipient for o in outcomes if o.channel == "email"]
+    whatsapp_recipients = [o.recipient for o in outcomes if o.channel == "whatsapp"]
+    # The account's own login email is always included alongside registered ones.
+    assert email_recipients == ["ada@example.com", "spouse@example.com"]
+    assert whatsapp_recipients == ["+5511999999999", "+5511888888888"]
 
 
 def test_alerts_service_no_alerts_sends_nothing(

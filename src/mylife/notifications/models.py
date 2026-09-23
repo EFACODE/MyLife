@@ -35,7 +35,6 @@ class NotificationPreferenceRow(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     whatsapp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    whatsapp_phone: Mapped[str | None] = mapped_column(String, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
@@ -46,8 +45,49 @@ class NotificationPreference(BaseModel):
 
     email_enabled: bool
     whatsapp_enabled: bool
-    whatsapp_phone: str | None
     updated_at: datetime
+
+
+class AlertEmailRow(Base):
+    """A user-scoped email address alerts may be sent to (multiple allowed)."""
+
+    __tablename__ = "alert_emails"
+
+    alert_email_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    email: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AlertEmail(BaseModel):
+    """An alert email address as read back from the registry."""
+
+    model_config = ConfigDict(frozen=True)
+
+    alert_email_id: uuid.UUID
+    email: str
+    created_at: datetime
+
+
+class AlertPhoneRow(Base):
+    """A user-scoped WhatsApp phone number alerts may be sent to (multiple allowed)."""
+
+    __tablename__ = "alert_phones"
+
+    alert_phone_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    phone: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AlertPhone(BaseModel):
+    """An alert WhatsApp phone number as read back from the registry."""
+
+    model_config = ConfigDict(frozen=True)
+
+    alert_phone_id: uuid.UUID
+    phone: str
+    created_at: datetime
 
 
 class NotificationRequestedPayload(BaseModel):

@@ -12,6 +12,11 @@ export interface User {
   created_at: string;
 }
 
+/** Editable profile fields — the account email is immutable. */
+export interface UpdateUserInput {
+  display_name: string;
+}
+
 /** A Life Event as returned by the timeline API (payload shape varies by type). */
 export interface TimelineEvent {
   event_id: string;
@@ -448,14 +453,24 @@ export type NotificationChannel = "email" | "whatsapp";
 export interface NotificationPreference {
   email_enabled: boolean;
   whatsapp_enabled: boolean;
-  whatsapp_phone: string | null;
   updated_at: string;
 }
 
 export interface SetNotificationPreferenceInput {
   email_enabled: boolean;
   whatsapp_enabled: boolean;
-  whatsapp_phone?: string | null;
+}
+
+export interface AlertEmail {
+  alert_email_id: string;
+  email: string;
+  created_at: string;
+}
+
+export interface AlertPhone {
+  alert_phone_id: string;
+  phone: string;
+  created_at: string;
 }
 
 export interface NotificationOutcome {

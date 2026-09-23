@@ -1,5 +1,7 @@
 import type {
   Account,
+  AlertEmail,
+  AlertPhone,
   Answer,
   AuditEntry,
   Balance,
@@ -42,6 +44,7 @@ import type {
   SetNotificationPreferenceInput,
   SleepInput,
   UpdateBillInput,
+  UpdateUserInput,
   SleepSession,
   TimelineEvent,
   TimelinePage,
@@ -139,6 +142,11 @@ export class ApiClient {
   /** The signed-in user. */
   me(): Promise<User> {
     return this.request<User>("/auth/me");
+  }
+
+  /** Edit the signed-in user's editable profile fields (email is immutable). */
+  updateCurrentUser(input: UpdateUserInput): Promise<User> {
+    return this.request<User>("/users/me", { method: "PATCH", body: input });
   }
 
   /** A page of the user's timeline events, optionally filtered by type. */
@@ -307,6 +315,40 @@ export class ApiClient {
     return this.request<NotificationPreference>("/notifications/preferences", {
       method: "PUT",
       body: input,
+    });
+  }
+
+  listAlertEmails(): Promise<AlertEmail[]> {
+    return this.request<AlertEmail[]>("/notifications/alert-emails");
+  }
+
+  addAlertEmail(email: string): Promise<AlertEmail> {
+    return this.request<AlertEmail>("/notifications/alert-emails", {
+      method: "POST",
+      body: { email },
+    });
+  }
+
+  deleteAlertEmail(alertEmailId: string): Promise<void> {
+    return this.request<void>(`/notifications/alert-emails/${alertEmailId}`, {
+      method: "DELETE",
+    });
+  }
+
+  listAlertPhones(): Promise<AlertPhone[]> {
+    return this.request<AlertPhone[]>("/notifications/alert-phones");
+  }
+
+  addAlertPhone(phone: string): Promise<AlertPhone> {
+    return this.request<AlertPhone>("/notifications/alert-phones", {
+      method: "POST",
+      body: { phone },
+    });
+  }
+
+  deleteAlertPhone(alertPhoneId: string): Promise<void> {
+    return this.request<void>(`/notifications/alert-phones/${alertPhoneId}`, {
+      method: "DELETE",
     });
   }
 

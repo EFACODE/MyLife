@@ -12,6 +12,7 @@ import {
   Scale,
   TrendingDown,
   TrendingUp,
+  User as UserIcon,
   Wallet,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -19,6 +20,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ApiError, type ApiClient } from "../../api/client";
 import type {
   Account,
+  AlertEmail,
+  AlertPhone,
   Balance,
   Bill,
   BillRecurrence,
@@ -62,6 +65,14 @@ type FinanceApi = Pick<
   | "runBillAlerts"
   | "getNotificationPreferences"
   | "setNotificationPreferences"
+  | "listAlertEmails"
+  | "addAlertEmail"
+  | "deleteAlertEmail"
+  | "listAlertPhones"
+  | "addAlertPhone"
+  | "deleteAlertPhone"
+  | "me"
+  | "updateCurrentUser"
 >;
 
 const TABS: TabItem[] = [
@@ -181,10 +192,51 @@ function SettingsTab({
 }) {
   return (
     <>
+      <UserProfile client={client} />
       <Accounts client={client} accounts={accounts} />
-      <BankImport client={client} />
       <AlertPreferences client={client} />
+      <BankImport client={client} />
     </>
+  );
+}
+
+function UserProfile({ client }: { client: FinanceApi }) {
+  const user = useAsync(() => client.me(), [client]);
+  const [displayName, setDisplayName] = useState("");
+  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+
+  useEffect(() => {
+    if (user.data) setDisplayName(user.data.display_name);
+  }, [user.data]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setStatus("idle");
+    try {
+      await client.updateCurrentUser({ display_name: displayName.trim() });
+      setStatus("ok");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <Section title="Dados do usuário" icon={UserIcon}>
+      {user.status === "error" && (
+        <ErrorText>Não foi possível carregar os dados do usuário.</ErrorText>
+      )}
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <Field label="E-mail">
+          <TextInput value={user.data?.email ?? ""} disabled readOnly />
+        </Field>
+        <Field label="Nome">
+          <TextInput value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+        </Field>
+        <Button type="submit">Salvar</Button>
+      </form>
+      {status === "ok" && <p className="mt-3 text-sm text-green-700">Dados salvos.</p>}
+      {status === "error" && <ErrorText>Não foi possível salvar os dados.</ErrorText>}
+    </Section>
   );
 }
 
@@ -1426,16 +1478,19 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
 
 function AlertPreferences({ client }: { client: FinanceApi }) {
   const preference = useAsync(() => client.getNotificationPreferences(), [client]);
+  const alertEmails = useAsync(() => client.listAlertEmails(), [client]);
+  const alertPhones = useAsync(() => client.listAlertPhones(), [client]);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [contactError, setContactError] = useState<string | null>(null);
 
   useEffect(() => {
     if (preference.data) {
       setEmailEnabled(preference.data.email_enabled);
       setWhatsappEnabled(preference.data.whatsapp_enabled);
-      setWhatsappPhone(preference.data.whatsapp_phone ?? "");
     }
   }, [preference.data]);
 
@@ -1446,7 +1501,6 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
       await client.setNotificationPreferences({
         email_enabled: emailEnabled,
         whatsapp_enabled: whatsappEnabled,
-        whatsapp_phone: whatsappPhone.trim() || null,
       });
       setStatus("ok");
     } catch {
@@ -1454,61 +1508,175 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
     }
   }
 
+  async function addEmail(event: FormEvent) {
+    event.preventDefault();
+    setContactError(null);
+    try {
+      await client.addAlertEmail(newEmail.trim());
+      setNewEmail("");
+      await alertEmails.run();
+    } catch (err) {
+      setContactError(
+        err instanceof ApiError && err.status === 409
+          ? "Esse e-mail já está cadastrado."
+          : "Não foi possível cadastrar o e-mail.",
+      );
+    }
+  }
+
+  async function removeEmail(alertEmailId: string) {
+    await client.deleteAlertEmail(alertEmailId);
+    await alertEmails.run();
+  }
+
+  async function addPhone(event: FormEvent) {
+    event.preventDefault();
+    setContactError(null);
+    try {
+      await client.addAlertPhone(newPhone.trim());
+      setNewPhone("");
+      await alertPhones.run();
+    } catch (err) {
+      setContactError(
+        err instanceof ApiError && err.status === 409
+          ? "Esse telefone já está cadastrado."
+          : "Não foi possível cadastrar o telefone.",
+      );
+    }
+  }
+
+  async function removePhone(alertPhoneId: string) {
+    await client.deleteAlertPhone(alertPhoneId);
+    await alertPhones.run();
+  }
+
   return (
     <Section title="Preferências de alerta de vencimento" icon={Bell}>
       <p className="mb-4 text-sm text-gray-500">
         Escolha como você quer ser avisado quando uma conta estiver perto de vencer ou vencida.
       </p>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-3">
-          <label
-            className={
-              "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
-              (emailEnabled
-                ? "border-blue-200 bg-blue-50 text-blue-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50")
-            }
-          >
-            <input
-              type="checkbox"
-              checked={emailEnabled}
-              onChange={(e) => setEmailEnabled(e.target.checked)}
-              className="sr-only"
-            />
-            <Bell className="h-4 w-4" />
-            E-mail
-          </label>
-          <label
-            className={
-              "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
-              (whatsappEnabled
-                ? "border-blue-200 bg-blue-50 text-blue-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50")
-            }
-          >
-            <input
-              type="checkbox"
-              checked={whatsappEnabled}
-              onChange={(e) => setWhatsappEnabled(e.target.checked)}
-              className="sr-only"
-            />
-            <Bell className="h-4 w-4" />
-            WhatsApp
-          </label>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Número do WhatsApp">
-            <TextInput
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              placeholder="+5511999999999"
-            />
-          </Field>
-          <Button type="submit">Salvar</Button>
-        </div>
+      <form onSubmit={submit} className="mb-6 flex flex-wrap items-end gap-3">
+        <label
+          className={
+            "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
+            (emailEnabled
+              ? "border-blue-200 bg-blue-50 text-blue-700"
+              : "border-gray-200 text-gray-600 hover:bg-gray-50")
+          }
+        >
+          <input
+            type="checkbox"
+            checked={emailEnabled}
+            onChange={(e) => setEmailEnabled(e.target.checked)}
+            className="sr-only"
+          />
+          <Bell className="h-4 w-4" />
+          E-mail
+        </label>
+        <label
+          className={
+            "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
+            (whatsappEnabled
+              ? "border-blue-200 bg-blue-50 text-blue-700"
+              : "border-gray-200 text-gray-600 hover:bg-gray-50")
+          }
+        >
+          <input
+            type="checkbox"
+            checked={whatsappEnabled}
+            onChange={(e) => setWhatsappEnabled(e.target.checked)}
+            className="sr-only"
+          />
+          <Bell className="h-4 w-4" />
+          WhatsApp
+        </label>
+        <Button type="submit">Salvar</Button>
       </form>
-      {status === "ok" && <p className="mt-3 text-sm text-green-700">Preferências salvas.</p>}
-      {status === "error" && <ErrorText>Não foi possível salvar as preferências.</ErrorText>}
+      {status === "ok" && <p className="mb-4 text-sm text-green-700">Preferências salvas.</p>}
+      {status === "error" && (
+        <ErrorText>Não foi possível salvar as preferências.</ErrorText>
+      )}
+
+      {contactError && <ErrorText>{contactError}</ErrorText>}
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900">E-mails de alerta</h3>
+          <form onSubmit={addEmail} className="mb-2 flex items-end gap-2">
+            <Field label="E-mail de alerta">
+              <TextInput
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="alguem@exemplo.com"
+                required
+              />
+            </Field>
+            <Button type="submit">Adicionar</Button>
+          </form>
+          {alertEmails.status === "error" && (
+            <ErrorText>Não foi possível carregar os e-mails.</ErrorText>
+          )}
+          {alertEmails.status === "ready" && (alertEmails.data ?? []).length === 0 && (
+            <p className="text-sm text-gray-500">Nenhum e-mail cadastrado ainda.</p>
+          )}
+          <ul className="flex flex-col gap-1 text-sm">
+            {(alertEmails.data ?? []).map((entry: AlertEmail) => (
+              <li
+                key={entry.alert_email_id}
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              >
+                <span>{entry.email}</span>
+                <button
+                  type="button"
+                  onClick={() => void removeEmail(entry.alert_email_id)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Excluir
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900">Telefones (WhatsApp)</h3>
+          <form onSubmit={addPhone} className="mb-2 flex items-end gap-2">
+            <Field label="Número do WhatsApp">
+              <TextInput
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="+5511999999999"
+                required
+              />
+            </Field>
+            <Button type="submit">Adicionar</Button>
+          </form>
+          {alertPhones.status === "error" && (
+            <ErrorText>Não foi possível carregar os telefones.</ErrorText>
+          )}
+          {alertPhones.status === "ready" && (alertPhones.data ?? []).length === 0 && (
+            <p className="text-sm text-gray-500">Nenhum telefone cadastrado ainda.</p>
+          )}
+          <ul className="flex flex-col gap-1 text-sm">
+            {(alertPhones.data ?? []).map((entry: AlertPhone) => (
+              <li
+                key={entry.alert_phone_id}
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              >
+                <span>{entry.phone}</span>
+                <button
+                  type="button"
+                  onClick={() => void removePhone(entry.alert_phone_id)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Excluir
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </Section>
   );
 }

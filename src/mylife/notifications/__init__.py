@@ -20,6 +20,10 @@ from mylife.notifications.models import (
     NOTIFICATION_DELIVERY_FAILED,
     NOTIFICATION_REQUESTED,
     NOTIFICATION_SENT,
+    AlertEmail,
+    AlertEmailRow,
+    AlertPhone,
+    AlertPhoneRow,
     NotificationDeliveryFailed,
     NotificationDeliveryFailedPayload,
     NotificationPreference,
@@ -29,13 +33,25 @@ from mylife.notifications.models import (
     NotificationSent,
     NotificationSentPayload,
 )
-from mylife.notifications.preferences import NotificationPreferenceService
+from mylife.notifications.preferences import (
+    DuplicateAlertEmailError,
+    DuplicateAlertPhoneError,
+    NotificationPreferenceService,
+    UnknownAlertEmailError,
+    UnknownAlertPhoneError,
+)
 from mylife.notifications.service import NotificationOutcome, NotificationService
 
 __all__ = [
     "NOTIFICATION_DELIVERY_FAILED",
     "NOTIFICATION_REQUESTED",
     "NOTIFICATION_SENT",
+    "AlertEmail",
+    "AlertEmailRow",
+    "AlertPhone",
+    "AlertPhoneRow",
+    "DuplicateAlertEmailError",
+    "DuplicateAlertPhoneError",
     "NotificationChannel",
     "NotificationChannelError",
     "NotificationDeliveryFailed",
@@ -50,6 +66,8 @@ __all__ = [
     "NotificationSentPayload",
     "NotificationService",
     "SmtpEmailChannel",
+    "UnknownAlertEmailError",
+    "UnknownAlertPhoneError",
     "WhatsAppCloudApiChannel",
     "build_channels_from_settings",
 ]

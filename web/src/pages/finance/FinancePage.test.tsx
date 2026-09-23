@@ -23,6 +23,14 @@ const client = vi.hoisted(() => ({
   runBillAlerts: vi.fn(),
   getNotificationPreferences: vi.fn(),
   setNotificationPreferences: vi.fn(),
+  listAlertEmails: vi.fn(),
+  addAlertEmail: vi.fn(),
+  deleteAlertEmail: vi.fn(),
+  listAlertPhones: vi.fn(),
+  addAlertPhone: vi.fn(),
+  deleteAlertPhone: vi.fn(),
+  me: vi.fn(),
+  updateCurrentUser: vi.fn(),
 }));
 vi.mock("../../api/useApiClient", () => ({ useApiClient: () => client }));
 
@@ -121,14 +129,42 @@ describe("FinancePage", () => {
     client.getNotificationPreferences.mockResolvedValue({
       email_enabled: true,
       whatsapp_enabled: false,
-      whatsapp_phone: null,
       updated_at: "x",
     });
     client.setNotificationPreferences.mockResolvedValue({
       email_enabled: true,
       whatsapp_enabled: false,
-      whatsapp_phone: null,
       updated_at: "x",
+    });
+    client.listAlertEmails.mockResolvedValue([]);
+    client.addAlertEmail.mockResolvedValue({
+      alert_email_id: "ae1",
+      email: "spouse@example.com",
+      created_at: "x",
+    });
+    client.deleteAlertEmail.mockResolvedValue(undefined);
+    client.listAlertPhones.mockResolvedValue([]);
+    client.addAlertPhone.mockResolvedValue({
+      alert_phone_id: "ap1",
+      phone: "+5511999999999",
+      created_at: "x",
+    });
+    client.deleteAlertPhone.mockResolvedValue(undefined);
+    client.me.mockResolvedValue({
+      user_id: "u1",
+      email: "ada@example.com",
+      display_name: "Ada",
+      status: "active",
+      household_id: null,
+      created_at: "x",
+    });
+    client.updateCurrentUser.mockResolvedValue({
+      user_id: "u1",
+      email: "ada@example.com",
+      display_name: "Ada Lovelace",
+      status: "active",
+      household_id: null,
+      created_at: "x",
     });
   });
 
@@ -142,8 +178,9 @@ describe("FinancePage", () => {
   it("cria uma conta na aba Configurações", async () => {
     render(<FinancePage />);
     goToTab("Configurações");
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Poupança" } });
-    fireEvent.click(screen.getByText("Abrir conta"));
+    const section = await billsSection("Contas");
+    fireEvent.change(within(section).getByLabelText("Nome"), { target: { value: "Poupança" } });
+    fireEvent.click(within(section).getByText("Abrir conta"));
     await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Poupança", "BRL"));
   });
 
@@ -351,17 +388,48 @@ describe("FinancePage", () => {
     const section = await billsSection("Preferências de alerta de vencimento");
 
     fireEvent.click(within(section).getByLabelText("WhatsApp"));
-    fireEvent.change(within(section).getByLabelText("Número do WhatsApp"), {
-      target: { value: "+5511999999999" },
-    });
     fireEvent.click(within(section).getByText("Salvar"));
 
     await waitFor(() =>
       expect(client.setNotificationPreferences).toHaveBeenCalledWith({
         email_enabled: true,
         whatsapp_enabled: true,
-        whatsapp_phone: "+5511999999999",
       }),
+    );
+  });
+
+  it("cadastra um e-mail e um telefone de alerta na aba Configurações", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+    const section = await billsSection("Preferências de alerta de vencimento");
+
+    fireEvent.change(within(section).getByLabelText("E-mail de alerta"), {
+      target: { value: "spouse@example.com" },
+    });
+    fireEvent.click(within(section).getAllByRole("button", { name: "Adicionar" })[0]);
+    await waitFor(() => expect(client.addAlertEmail).toHaveBeenCalledWith("spouse@example.com"));
+
+    fireEvent.change(within(section).getByLabelText("Número do WhatsApp"), {
+      target: { value: "+5511999999999" },
+    });
+    fireEvent.click(within(section).getAllByRole("button", { name: "Adicionar" })[1]);
+    await waitFor(() =>
+      expect(client.addAlertPhone).toHaveBeenCalledWith("+5511999999999"),
+    );
+  });
+
+  it("mostra e edita os dados do usuário na aba Configurações", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+    const section = await billsSection("Dados do usuário");
+
+    expect(await within(section).findByDisplayValue("ada@example.com")).toBeDisabled();
+    const nameInput = await within(section).findByDisplayValue("Ada");
+    fireEvent.change(nameInput, { target: { value: "Ada Lovelace" } });
+    fireEvent.click(within(section).getByText("Salvar"));
+
+    await waitFor(() =>
+      expect(client.updateCurrentUser).toHaveBeenCalledWith({ display_name: "Ada Lovelace" }),
     );
   });
 });
