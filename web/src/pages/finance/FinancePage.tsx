@@ -400,19 +400,20 @@ function TransactionsTab({
         <StatCard label="Saldo" value={totals.balance} icon={Scale} />
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           type="search"
           aria-label="Buscar transações"
           placeholder="Buscar transações..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[220px] flex-1 rounded border border-gray-300 px-3 py-1.5 text-sm"
+          className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm sm:min-w-[220px] sm:flex-1"
         />
         <Select
           aria-label="Filtrar por conta"
           value={accountFilter}
           onChange={(e) => setAccountFilter(e.target.value)}
+          className="w-full sm:w-auto"
         >
           <option value="">Todas as contas</option>
           {accounts.map((a) => (
@@ -425,12 +426,13 @@ function TransactionsTab({
           aria-label="Filtrar por tipo"
           value={kindFilter}
           onChange={(e) => setKindFilter(e.target.value as TxKindFilter)}
+          className="w-full sm:w-auto"
         >
           <option value="all">Todos os tipos</option>
           <option value="expense">Despesas manuais</option>
           <option value="import">Importadas</option>
         </Select>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button onClick={() => setShowForm((v) => !v)} className="w-full sm:w-auto">
           {showForm ? "Cancelar" : "+ Nova Transação"}
         </Button>
       </div>
@@ -482,12 +484,10 @@ function NewTransactionForm({
     if (!accountId && accounts.length > 0) setAccountId(accounts[0].account_id);
   }, [accounts, accountId]);
 
-  const parsedAmount = parseMoneyInput(amount);
-  const isExpense = parsedAmount < 0;
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const parsedAmount = parseMoneyInput(amount);
     try {
       const input = {
         account_id: accountId,
@@ -496,7 +496,7 @@ function NewTransactionForm({
         description: description.trim(),
         category: category.trim() || null,
       };
-      if (isExpense) {
+      if (parsedAmount < 0) {
         await client.recordExpense({ ...input, expense_type: expenseType });
       } else {
         await client.recordTransaction({ ...input, amount_minor: parsedAmount });
@@ -509,7 +509,7 @@ function NewTransactionForm({
 
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4">
         <Field label="Conta">
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
             <option value="" disabled>
@@ -522,23 +522,29 @@ function NewTransactionForm({
             ))}
           </Select>
         </Field>
-        <Field label="Valor (negativo = despesa, positivo = receita)">
+        <Field label="Valor">
           <TextInput
             type="number"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="text-right tabular-nums"
+            className="w-full text-right tabular-nums"
             required
           />
         </Field>
         <Field label="Moeda">
-          <TextInput value={currency} onChange={(e) => setCurrency(e.target.value)} required />
+          <TextInput
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            className="w-full"
+            required
+          />
         </Field>
         <Field label="Descrição">
           <TextInput
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            className="w-full"
             required
           />
         </Field>
@@ -552,18 +558,18 @@ function NewTransactionForm({
             ))}
           </Select>
         </Field>
-        {isExpense && (
-          <Field label="Classificação">
-            <Select
-              value={expenseType}
-              onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
-            >
-              <option value="variable">Variável</option>
-              <option value="fixed">Fixa</option>
-            </Select>
-          </Field>
-        )}
-        <Button type="submit">Salvar</Button>
+        <Field label="Classificação">
+          <Select
+            value={expenseType}
+            onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
+          >
+            <option value="variable">Variável</option>
+            <option value="fixed">Fixa</option>
+          </Select>
+        </Field>
+        <Button type="submit" className="w-full sm:w-auto">
+          Salvar
+        </Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </div>
@@ -586,7 +592,7 @@ function TransactionsTable({
     return <p className="text-sm text-gray-500">Nenhuma transação encontrada.</p>;
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200">
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
           <tr>
@@ -968,7 +974,10 @@ function RegisterBill({
 
   return (
     <Section title="Cadastrar conta a pagar" icon={PlusCircle}>
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form
+        onSubmit={submit}
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4"
+      >
         <Field label="Conta">
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
             <option value="" disabled>
@@ -1055,7 +1064,9 @@ function RegisterBill({
             />
           </Field>
         )}
-        <Button type="submit">Cadastrar</Button>
+        <Button type="submit" className="w-full sm:w-auto">
+          Cadastrar
+        </Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </Section>
@@ -1227,7 +1238,10 @@ function EditBillForm({
   return (
     <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/40 p-4">
       <h3 className="mb-3 text-sm font-semibold text-gray-900">Editar conta a pagar</h3>
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form
+        onSubmit={submit}
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4"
+      >
         <Field label="Beneficiário">
           <TextInput value={payee} onChange={(e) => setPayee(e.target.value)} required />
         </Field>
@@ -1302,14 +1316,18 @@ function EditBillForm({
             />
           </Field>
         )}
-        <Button type="submit">Salvar</Button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          Cancelar edição
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button type="submit" className="w-full sm:w-auto">
+            Salvar
+          </Button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto"
+          >
+            Cancelar edição
+          </button>
+        </div>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
     </div>

@@ -228,8 +228,7 @@ describe("FinancePage", () => {
 
     fireEvent.click(screen.getByText("+ Nova Transação"));
     await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
-    const amountLabel = "Valor (negativo = despesa, positivo = receita)";
-    fireEvent.change(screen.getByLabelText(amountLabel), { target: { value: "-12.00" } });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "-12.00" } });
     fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Café" } });
     fireEvent.change(screen.getByLabelText("Categoria"), { target: { value: "Moradia" } });
     fireEvent.change(screen.getByLabelText("Classificação"), { target: { value: "fixed" } });
@@ -248,17 +247,16 @@ describe("FinancePage", () => {
     );
   });
 
-  it("registra uma receita (valor positivo) sem classificação", async () => {
+  it("registra uma receita (valor positivo) sem enviar classificação", async () => {
     render(<FinancePage />);
     goToTab("Transações");
     await screen.findByText("Almoço");
 
     fireEvent.click(screen.getByText("+ Nova Transação"));
     await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
-    const amountLabel = "Valor (negativo = despesa, positivo = receita)";
-    fireEvent.change(screen.getByLabelText(amountLabel), { target: { value: "500.00" } });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "500.00" } });
     fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Bônus" } });
-    expect(screen.queryByLabelText("Classificação")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Classificação")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Salvar"));
 
     await waitFor(() =>
