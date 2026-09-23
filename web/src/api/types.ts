@@ -368,6 +368,15 @@ export interface TransactionInput extends ExpenseInput {
   external_id?: string | null;
 }
 
+/** Editable fields of a previously recorded transaction (the account is fixed). */
+export interface UpdateTransactionInput {
+  amount_minor: number;
+  currency: string;
+  description: string;
+  category?: string | null;
+  expense_type?: ExpenseType | null;
+}
+
 export interface PositionInput {
   account_id: string;
   value_minor: number;
