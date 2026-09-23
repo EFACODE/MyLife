@@ -9,6 +9,7 @@ integer number of **minor units** (e.g. cents) — never a float. See
 """
 
 import uuid
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Final, Literal
 
@@ -16,12 +17,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from mylife.core.events import LifeEvent
+from mylife.core.events import LifeEvent, StoredEvent
 from mylife.db.base import Base
 
 EXPENSE_CREATED: Final = "finance.expense_created"
 TRANSACTION_IMPORTED: Final = "finance.transaction_imported"
 OPENFINANCE_TRANSACTION_IMPORTED: Final = "finance.openfinance_transaction_imported"
+TRANSACTION_UPDATED: Final = "finance.transaction_updated"
+TRANSACTION_DELETED: Final = "finance.transaction_deleted"
 POSITION_VALUED: Final = "finance.position_valued"
 FINANCE_SOURCE = "finance"
 
@@ -39,6 +42,8 @@ TRANSACTION_TYPES: Final[tuple[str, ...]] = (
     TRANSACTION_IMPORTED,
     OPENFINANCE_TRANSACTION_IMPORTED,
 )
+# Corrections that edit/void a previously recorded transaction (T4.1 follow-up).
+TRANSACTION_CORRECTION_TYPES: Final[tuple[str, ...]] = (TRANSACTION_UPDATED, TRANSACTION_DELETED)
 
 
 class AccountRow(Base):
@@ -117,6 +122,83 @@ class OpenFinanceTransactionImported(LifeEvent[FinancePayload]):
         OPENFINANCE_TRANSACTION_IMPORTED
     )
     schema_version: Literal[1] = 1
+
+
+class TransactionUpdatedPayload(BaseModel):
+    """A correction to a previously recorded transaction's editable fields.
+
+    Preserves history (``corrects_event_id`` on the envelope references the
+    original fact) rather than mutating it; the read model folds the latest
+    correction onto the original when listing transactions and computing
+    balances.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    transaction_event_id: uuid.UUID
+    amount_minor: int
+    currency: str
+    description: str
+    category: str | None = None
+    expense_type: ExpenseType | None = None
+
+
+class TransactionUpdated(LifeEvent[TransactionUpdatedPayload]):
+    """Emitted when a user edits a previously recorded transaction (Finance)."""
+
+    event_type: Literal["finance.transaction_updated"] = TRANSACTION_UPDATED
+    schema_version: Literal[1] = 1
+
+
+class TransactionDeletedPayload(BaseModel):
+    """The fact that a previously recorded transaction was deleted."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    transaction_event_id: uuid.UUID
+
+
+class TransactionDeleted(LifeEvent[TransactionDeletedPayload]):
+    """Emitted when a user deletes a previously recorded transaction (Finance)."""
+
+    event_type: Literal["finance.transaction_deleted"] = TRANSACTION_DELETED
+    schema_version: Literal[1] = 1
+
+
+def fold_transaction_corrections(events: Iterable[StoredEvent]) -> dict[uuid.UUID, StoredEvent]:
+    """Collapse transaction corrections onto their base fact, in-order.
+
+    ``events`` must be a user's ``EXPENSE_CREATED``/``TRANSACTION_IMPORTED``/
+    ``TRANSACTION_UPDATED``/``TRANSACTION_DELETED`` events in ascending append
+    order (e.g. ``EventStore.read_stream``). Returns the resulting *effective*
+    transaction events keyed by their original (base) event id, in the same
+    relative order as they were first created — corrections never rewrite
+    history, they only change how it reads back.
+    """
+    base: dict[uuid.UUID, StoredEvent] = {}
+    for event in events:
+        if event.event_type in (
+            EXPENSE_CREATED,
+            TRANSACTION_IMPORTED,
+            OPENFINANCE_TRANSACTION_IMPORTED,
+        ):
+            base[event.event_id] = event
+        elif event.event_type == TRANSACTION_UPDATED:
+            target_id = uuid.UUID(str(event.payload["transaction_event_id"]))
+            existing = base.get(target_id)
+            if existing is None:
+                continue
+            payload = dict(existing.payload)
+            payload["amount_minor"] = event.payload["amount_minor"]
+            payload["currency"] = event.payload["currency"]
+            payload["description"] = event.payload["description"]
+            payload["category"] = event.payload.get("category")
+            payload["expense_type"] = event.payload.get("expense_type")
+            base[target_id] = existing.model_copy(update={"payload": payload})
+        elif event.event_type == TRANSACTION_DELETED:
+            target_id = uuid.UUID(str(event.payload["transaction_event_id"]))
+            base.pop(target_id, None)
+    return base
 
 
 class PositionPayload(BaseModel):

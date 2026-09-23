@@ -17,8 +17,10 @@ from sqlalchemy.orm import Session
 from mylife.core.events import EventStore, StoredEvent
 from mylife.finance.models import (
     POSITION_VALUED,
+    TRANSACTION_CORRECTION_TYPES,
     TRANSACTION_TYPES,
     AccountRow,
+    fold_transaction_corrections,
 )
 
 # Read the whole finance history for a user; a materialized projection is the
@@ -108,13 +110,25 @@ class NetWorthService:
         return {str(row.account_id): row for row in rows}
 
     def _finance_events(self, user_id: uuid.UUID) -> list[StoredEvent]:
-        """The user's finance events in ascending append order (``global_seq``)."""
-        finance_types = {*TRANSACTION_TYPES, POSITION_VALUED}
-        return [
+        """The user's finance events in ascending append order (``global_seq``).
+
+        Transaction edits/deletes are folded onto their base fact (see
+        :func:`fold_transaction_corrections`) so balances and cash flow
+        reflect the latest correction, each still attributed at its
+        original position in the stream.
+        """
+        finance_types = {*TRANSACTION_TYPES, *TRANSACTION_CORRECTION_TYPES, POSITION_VALUED}
+        events = [
             event
             for event in EventStore(self._session).read_stream(user_id, limit=_UNBOUNDED)
             if event.event_type in finance_types
         ]
+        transaction_events = [e for e in events if e.event_type != POSITION_VALUED]
+        position_events = [e for e in events if e.event_type == POSITION_VALUED]
+        folded = list(fold_transaction_corrections(transaction_events).values())
+        combined = folded + position_events
+        combined.sort(key=lambda event: event.global_seq)
+        return combined
 
     def _balances(self, user_id: uuid.UUID) -> dict[str, Balance]:
         accounts = self._accounts(user_id)

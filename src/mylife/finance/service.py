@@ -14,12 +14,16 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mylife.core.events import EventBus, EventDispatchError, EventStore
+from mylife.core.events import EventBus, EventDispatchError, EventStore, StoredEvent
 from mylife.core.events.store import _stored_utc
 from mylife.finance.models import (
+    EXPENSE_CREATED,
     FINANCE_SOURCE,
     KIND_BY_TYPE,
-    TRANSACTION_TYPES,
+    OPENFINANCE_TRANSACTION_IMPORTED,
+    TRANSACTION_DELETED,
+    TRANSACTION_IMPORTED,
+    TRANSACTION_UPDATED,
     Account,
     AccountRow,
     Category,
@@ -30,15 +34,27 @@ from mylife.finance.models import (
     PositionPayload,
     PositionValued,
     Transaction,
+    TransactionDeleted,
+    TransactionDeletedPayload,
     TransactionImported,
+    TransactionUpdated,
+    TransactionUpdatedPayload,
+    fold_transaction_corrections,
 )
 from mylife.finance.net_worth import Balance, NetWorthService
-from mylife.timeline.query import TimelineEvent, TimelineQueryFilter, TimelineQueryService
 
 logger = logging.getLogger(__name__)
 
 # A page large enough to hold a user's finance history when filtering in Python.
 _UNBOUNDED = 1_000_000
+
+_TRANSACTION_EVENT_TYPES = {
+    EXPENSE_CREATED,
+    TRANSACTION_IMPORTED,
+    OPENFINANCE_TRANSACTION_IMPORTED,
+    TRANSACTION_UPDATED,
+    TRANSACTION_DELETED,
+}
 
 
 class UnknownAccountError(Exception):
@@ -65,7 +81,15 @@ class DuplicateCategoryError(Exception):
         self.name = name
 
 
-def _to_transaction(event: TimelineEvent) -> Transaction:
+class UnknownTransactionError(Exception):
+    """Raised when a transaction is missing or not owned by the acting user."""
+
+    def __init__(self, transaction_event_id: uuid.UUID) -> None:
+        super().__init__(f"transaction {transaction_event_id} not found")
+        self.transaction_event_id = transaction_event_id
+
+
+def _to_transaction(event: StoredEvent) -> Transaction:
     payload = event.payload
     category = payload.get("category")
     expense_type = payload.get("expense_type")
@@ -322,22 +346,101 @@ class FinanceService:
     ) -> list[Transaction]:
         """Return the user's finance transactions, newest first.
 
-        Reads the finance event types from the event store and maps their
-        payloads to :class:`Transaction` views; optionally filters by account.
+        Reads the finance event stream (base facts plus any edits/deletes),
+        folds corrections onto their base transaction (see
+        :func:`fold_transaction_corrections`), and maps the result to
+        :class:`Transaction` views; optionally filters by account.
         """
-        # Over-fetch when filtering by account so the post-filter page is full.
-        fetch_limit = limit if account_id is None else _UNBOUNDED
-        page = TimelineQueryService(self._session).query(
-            TimelineQueryFilter(
-                user_id=user_id,
-                event_types=TRANSACTION_TYPES,
-                limit=fetch_limit,
-            )
-        )
-        transactions = [_to_transaction(item) for item in page.items]
+        events = [
+            event
+            for event in EventStore(self._session).read_stream(user_id, limit=_UNBOUNDED)
+            if event.event_type in _TRANSACTION_EVENT_TYPES
+        ]
+        folded = list(fold_transaction_corrections(events).values())
+        folded.sort(key=lambda event: (event.occurred_at, event.global_seq), reverse=True)
+        transactions = [_to_transaction(event) for event in folded]
         if account_id is not None:
             transactions = [t for t in transactions if t.account_id == account_id]
         return transactions[:limit]
+
+    def update_transaction(
+        self,
+        user_id: uuid.UUID,
+        transaction_event_id: uuid.UUID,
+        amount_minor: int,
+        currency: str,
+        description: str,
+        *,
+        category: str | None = None,
+        expense_type: ExpenseType | None = None,
+        now: datetime,
+        correlation_id: str,
+    ) -> Transaction:
+        """Edit a previously recorded transaction, appending a ``TransactionUpdated``.
+
+        The account a transaction is recorded against cannot be changed (like
+        bill edits). Raises :class:`UnknownTransactionError` if the
+        transaction is missing or not the user's.
+        """
+        existing = self._get_transaction(user_id, transaction_event_id)
+        payload = TransactionUpdatedPayload(
+            transaction_event_id=transaction_event_id,
+            amount_minor=amount_minor,
+            currency=currency.strip().upper(),
+            description=description,
+            category=category,
+            expense_type=expense_type,
+        )
+        event = TransactionUpdated(
+            user_id=user_id,
+            occurred_at=now,
+            source=FINANCE_SOURCE,
+            correlation_id=correlation_id,
+            corrects_event_id=transaction_event_id,
+            payload=payload,
+        )
+        self._append(event)
+        return Transaction(
+            event_id=existing.event_id,
+            kind=existing.kind,
+            account_id=existing.account_id,
+            amount_minor=payload.amount_minor,
+            currency=payload.currency,
+            description=payload.description,
+            category=payload.category,
+            expense_type=payload.expense_type,
+            occurred_at=existing.occurred_at,
+        )
+
+    def delete_transaction(
+        self,
+        user_id: uuid.UUID,
+        transaction_event_id: uuid.UUID,
+        *,
+        now: datetime,
+        correlation_id: str,
+    ) -> None:
+        """Delete a previously recorded transaction, appending a ``TransactionDeleted``.
+
+        Raises :class:`UnknownTransactionError` if the transaction is missing
+        or not the user's.
+        """
+        self._get_transaction(user_id, transaction_event_id)
+        event = TransactionDeleted(
+            user_id=user_id,
+            occurred_at=now,
+            source=FINANCE_SOURCE,
+            correlation_id=correlation_id,
+            corrects_event_id=transaction_event_id,
+            payload=TransactionDeletedPayload(transaction_event_id=transaction_event_id),
+        )
+        self._append(event)
+
+    def _get_transaction(self, user_id: uuid.UUID, transaction_event_id: uuid.UUID) -> Transaction:
+        for transaction in self.list_transactions(user_id, limit=_UNBOUNDED):
+            if transaction.event_id == transaction_event_id:
+                return transaction
+        raise UnknownTransactionError(transaction_event_id)
 
     def _require_account(
         self, user_id: uuid.UUID, account_id: uuid.UUID, *, raising: bool = True
@@ -352,12 +455,7 @@ class FinanceService:
         return row
 
     def _append_and_publish(self, event: ExpenseCreated | TransactionImported) -> Transaction:
-        stored = EventStore(self._session).append(event)
-        self._session.commit()
-        try:
-            self._bus.publish(event)
-        except EventDispatchError:
-            logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
+        stored = self._append(event)
         return Transaction(
             event_id=stored.event_id,
             kind=KIND_BY_TYPE[event.event_type],
@@ -369,3 +467,14 @@ class FinanceService:
             expense_type=event.payload.expense_type,
             occurred_at=stored.occurred_at,
         )
+
+    def _append(
+        self, event: ExpenseCreated | TransactionImported | TransactionUpdated | TransactionDeleted
+    ) -> StoredEvent:
+        stored = EventStore(self._session).append(event)
+        self._session.commit()
+        try:
+            self._bus.publish(event)
+        except EventDispatchError:
+            logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
+        return stored

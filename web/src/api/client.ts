@@ -44,6 +44,7 @@ import type {
   SetNotificationPreferenceInput,
   SleepInput,
   UpdateBillInput,
+  UpdateTransactionInput,
   UpdateUserInput,
   SleepSession,
   TimelineEvent,
@@ -233,6 +234,22 @@ export class ApiClient {
     if (limit !== undefined) params.set("limit", String(limit));
     const query = params.toString();
     return this.request<Transaction[]>(`/finance/transactions${query ? `?${query}` : ""}`);
+  }
+
+  updateTransaction(
+    transactionEventId: string,
+    input: UpdateTransactionInput,
+  ): Promise<Transaction> {
+    return this.request<Transaction>(`/finance/transactions/${transactionEventId}`, {
+      method: "PATCH",
+      body: input,
+    });
+  }
+
+  deleteTransaction(transactionEventId: string): Promise<void> {
+    return this.request<void>(`/finance/transactions/${transactionEventId}`, {
+      method: "DELETE",
+    });
   }
 
   recordPosition(input: PositionInput): Promise<Balance> {

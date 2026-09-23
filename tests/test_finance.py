@@ -13,11 +13,15 @@ from mylife.core.events import EventStore, InProcessEventBus
 from mylife.db.base import Base
 from mylife.finance import (
     EXPENSE_CREATED,
+    TRANSACTION_DELETED,
     TRANSACTION_IMPORTED,
+    TRANSACTION_UPDATED,
     DuplicateCategoryError,
     FinanceService,
+    NetWorthService,
     UnknownAccountError,
     UnknownCategoryError,
+    UnknownTransactionError,
 )
 
 NOW = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
@@ -169,6 +173,111 @@ def test_list_transactions_scoped_to_user(service: FinanceService) -> None:
     )
 
     assert service.list_transactions(other) == []
+
+
+def test_update_transaction_changes_fields_and_emits_correction(
+    service: FinanceService, session: Session
+) -> None:
+    user = uuid.uuid4()
+    account = service.create_account(user, "Checking", "BRL", now=NOW)
+    original = service.record_expense(
+        user, account.account_id, 4599, "BRL", "Lunch", category="food", now=NOW, correlation_id="c"
+    )
+
+    updated = service.update_transaction(
+        user,
+        original.event_id,
+        5000,
+        "BRL",
+        "Lunch (corrected)",
+        category="restaurante",
+        expense_type="variable",
+        now=NOW,
+        correlation_id="c2",
+    )
+
+    assert updated.event_id == original.event_id  # identity preserved
+    assert updated.amount_minor == 5000
+    assert updated.description == "Lunch (corrected)"
+    assert updated.category == "restaurante"
+    assert updated.expense_type == "variable"
+
+    events = EventStore(session).read_stream(user)
+    assert [e.event_type for e in events] == [EXPENSE_CREATED, TRANSACTION_UPDATED]
+    assert events[1].corrects_event_id == original.event_id
+
+    listed = service.list_transactions(user)
+    assert len(listed) == 1
+    assert listed[0].amount_minor == 5000
+    assert listed[0].description == "Lunch (corrected)"
+
+
+def test_update_transaction_unknown_or_foreign_raises(service: FinanceService) -> None:
+    user = uuid.uuid4()
+    other = uuid.uuid4()
+    account = service.create_account(other, "Checking", "BRL", now=NOW)
+    theirs = service.record_expense(
+        other, account.account_id, 100, "BRL", "x", now=NOW, correlation_id="c"
+    )
+
+    with pytest.raises(UnknownTransactionError):
+        service.update_transaction(user, uuid.uuid4(), 100, "BRL", "x", now=NOW, correlation_id="c")
+    with pytest.raises(UnknownTransactionError):
+        service.update_transaction(
+            user, theirs.event_id, 100, "BRL", "x", now=NOW, correlation_id="c"
+        )
+
+
+def test_delete_transaction_removes_it_from_listing(
+    service: FinanceService, session: Session
+) -> None:
+    user = uuid.uuid4()
+    account = service.create_account(user, "Checking", "BRL", now=NOW)
+    txn = service.record_expense(
+        user, account.account_id, 100, "BRL", "gone soon", now=NOW, correlation_id="c"
+    )
+    service.record_expense(
+        user, account.account_id, 200, "BRL", "stays", now=NOW, correlation_id="c"
+    )
+
+    service.delete_transaction(user, txn.event_id, now=NOW, correlation_id="c2")
+
+    listed = service.list_transactions(user)
+    assert [t.description for t in listed] == ["stays"]
+    events = EventStore(session).read_stream(user)
+    assert [e.event_type for e in events] == [
+        EXPENSE_CREATED,
+        EXPENSE_CREATED,
+        TRANSACTION_DELETED,
+    ]
+
+
+def test_delete_transaction_unknown_or_foreign_raises(service: FinanceService) -> None:
+    user = uuid.uuid4()
+    with pytest.raises(UnknownTransactionError):
+        service.delete_transaction(user, uuid.uuid4(), now=NOW, correlation_id="c")
+
+
+def test_update_and_delete_transaction_adjust_account_balance(
+    service: FinanceService, session: Session
+) -> None:
+    user = uuid.uuid4()
+    account = service.create_account(user, "Checking", "BRL", now=NOW)
+    txn = service.record_expense(
+        user, account.account_id, 1000, "BRL", "x", now=NOW, correlation_id="c"
+    )
+    keeper = service.record_expense(
+        user, account.account_id, 500, "BRL", "y", now=NOW, correlation_id="c"
+    )
+
+    net_worth = NetWorthService(session)
+    assert net_worth.account_balance(user, account.account_id).balance_minor == -1500
+
+    service.update_transaction(user, txn.event_id, -2000, "BRL", "x", now=NOW, correlation_id="c2")
+    assert net_worth.account_balance(user, account.account_id).balance_minor == -2500
+
+    service.delete_transaction(user, keeper.event_id, now=NOW, correlation_id="c3")
+    assert net_worth.account_balance(user, account.account_id).balance_minor == -2000
 
 
 def test_create_and_list_categories_scoped(service: FinanceService) -> None:

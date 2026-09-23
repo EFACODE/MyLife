@@ -41,6 +41,7 @@ from mylife.finance import (
     UnknownAccountError,
     UnknownBillError,
     UnknownCategoryError,
+    UnknownTransactionError,
 )
 from mylife.finance.bank_csv import BankCsvConnector
 from mylife.finance.bill_alerts import BillAlertsService
@@ -93,6 +94,16 @@ class TransactionRequest(BaseModel):
     description: str = Field(min_length=1)
     category: str | None = None
     external_id: str | None = None
+
+
+class UpdateTransactionRequest(BaseModel):
+    """Request to edit a previously recorded transaction (the account is fixed)."""
+
+    amount_minor: int
+    currency: str = Field(min_length=3, max_length=3)
+    description: str = Field(min_length=1)
+    category: str | None = None
+    expense_type: ExpenseType | None = None
 
 
 class PositionRequest(BaseModel):
@@ -299,6 +310,52 @@ def list_transactions(
     return FinanceService(session, bus).list_transactions(
         current_user.user_id, account_id=account_id, limit=limit
     )
+
+
+@router.patch("/finance/transactions/{transaction_event_id}", response_model=Transaction)
+def update_transaction(
+    transaction_event_id: uuid.UUID,
+    request: UpdateTransactionRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Transaction:
+    """Edit one of the authenticated user's transactions."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        return FinanceService(session, bus).update_transaction(
+            current_user.user_id,
+            transaction_event_id,
+            request.amount_minor,
+            request.currency,
+            request.description,
+            category=request.category,
+            expense_type=request.expense_type,
+            now=utcnow(),
+            correlation_id=correlation_id,
+        )
+    except UnknownTransactionError as exc:
+        raise HTTPException(status_code=404, detail="transaction not found") from exc
+
+
+@router.delete("/finance/transactions/{transaction_event_id}", status_code=204)
+def delete_transaction(
+    transaction_event_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> None:
+    """Delete one of the authenticated user's transactions."""
+    correlation_id = get_correlation_id() or new_correlation_id()
+    try:
+        FinanceService(session, bus).delete_transaction(
+            current_user.user_id,
+            transaction_event_id,
+            now=utcnow(),
+            correlation_id=correlation_id,
+        )
+    except UnknownTransactionError as exc:
+        raise HTTPException(status_code=404, detail="transaction not found") from exc
 
 
 @router.post("/finance/positions", response_model=Balance, status_code=201)

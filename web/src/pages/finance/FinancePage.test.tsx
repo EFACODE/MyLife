@@ -12,6 +12,8 @@ const client = vi.hoisted(() => ({
   recordExpense: vi.fn(),
   recordTransaction: vi.fn(),
   listTransactions: vi.fn(),
+  updateTransaction: vi.fn(),
+  deleteTransaction: vi.fn(),
   netWorth: vi.fn(),
   importBank: vi.fn(),
   listBills: vi.fn(),
@@ -61,6 +63,8 @@ describe("FinancePage", () => {
     client.deleteCategory.mockResolvedValue(undefined);
     client.recordExpense.mockResolvedValue({ event_id: "e1" });
     client.recordTransaction.mockResolvedValue({ event_id: "e2" });
+    client.updateTransaction.mockResolvedValue({ event_id: "t1" });
+    client.deleteTransaction.mockResolvedValue(undefined);
     client.listTransactions.mockResolvedValue([
       {
         event_id: "t1",
@@ -206,6 +210,38 @@ describe("FinancePage", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getAllByText("BRL -45,99")).toHaveLength(2);
     expect(screen.getAllByText("BRL 1.000,00")).toHaveLength(2);
+  });
+
+  it("edita uma transação", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    await screen.findByText("Almoço");
+
+    fireEvent.click(screen.getAllByText("Editar")[0]);
+    await screen.findByText("Editar transação");
+
+    fireEvent.change(screen.getByLabelText("Descrição"), {
+      target: { value: "Almoço corrigido" },
+    });
+    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "-50.00" } });
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() =>
+      expect(client.updateTransaction).toHaveBeenCalledWith(
+        "t1",
+        expect.objectContaining({ amount_minor: -5000, description: "Almoço corrigido" }),
+      ),
+    );
+  });
+
+  it("exclui uma transação", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    await screen.findByText("Almoço");
+
+    fireEvent.click(screen.getAllByText("Excluir")[0]);
+
+    await waitFor(() => expect(client.deleteTransaction).toHaveBeenCalledWith("t1"));
   });
 
   it("filtra transações pela busca", async () => {

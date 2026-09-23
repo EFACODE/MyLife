@@ -121,6 +121,122 @@ def test_import_transaction_and_list(client: TestClient) -> None:
     assert [t["kind"] for t in txns.json()] == ["import"]
 
 
+def test_update_transaction(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    created = client.post(
+        "/finance/expenses",
+        json={
+            "account_id": account_id,
+            "amount_minor": 4599,
+            "currency": "BRL",
+            "description": "Lunch",
+            "category": "food",
+        },
+        headers=auth,
+    )
+    event_id = created.json()["event_id"]
+
+    response = client.patch(
+        f"/finance/transactions/{event_id}",
+        json={
+            "amount_minor": -5000,
+            "currency": "BRL",
+            "description": "Lunch (corrected)",
+            "category": "restaurante",
+            "expense_type": "variable",
+        },
+        headers=auth,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["event_id"] == event_id
+    assert body["amount_minor"] == -5000
+    assert body["description"] == "Lunch (corrected)"
+    assert body["category"] == "restaurante"
+    assert body["expense_type"] == "variable"
+
+    listed = client.get("/finance/transactions", headers=auth).json()
+    assert len(listed) == 1
+    assert listed[0]["amount_minor"] == -5000
+
+
+def test_update_unknown_transaction_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    response = client.patch(
+        "/finance/transactions/00000000-0000-0000-0000-000000000000",
+        json={"amount_minor": -100, "currency": "BRL", "description": "x"},
+        headers=auth,
+    )
+    assert response.status_code == 404
+
+
+def test_update_foreign_transaction_is_404(client: TestClient) -> None:
+    owner_auth = _auth(client, "owner@example.com")
+    account_id = _account(client, owner_auth)
+    created = client.post(
+        "/finance/expenses",
+        json={
+            "account_id": account_id,
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "description": "x",
+        },
+        headers=owner_auth,
+    )
+    event_id = created.json()["event_id"]
+
+    intruder_auth = _auth(client, "intruder@example.com")
+    response = client.patch(
+        f"/finance/transactions/{event_id}",
+        json={"amount_minor": -100, "currency": "BRL", "description": "hijacked"},
+        headers=intruder_auth,
+    )
+    assert response.status_code == 404
+
+
+def test_delete_transaction(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    created = client.post(
+        "/finance/expenses",
+        json={
+            "account_id": account_id,
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "description": "gone soon",
+        },
+        headers=auth,
+    )
+    event_id = created.json()["event_id"]
+
+    response = client.delete(f"/finance/transactions/{event_id}", headers=auth)
+    assert response.status_code == 204
+    assert client.get("/finance/transactions", headers=auth).json() == []
+
+
+def test_delete_unknown_transaction_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    response = client.delete(
+        "/finance/transactions/00000000-0000-0000-0000-000000000000", headers=auth
+    )
+    assert response.status_code == 404
+
+
+def test_transaction_edit_endpoints_require_auth(client: TestClient) -> None:
+    assert (
+        client.patch(
+            "/finance/transactions/00000000-0000-0000-0000-000000000000",
+            json={"amount_minor": -100, "currency": "BRL", "description": "x"},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.delete("/finance/transactions/00000000-0000-0000-0000-000000000000").status_code
+        == 401
+    )
+
+
 def test_expense_unknown_account_is_404(client: TestClient) -> None:
     auth = _auth(client)
     response = client.post(

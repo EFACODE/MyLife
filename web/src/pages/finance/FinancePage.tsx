@@ -54,6 +54,8 @@ type FinanceApi = Pick<
   | "recordExpense"
   | "recordTransaction"
   | "listTransactions"
+  | "updateTransaction"
+  | "deleteTransaction"
   | "netWorth"
   | "importBank"
   | "listBills"
@@ -357,6 +359,7 @@ function TransactionsTab({
   const [kindFilter, setKindFilter] = useState<TxKindFilter>("all");
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
 
   const accountName = useMemo(() => {
     const byId = new Map(accounts.map((a) => [a.account_id, a.name]));
@@ -449,6 +452,25 @@ function TransactionsTab({
         />
       )}
 
+      {editingTransactionId &&
+        (() => {
+          const editing = (transactions.data ?? []).find(
+            (t) => t.event_id === editingTransactionId,
+          );
+          return editing ? (
+            <EditTransactionForm
+              client={client}
+              transaction={editing}
+              categories={categories.data ?? []}
+              onSaved={() => {
+                setEditingTransactionId(null);
+                void transactions.run();
+              }}
+              onCancel={() => setEditingTransactionId(null)}
+            />
+          ) : null;
+        })()}
+
       {transactions.status === "error" && (
         <ErrorText>Não foi possível carregar as transações.</ErrorText>
       )}
@@ -456,6 +478,11 @@ function TransactionsTab({
         transactions={filtered}
         accountName={accountName}
         loading={transactions.status === "loading"}
+        onEdit={(t) => setEditingTransactionId(t.event_id)}
+        onDelete={async (eventId) => {
+          await client.deleteTransaction(eventId);
+          void transactions.run();
+        }}
       />
     </div>
   );
@@ -576,14 +603,125 @@ function NewTransactionForm({
   );
 }
 
+function EditTransactionForm({
+  client,
+  transaction,
+  categories,
+  onSaved,
+  onCancel,
+}: {
+  client: FinanceApi;
+  transaction: Transaction;
+  categories: Category[];
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [amount, setAmount] = useState((transaction.amount_minor / 100).toFixed(2));
+  const [currency, setCurrency] = useState(transaction.currency);
+  const [description, setDescription] = useState(transaction.description);
+  const [category, setCategory] = useState(transaction.category ?? "");
+  const [expenseType, setExpenseType] = useState<ExpenseType>(transaction.expense_type ?? "variable");
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await client.updateTransaction(transaction.event_id, {
+        amount_minor: parseMoneyInput(amount),
+        currency: currency.trim().toUpperCase(),
+        description: description.trim(),
+        category: category.trim() || null,
+        expense_type: expenseType,
+      });
+      onSaved();
+    } catch {
+      setError("Não foi possível salvar as alterações.");
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+      <h3 className="mb-3 text-sm font-semibold text-gray-900">Editar transação</h3>
+      <form
+        onSubmit={submit}
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4"
+      >
+        <Field label="Valor">
+          <TextInput
+            type="number"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full text-right tabular-nums"
+            required
+          />
+        </Field>
+        <Field label="Moeda">
+          <TextInput
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            className="w-full"
+            required
+          />
+        </Field>
+        <Field label="Descrição">
+          <TextInput
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full"
+            required
+          />
+        </Field>
+        <Field label="Categoria">
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Classificação">
+          <Select
+            value={expenseType}
+            onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
+          >
+            <option value="variable">Variável</option>
+            <option value="fixed">Fixa</option>
+          </Select>
+        </Field>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button type="submit" className="w-full sm:w-auto">
+            Salvar
+          </Button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto"
+          >
+            Cancelar edição
+          </button>
+        </div>
+      </form>
+      {error && <ErrorText>{error}</ErrorText>}
+    </div>
+  );
+}
+
 function TransactionsTable({
   transactions,
   accountName,
   loading,
+  onEdit,
+  onDelete,
 }: {
   transactions: Transaction[];
   accountName: (id: string) => string;
   loading: boolean;
+  onEdit: (transaction: Transaction) => void;
+  onDelete: (eventId: string) => void;
 }) {
   if (loading && transactions.length === 0) {
     return <p className="text-sm text-gray-500">Carregando…</p>;
@@ -602,6 +740,7 @@ function TransactionsTable({
             <th className="px-4 py-2 font-medium">Conta</th>
             <th className="px-4 py-2 font-medium">Data</th>
             <th className="px-4 py-2 text-right font-medium">Valor</th>
+            <th className="px-4 py-2 text-right font-medium">Ações</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -632,6 +771,24 @@ function TransactionsTable({
                 }
               >
                 {money(t.amount_minor, t.currency)}
+              </td>
+              <td className="px-4 py-2.5">
+                <span className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(t)}
+                    className="shrink-0 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(t.event_id)}
+                    className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+                  >
+                    Excluir
+                  </button>
+                </span>
               </td>
             </tr>
           ))}
