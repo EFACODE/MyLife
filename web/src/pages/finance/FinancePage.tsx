@@ -12,12 +12,23 @@ import {
   Scale,
   TrendingDown,
   TrendingUp,
+  User as UserIcon,
   Wallet,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { ApiError, type ApiClient } from "../../api/client";
-import type { Account, Bill, BillRecurrence, Category, Transaction } from "../../api/types";
+import type {
+  Account,
+  AlertEmail,
+  AlertPhone,
+  Balance,
+  Bill,
+  BillRecurrence,
+  Category,
+  ExpenseType,
+  Transaction,
+} from "../../api/types";
 import { useApiClient } from "../../api/useApiClient";
 import { CategoryAvatar } from "../../components/ui/CategoryAvatar";
 import { CategoryBadge } from "../../components/ui/CategoryBadge";
@@ -44,7 +55,6 @@ type FinanceApi = Pick<
   | "recordTransaction"
   | "listTransactions"
   | "netWorth"
-  | "cashFlow"
   | "importBank"
   | "listBills"
   | "registerBill"
@@ -55,6 +65,14 @@ type FinanceApi = Pick<
   | "runBillAlerts"
   | "getNotificationPreferences"
   | "setNotificationPreferences"
+  | "listAlertEmails"
+  | "addAlertEmail"
+  | "deleteAlertEmail"
+  | "listAlertPhones"
+  | "addAlertPhone"
+  | "deleteAlertPhone"
+  | "me"
+  | "updateCurrentUser"
 >;
 
 const TABS: TabItem[] = [
@@ -79,7 +97,11 @@ export function FinancePage() {
       </p>
       <Tabs items={TABS} active={tab} onChange={setTab} />
       {tab === "overview" && (
-        <OverviewTab client={client} transactions={transactions.data ?? []} />
+        <OverviewTab
+          client={client}
+          accounts={accounts.data ?? []}
+          transactions={transactions.data ?? []}
+        />
       )}
       {tab === "transactions" && (
         <TransactionsTab
@@ -97,15 +119,65 @@ export function FinancePage() {
 
 // --- Visão geral ---------------------------------------------------------
 
-function OverviewTab({ client, transactions }: { client: FinanceApi; transactions: Transaction[] }) {
+function OverviewTab({
+  client,
+  accounts,
+  transactions,
+}: {
+  client: FinanceApi;
+  accounts: Account[];
+  transactions: Transaction[];
+}) {
   return (
     <>
-      <NetWorthView client={client} />
-      <CashFlowView client={client} />
+      <AccountBalances client={client} accounts={accounts} />
       <Section title="Gastos por categoria" icon={PiggyBank}>
         <CategorySpendBreakdown transactions={transactions} />
       </Section>
     </>
+  );
+}
+
+function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
+  const netWorth = useAsync(() => client.netWorth(), [client]);
+  const balanceByAccount = useMemo(() => {
+    const map = new Map<string, Balance>();
+    for (const balance of netWorth.data?.accounts ?? []) {
+      map.set(balance.account_id, balance);
+    }
+    return map;
+  }, [netWorth.data]);
+
+  return (
+    <Section
+      title="Saldo das contas"
+      icon={Wallet}
+      actions={<Button onClick={() => netWorth.run()}>Atualizar</Button>}
+    >
+      {netWorth.status === "error" && (
+        <ErrorText>Não foi possível carregar os saldos.</ErrorText>
+      )}
+      {accounts.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhuma conta cadastrada ainda.</p>
+      ) : (
+        <ul className="flex flex-col gap-1 text-sm">
+          {accounts.map((account) => {
+            const balance = balanceByAccount.get(account.account_id);
+            return (
+              <li
+                key={account.account_id}
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              >
+                <span className="font-medium">{account.name}</span>
+                <span className="font-medium tabular-nums text-gray-900">
+                  {moneySuffixed(balance?.balance_minor ?? 0, account.currency)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Section>
   );
 }
 
@@ -120,10 +192,51 @@ function SettingsTab({
 }) {
   return (
     <>
+      <UserProfile client={client} />
       <Accounts client={client} accounts={accounts} />
-      <BankImport client={client} />
       <AlertPreferences client={client} />
+      <BankImport client={client} />
     </>
+  );
+}
+
+function UserProfile({ client }: { client: FinanceApi }) {
+  const user = useAsync(() => client.me(), [client]);
+  const [displayName, setDisplayName] = useState("");
+  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+
+  useEffect(() => {
+    if (user.data) setDisplayName(user.data.display_name);
+  }, [user.data]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setStatus("idle");
+    try {
+      await client.updateCurrentUser({ display_name: displayName.trim() });
+      setStatus("ok");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <Section title="Dados do usuário" icon={UserIcon}>
+      {user.status === "error" && (
+        <ErrorText>Não foi possível carregar os dados do usuário.</ErrorText>
+      )}
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <Field label="E-mail">
+          <TextInput value={user.data?.email ?? ""} disabled readOnly />
+        </Field>
+        <Field label="Nome">
+          <TextInput value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+        </Field>
+        <Button type="submit">Salvar</Button>
+      </form>
+      {status === "ok" && <p className="mt-3 text-sm text-green-700">Dados salvos.</p>}
+      {status === "error" && <ErrorText>Não foi possível salvar os dados.</ErrorText>}
+    </Section>
   );
 }
 
@@ -168,83 +281,6 @@ function Accounts({
           <li key={account.account_id} className="rounded border border-gray-200 px-3 py-2">
             <span className="font-medium">{account.name}</span>
             <span className="text-gray-500"> · {account.currency}</span>
-          </li>
-        ))}
-      </ul>
-    </Section>
-  );
-}
-
-function NetWorthView({ client }: { client: FinanceApi }) {
-  const netWorth = useAsync(() => client.netWorth(), [client]);
-  return (
-    <Section
-      title="Patrimônio líquido"
-      icon={Scale}
-      actions={<Button onClick={() => netWorth.run()}>Atualizar</Button>}
-    >
-      {netWorth.status === "error" && (
-        <ErrorText>Não foi possível carregar o patrimônio líquido.</ErrorText>
-      )}
-      <ul className="flex flex-col gap-1 text-sm">
-        {(netWorth.data?.currencies ?? []).map((total) => (
-          <li key={total.currency}>
-            <span className="font-medium">{money(total.total_minor, total.currency)}</span>
-          </li>
-        ))}
-        {netWorth.status === "ready" && netWorth.data?.currencies.length === 0 && (
-          <li className="text-gray-500">Nenhum saldo ainda.</li>
-        )}
-      </ul>
-    </Section>
-  );
-}
-
-function CashFlowView({ client }: { client: FinanceApi }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const flow = useAsync(
-    () => client.cashFlow(new Date(from).toISOString(), new Date(to).toISOString()),
-    [client, from, to],
-    { immediate: false },
-  );
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    void flow.run();
-  }
-
-  return (
-    <Section title="Fluxo de caixa" icon={TrendingUp}>
-      <form onSubmit={submit} className="mb-3 flex items-end gap-2">
-        <Field label="De">
-          <TextInput
-            type="datetime-local"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Até">
-          <TextInput
-            type="datetime-local"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            required
-          />
-        </Field>
-        <Button type="submit">Calcular</Button>
-      </form>
-      {flow.status === "error" && (
-        <ErrorText>Não foi possível calcular o fluxo de caixa.</ErrorText>
-      )}
-      <ul className="flex flex-col gap-1 text-sm">
-        {(flow.data?.flows ?? []).map((currencyFlow) => (
-          <li key={currencyFlow.currency}>
-            <span className="font-medium">{currencyFlow.currency}</span>: entradas{" "}
-            {money(currencyFlow.inflow_minor, currencyFlow.currency)}, saídas{" "}
-            {money(currencyFlow.outflow_minor, currencyFlow.currency)}, líquido{" "}
-            {money(currencyFlow.net_minor, currencyFlow.currency)}
           </li>
         ))}
       </ul>
@@ -316,6 +352,7 @@ function TransactionsTab({
   accounts: Account[];
   transactions: AsyncResult<Transaction[]>;
 }) {
+  const categories = useAsync(() => client.listCategories(), [client]);
   const [accountFilter, setAccountFilter] = useState("");
   const [kindFilter, setKindFilter] = useState<TxKindFilter>("all");
   const [search, setSearch] = useState("");
@@ -402,6 +439,7 @@ function TransactionsTab({
         <NewTransactionForm
           client={client}
           accounts={accounts}
+          categories={categories.data ?? []}
           onCreated={() => {
             setShowForm(false);
             void transactions.run();
@@ -424,23 +462,28 @@ function TransactionsTab({
 function NewTransactionForm({
   client,
   accounts,
+  categories,
   onCreated,
 }: {
   client: FinanceApi;
   accounts: Account[];
+  categories: Category[];
   onCreated: () => void;
 }) {
   const [accountId, setAccountId] = useState("");
-  const [kind, setKind] = useState<"expense" | "income">("expense");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("BRL");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [expenseType, setExpenseType] = useState<ExpenseType>("variable");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accountId && accounts.length > 0) setAccountId(accounts[0].account_id);
   }, [accounts, accountId]);
+
+  const parsedAmount = parseMoneyInput(amount);
+  const isExpense = parsedAmount < 0;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -448,15 +491,15 @@ function NewTransactionForm({
     try {
       const input = {
         account_id: accountId,
-        amount_minor: parseMoneyInput(amount),
+        amount_minor: Math.abs(parsedAmount),
         currency: currency.trim().toUpperCase(),
         description: description.trim(),
         category: category.trim() || null,
       };
-      if (kind === "expense") {
-        await client.recordExpense(input);
+      if (isExpense) {
+        await client.recordExpense({ ...input, expense_type: expenseType });
       } else {
-        await client.recordTransaction(input);
+        await client.recordTransaction({ ...input, amount_minor: parsedAmount });
       }
       onCreated();
     } catch {
@@ -479,17 +522,10 @@ function NewTransactionForm({
             ))}
           </Select>
         </Field>
-        <Field label="Tipo">
-          <Select value={kind} onChange={(e) => setKind(e.target.value as "expense" | "income")}>
-            <option value="expense">Despesa</option>
-            <option value="income">Receita</option>
-          </Select>
-        </Field>
-        <Field label="Valor">
+        <Field label="Valor (negativo = despesa, positivo = receita)">
           <TextInput
             type="number"
             step="0.01"
-            min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="text-right tabular-nums"
@@ -507,8 +543,26 @@ function NewTransactionForm({
           />
         </Field>
         <Field label="Categoria">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
+        {isExpense && (
+          <Field label="Classificação">
+            <Select
+              value={expenseType}
+              onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
+            >
+              <option value="variable">Variável</option>
+              <option value="fixed">Fixa</option>
+            </Select>
+          </Field>
+        )}
         <Button type="submit">Salvar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
@@ -538,6 +592,7 @@ function TransactionsTable({
           <tr>
             <th className="px-4 py-2 font-medium">Descrição</th>
             <th className="px-4 py-2 font-medium">Categoria</th>
+            <th className="px-4 py-2 font-medium">Classificação</th>
             <th className="px-4 py-2 font-medium">Conta</th>
             <th className="px-4 py-2 font-medium">Data</th>
             <th className="px-4 py-2 text-right font-medium">Valor</th>
@@ -554,6 +609,13 @@ function TransactionsTable({
               </td>
               <td className="px-4 py-2.5">
                 <CategoryBadge category={t.category} />
+              </td>
+              <td className="px-4 py-2.5 text-gray-500">
+                {t.expense_type === "fixed"
+                  ? "Fixa"
+                  : t.expense_type === "variable"
+                    ? "Variável"
+                    : "—"}
               </td>
               <td className="px-4 py-2.5 text-gray-500">{accountName(t.account_id)}</td>
               <td className="px-4 py-2.5 text-gray-500">{shortDate(t.occurred_at)}</td>
@@ -1416,16 +1478,19 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
 
 function AlertPreferences({ client }: { client: FinanceApi }) {
   const preference = useAsync(() => client.getNotificationPreferences(), [client]);
+  const alertEmails = useAsync(() => client.listAlertEmails(), [client]);
+  const alertPhones = useAsync(() => client.listAlertPhones(), [client]);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [contactError, setContactError] = useState<string | null>(null);
 
   useEffect(() => {
     if (preference.data) {
       setEmailEnabled(preference.data.email_enabled);
       setWhatsappEnabled(preference.data.whatsapp_enabled);
-      setWhatsappPhone(preference.data.whatsapp_phone ?? "");
     }
   }, [preference.data]);
 
@@ -1436,7 +1501,6 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
       await client.setNotificationPreferences({
         email_enabled: emailEnabled,
         whatsapp_enabled: whatsappEnabled,
-        whatsapp_phone: whatsappPhone.trim() || null,
       });
       setStatus("ok");
     } catch {
@@ -1444,61 +1508,175 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
     }
   }
 
+  async function addEmail(event: FormEvent) {
+    event.preventDefault();
+    setContactError(null);
+    try {
+      await client.addAlertEmail(newEmail.trim());
+      setNewEmail("");
+      await alertEmails.run();
+    } catch (err) {
+      setContactError(
+        err instanceof ApiError && err.status === 409
+          ? "Esse e-mail já está cadastrado."
+          : "Não foi possível cadastrar o e-mail.",
+      );
+    }
+  }
+
+  async function removeEmail(alertEmailId: string) {
+    await client.deleteAlertEmail(alertEmailId);
+    await alertEmails.run();
+  }
+
+  async function addPhone(event: FormEvent) {
+    event.preventDefault();
+    setContactError(null);
+    try {
+      await client.addAlertPhone(newPhone.trim());
+      setNewPhone("");
+      await alertPhones.run();
+    } catch (err) {
+      setContactError(
+        err instanceof ApiError && err.status === 409
+          ? "Esse telefone já está cadastrado."
+          : "Não foi possível cadastrar o telefone.",
+      );
+    }
+  }
+
+  async function removePhone(alertPhoneId: string) {
+    await client.deleteAlertPhone(alertPhoneId);
+    await alertPhones.run();
+  }
+
   return (
     <Section title="Preferências de alerta de vencimento" icon={Bell}>
       <p className="mb-4 text-sm text-gray-500">
         Escolha como você quer ser avisado quando uma conta estiver perto de vencer ou vencida.
       </p>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-3">
-          <label
-            className={
-              "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
-              (emailEnabled
-                ? "border-blue-200 bg-blue-50 text-blue-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50")
-            }
-          >
-            <input
-              type="checkbox"
-              checked={emailEnabled}
-              onChange={(e) => setEmailEnabled(e.target.checked)}
-              className="sr-only"
-            />
-            <Bell className="h-4 w-4" />
-            E-mail
-          </label>
-          <label
-            className={
-              "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
-              (whatsappEnabled
-                ? "border-blue-200 bg-blue-50 text-blue-700"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50")
-            }
-          >
-            <input
-              type="checkbox"
-              checked={whatsappEnabled}
-              onChange={(e) => setWhatsappEnabled(e.target.checked)}
-              className="sr-only"
-            />
-            <Bell className="h-4 w-4" />
-            WhatsApp
-          </label>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Número do WhatsApp">
-            <TextInput
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              placeholder="+5511999999999"
-            />
-          </Field>
-          <Button type="submit">Salvar</Button>
-        </div>
+      <form onSubmit={submit} className="mb-6 flex flex-wrap items-end gap-3">
+        <label
+          className={
+            "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
+            (emailEnabled
+              ? "border-blue-200 bg-blue-50 text-blue-700"
+              : "border-gray-200 text-gray-600 hover:bg-gray-50")
+          }
+        >
+          <input
+            type="checkbox"
+            checked={emailEnabled}
+            onChange={(e) => setEmailEnabled(e.target.checked)}
+            className="sr-only"
+          />
+          <Bell className="h-4 w-4" />
+          E-mail
+        </label>
+        <label
+          className={
+            "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors " +
+            (whatsappEnabled
+              ? "border-blue-200 bg-blue-50 text-blue-700"
+              : "border-gray-200 text-gray-600 hover:bg-gray-50")
+          }
+        >
+          <input
+            type="checkbox"
+            checked={whatsappEnabled}
+            onChange={(e) => setWhatsappEnabled(e.target.checked)}
+            className="sr-only"
+          />
+          <Bell className="h-4 w-4" />
+          WhatsApp
+        </label>
+        <Button type="submit">Salvar</Button>
       </form>
-      {status === "ok" && <p className="mt-3 text-sm text-green-700">Preferências salvas.</p>}
-      {status === "error" && <ErrorText>Não foi possível salvar as preferências.</ErrorText>}
+      {status === "ok" && <p className="mb-4 text-sm text-green-700">Preferências salvas.</p>}
+      {status === "error" && (
+        <ErrorText>Não foi possível salvar as preferências.</ErrorText>
+      )}
+
+      {contactError && <ErrorText>{contactError}</ErrorText>}
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900">E-mails de alerta</h3>
+          <form onSubmit={addEmail} className="mb-2 flex items-end gap-2">
+            <Field label="E-mail de alerta">
+              <TextInput
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="alguem@exemplo.com"
+                required
+              />
+            </Field>
+            <Button type="submit">Adicionar</Button>
+          </form>
+          {alertEmails.status === "error" && (
+            <ErrorText>Não foi possível carregar os e-mails.</ErrorText>
+          )}
+          {alertEmails.status === "ready" && (alertEmails.data ?? []).length === 0 && (
+            <p className="text-sm text-gray-500">Nenhum e-mail cadastrado ainda.</p>
+          )}
+          <ul className="flex flex-col gap-1 text-sm">
+            {(alertEmails.data ?? []).map((entry: AlertEmail) => (
+              <li
+                key={entry.alert_email_id}
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              >
+                <span>{entry.email}</span>
+                <button
+                  type="button"
+                  onClick={() => void removeEmail(entry.alert_email_id)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Excluir
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900">Telefones (WhatsApp)</h3>
+          <form onSubmit={addPhone} className="mb-2 flex items-end gap-2">
+            <Field label="Número do WhatsApp">
+              <TextInput
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="+5511999999999"
+                required
+              />
+            </Field>
+            <Button type="submit">Adicionar</Button>
+          </form>
+          {alertPhones.status === "error" && (
+            <ErrorText>Não foi possível carregar os telefones.</ErrorText>
+          )}
+          {alertPhones.status === "ready" && (alertPhones.data ?? []).length === 0 && (
+            <p className="text-sm text-gray-500">Nenhum telefone cadastrado ainda.</p>
+          )}
+          <ul className="flex flex-col gap-1 text-sm">
+            {(alertPhones.data ?? []).map((entry: AlertPhone) => (
+              <li
+                key={entry.alert_phone_id}
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              >
+                <span>{entry.phone}</span>
+                <button
+                  type="button"
+                  onClick={() => void removePhone(entry.alert_phone_id)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Excluir
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </Section>
   );
 }

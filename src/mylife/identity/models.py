@@ -16,6 +16,7 @@ from mylife.core.events import LifeEvent
 from mylife.db.base import Base
 
 USER_REGISTERED: Final = "identity.user_registered"
+USER_UPDATED: Final = "identity.user_updated"
 ACTIVE_STATUS: Final = "active"
 
 
@@ -88,4 +89,19 @@ class UserRegistered(LifeEvent[UserRegisteredPayload]):
     """Emitted when a user registers (Identity context)."""
 
     event_type: Literal["identity.user_registered"] = USER_REGISTERED
+    schema_version: Literal[1] = 1
+
+
+class UserUpdatedPayload(BaseModel):
+    """A correction to a user's editable profile fields (email is immutable)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    display_name: str
+
+
+class UserUpdated(LifeEvent[UserUpdatedPayload]):
+    """Emitted when a user edits their profile (Identity context)."""
+
+    event_type: Literal["identity.user_updated"] = USER_UPDATED
     schema_version: Literal[1] = 1

@@ -18,10 +18,14 @@ from mylife.notifications import (
     NOTIFICATION_DELIVERY_FAILED,
     NOTIFICATION_REQUESTED,
     NOTIFICATION_SENT,
+    DuplicateAlertEmailError,
+    DuplicateAlertPhoneError,
     NotificationChannelError,
     NotificationPreferenceService,
     NotificationService,
     SmtpEmailChannel,
+    UnknownAlertEmailError,
+    UnknownAlertPhoneError,
     WhatsAppCloudApiChannel,
 )
 
@@ -157,23 +161,70 @@ def test_preferences_default_when_unset(session: Session) -> None:
 
     assert preference.email_enabled is True
     assert preference.whatsapp_enabled is False
-    assert preference.whatsapp_phone is None
 
 
 def test_preferences_set_and_get_round_trip(session: Session) -> None:
     service = NotificationPreferenceService(session)
-    saved = service.set(
-        USER,
-        email_enabled=False,
-        whatsapp_enabled=True,
-        whatsapp_phone=" +5511999999999 ",
-        now=NOW,
-    )
+    saved = service.set(USER, email_enabled=False, whatsapp_enabled=True, now=NOW)
 
-    assert saved.whatsapp_phone == "+5511999999999"
+    assert saved.whatsapp_enabled is True
     fetched = service.get(USER)
     assert fetched.email_enabled is False
     assert fetched.whatsapp_enabled is True
+
+
+def test_add_list_and_delete_alert_email(session: Session) -> None:
+    service = NotificationPreferenceService(session)
+
+    first = service.add_alert_email(USER, "  Spouse@Example.COM ", now=NOW)
+    second = service.add_alert_email(USER, "accountant@example.com", now=NOW)
+
+    assert first.email == "spouse@example.com"  # normalized
+    listed = service.list_alert_emails(USER)
+    assert [e.email for e in listed] == ["spouse@example.com", "accountant@example.com"]
+
+    service.delete_alert_email(USER, first.alert_email_id)
+    assert [e.email for e in service.list_alert_emails(USER)] == [second.email]
+
+
+def test_add_alert_email_rejects_duplicate(session: Session) -> None:
+    service = NotificationPreferenceService(session)
+    service.add_alert_email(USER, "spouse@example.com", now=NOW)
+
+    with pytest.raises(DuplicateAlertEmailError):
+        service.add_alert_email(USER, "Spouse@Example.com", now=NOW)
+
+
+def test_delete_unknown_alert_email_raises(session: Session) -> None:
+    with pytest.raises(UnknownAlertEmailError):
+        NotificationPreferenceService(session).delete_alert_email(USER, uuid.uuid4())
+
+
+def test_add_list_and_delete_alert_phone(session: Session) -> None:
+    service = NotificationPreferenceService(session)
+
+    first = service.add_alert_phone(USER, " +5511999999999 ", now=NOW)
+    second = service.add_alert_phone(USER, "+5511888888888", now=NOW)
+
+    assert first.phone == "+5511999999999"  # trimmed
+    listed = service.list_alert_phones(USER)
+    assert [p.phone for p in listed] == ["+5511999999999", "+5511888888888"]
+
+    service.delete_alert_phone(USER, first.alert_phone_id)
+    assert [p.phone for p in service.list_alert_phones(USER)] == [second.phone]
+
+
+def test_add_alert_phone_rejects_duplicate(session: Session) -> None:
+    service = NotificationPreferenceService(session)
+    service.add_alert_phone(USER, "+5511999999999", now=NOW)
+
+    with pytest.raises(DuplicateAlertPhoneError):
+        service.add_alert_phone(USER, "+5511999999999", now=NOW)
+
+
+def test_delete_unknown_alert_phone_raises(session: Session) -> None:
+    with pytest.raises(UnknownAlertPhoneError):
+        NotificationPreferenceService(session).delete_alert_phone(USER, uuid.uuid4())
 
 
 class _RecordingChannel:

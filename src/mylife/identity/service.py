@@ -23,6 +23,8 @@ from mylife.identity.models import (
     UserRegistered,
     UserRegisteredPayload,
     UserRow,
+    UserUpdated,
+    UserUpdatedPayload,
 )
 from mylife.identity.security import hash_password, verify_password
 
@@ -152,6 +154,31 @@ class IdentityService:
         """Return the user or ``None``."""
         row = self._session.get(UserRow, user_id)
         return _to_user(row) if row is not None else None
+
+    def update_display_name(
+        self, user_id: uuid.UUID, display_name: str, *, now: datetime, correlation_id: str
+    ) -> User:
+        """Update the user's display name (email is immutable), emitting ``UserUpdated``."""
+        row = self._session.get(UserRow, user_id)
+        assert row is not None  # the caller resolved this user via authentication
+        normalized = display_name.strip()
+        row.display_name = normalized
+
+        event = UserUpdated(
+            user_id=user_id,
+            occurred_at=now,
+            source=IDENTITY_SOURCE,
+            correlation_id=correlation_id,
+            payload=UserUpdatedPayload(display_name=normalized),
+        )
+        EventStore(self._session).append(event)
+        self._session.commit()
+        try:
+            self._bus.publish(event)
+        except EventDispatchError:
+            logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
+
+        return _to_user(row)
 
     def create_household(self, name: str, *, now: datetime) -> Household:
         """Create and return a household."""

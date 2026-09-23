@@ -35,6 +35,30 @@ def client() -> Iterator[TestClient]:
     engine.dispose()
 
 
+def _auth(client: TestClient, email: str = "ada@example.com") -> dict[str, str]:
+    client.post("/users", json={"email": email, "display_name": "Ada", "password": "s3cretpw"})
+    token = client.post("/auth/login", data={"username": email, "password": "s3cretpw"}).json()[
+        "access_token"
+    ]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_update_current_user_display_name(client: TestClient) -> None:
+    auth = _auth(client)
+
+    response = client.patch("/users/me", json={"display_name": "Ada Lovelace"}, headers=auth)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["display_name"] == "Ada Lovelace"
+    assert body["email"] == "ada@example.com"  # unchanged, not accepted by the request
+
+
+def test_update_current_user_requires_auth(client: TestClient) -> None:
+    response = client.patch("/users/me", json={"display_name": "Ada Lovelace"})
+    assert response.status_code == 401
+
+
 def test_register_and_read_user(client: TestClient) -> None:
     created = client.post(
         "/users", json={"email": "ada@example.com", "display_name": "Ada", "password": "s3cretpw"}

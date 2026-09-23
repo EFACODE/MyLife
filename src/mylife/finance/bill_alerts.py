@@ -171,36 +171,47 @@ class BillAlertsService:
         if user is None:
             return []
         preference = self._preferences.get(user_id)
+        # Registered alert emails are additional recipients; the account's own
+        # login email is always included so users never lose alerts by not
+        # registering any (T4.8 default behavior, preserved).
+        email_recipients = [user.email] + [
+            alert_email.email for alert_email in self._preferences.list_alert_emails(user_id)
+        ]
+        phone_recipients = [
+            alert_phone.phone for alert_phone in self._preferences.list_alert_phones(user_id)
+        ]
 
         outcomes: list[NotificationOutcome] = []
         for alert in alerts:
             subject, body = _render(alert)
             if preference.email_enabled:
-                outcomes.append(
-                    self._notifications.send(
-                        user_id,
-                        channel="email",
-                        template=_TEMPLATE,
-                        subject=subject,
-                        body=body,
-                        recipient=user.email,
-                        evidence=alert.evidence,
-                        now=now,
-                        correlation_id=correlation_id,
+                for recipient in email_recipients:
+                    outcomes.append(
+                        self._notifications.send(
+                            user_id,
+                            channel="email",
+                            template=_TEMPLATE,
+                            subject=subject,
+                            body=body,
+                            recipient=recipient,
+                            evidence=alert.evidence,
+                            now=now,
+                            correlation_id=correlation_id,
+                        )
                     )
-                )
-            if preference.whatsapp_enabled and preference.whatsapp_phone:
-                outcomes.append(
-                    self._notifications.send(
-                        user_id,
-                        channel="whatsapp",
-                        template=_TEMPLATE,
-                        subject=subject,
-                        body=body,
-                        recipient=preference.whatsapp_phone,
-                        evidence=alert.evidence,
-                        now=now,
-                        correlation_id=correlation_id,
+            if preference.whatsapp_enabled:
+                for recipient in phone_recipients:
+                    outcomes.append(
+                        self._notifications.send(
+                            user_id,
+                            channel="whatsapp",
+                            template=_TEMPLATE,
+                            subject=subject,
+                            body=body,
+                            recipient=recipient,
+                            evidence=alert.evidence,
+                            now=now,
+                            correlation_id=correlation_id,
+                        )
                     )
-                )
         return outcomes

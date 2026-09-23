@@ -82,6 +82,25 @@ def test_record_expense_returns_money_out(client: TestClient) -> None:
     assert body["kind"] == "expense"
 
 
+def test_record_expense_with_expense_type(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+
+    response = client.post(
+        "/finance/expenses",
+        json={
+            "account_id": account_id,
+            "amount_minor": 1200,
+            "currency": "BRL",
+            "description": "Netflix",
+            "expense_type": "fixed",
+        },
+        headers=auth,
+    )
+    assert response.status_code == 201
+    assert response.json()["expense_type"] == "fixed"
+
+
 def test_import_transaction_and_list(client: TestClient) -> None:
     auth = _auth(client)
     account_id = _account(client, auth)

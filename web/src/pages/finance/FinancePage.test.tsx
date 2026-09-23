@@ -13,7 +13,6 @@ const client = vi.hoisted(() => ({
   recordTransaction: vi.fn(),
   listTransactions: vi.fn(),
   netWorth: vi.fn(),
-  cashFlow: vi.fn(),
   importBank: vi.fn(),
   listBills: vi.fn(),
   registerBill: vi.fn(),
@@ -24,6 +23,14 @@ const client = vi.hoisted(() => ({
   runBillAlerts: vi.fn(),
   getNotificationPreferences: vi.fn(),
   setNotificationPreferences: vi.fn(),
+  listAlertEmails: vi.fn(),
+  addAlertEmail: vi.fn(),
+  deleteAlertEmail: vi.fn(),
+  listAlertPhones: vi.fn(),
+  addAlertPhone: vi.fn(),
+  deleteAlertPhone: vi.fn(),
+  me: vi.fn(),
+  updateCurrentUser: vi.fn(),
 }));
 vi.mock("../../api/useApiClient", () => ({ useApiClient: () => client }));
 
@@ -78,9 +85,8 @@ describe("FinancePage", () => {
     ]);
     client.netWorth.mockResolvedValue({
       currencies: [{ currency: "BRL", total_minor: -25389 }],
-      accounts: [],
+      accounts: [{ account_id: "a1", currency: "BRL", balance_minor: -25389, as_of: "x" }],
     });
-    client.cashFlow.mockResolvedValue({ occurred_from: "x", occurred_to: "y", flows: [] });
     client.importBank.mockRejectedValue(new ApiError(403, "forbidden"));
     client.listBills.mockResolvedValue([
       {
@@ -123,28 +129,58 @@ describe("FinancePage", () => {
     client.getNotificationPreferences.mockResolvedValue({
       email_enabled: true,
       whatsapp_enabled: false,
-      whatsapp_phone: null,
       updated_at: "x",
     });
     client.setNotificationPreferences.mockResolvedValue({
       email_enabled: true,
       whatsapp_enabled: false,
-      whatsapp_phone: null,
       updated_at: "x",
+    });
+    client.listAlertEmails.mockResolvedValue([]);
+    client.addAlertEmail.mockResolvedValue({
+      alert_email_id: "ae1",
+      email: "spouse@example.com",
+      created_at: "x",
+    });
+    client.deleteAlertEmail.mockResolvedValue(undefined);
+    client.listAlertPhones.mockResolvedValue([]);
+    client.addAlertPhone.mockResolvedValue({
+      alert_phone_id: "ap1",
+      phone: "+5511999999999",
+      created_at: "x",
+    });
+    client.deleteAlertPhone.mockResolvedValue(undefined);
+    client.me.mockResolvedValue({
+      user_id: "u1",
+      email: "ada@example.com",
+      display_name: "Ada",
+      status: "active",
+      household_id: null,
+      created_at: "x",
+    });
+    client.updateCurrentUser.mockResolvedValue({
+      user_id: "u1",
+      email: "ada@example.com",
+      display_name: "Ada Lovelace",
+      status: "active",
+      household_id: null,
+      created_at: "x",
     });
   });
 
-  it("mostra a aba Visão geral por padrão, com patrimônio líquido e gastos por categoria", async () => {
+  it("mostra a aba Visão geral por padrão, com saldo das contas e gastos por categoria", async () => {
     render(<FinancePage />);
-    expect(await screen.findByText("BRL -253,89")).toBeInTheDocument();
+    expect(await screen.findByText("Conta Corrente")).toBeInTheDocument();
+    expect(await screen.findByText("-253,89 BRL")).toBeInTheDocument();
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
   });
 
   it("cria uma conta na aba Configurações", async () => {
     render(<FinancePage />);
     goToTab("Configurações");
-    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Poupança" } });
-    fireEvent.click(screen.getByText("Abrir conta"));
+    const section = await billsSection("Contas");
+    fireEvent.change(within(section).getByLabelText("Nome"), { target: { value: "Poupança" } });
+    fireEvent.click(within(section).getByText("Abrir conta"));
     await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Poupança", "BRL"));
   });
 
@@ -185,20 +221,49 @@ describe("FinancePage", () => {
     expect(screen.getByText("Salário")).toBeInTheDocument();
   });
 
-  it("registra uma nova transação a partir da aba Transações", async () => {
+  it("registra uma despesa (valor negativo) com categoria e classificação", async () => {
     render(<FinancePage />);
     goToTab("Transações");
     await screen.findByText("Almoço");
 
     fireEvent.click(screen.getByText("+ Nova Transação"));
     await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
-    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "12.00" } });
+    const amountLabel = "Valor (negativo = despesa, positivo = receita)";
+    fireEvent.change(screen.getByLabelText(amountLabel), { target: { value: "-12.00" } });
     fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Café" } });
+    fireEvent.change(screen.getByLabelText("Categoria"), { target: { value: "Moradia" } });
+    fireEvent.change(screen.getByLabelText("Classificação"), { target: { value: "fixed" } });
     fireEvent.click(screen.getByText("Salvar"));
 
     await waitFor(() =>
       expect(client.recordExpense).toHaveBeenCalledWith(
-        expect.objectContaining({ account_id: "a1", amount_minor: 1200, description: "Café" }),
+        expect.objectContaining({
+          account_id: "a1",
+          amount_minor: 1200,
+          description: "Café",
+          category: "Moradia",
+          expense_type: "fixed",
+        }),
+      ),
+    );
+  });
+
+  it("registra uma receita (valor positivo) sem classificação", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    await screen.findByText("Almoço");
+
+    fireEvent.click(screen.getByText("+ Nova Transação"));
+    await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
+    const amountLabel = "Valor (negativo = despesa, positivo = receita)";
+    fireEvent.change(screen.getByLabelText(amountLabel), { target: { value: "500.00" } });
+    fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Bônus" } });
+    expect(screen.queryByLabelText("Classificação")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() =>
+      expect(client.recordTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ account_id: "a1", amount_minor: 50000, description: "Bônus" }),
       ),
     );
   });
@@ -323,17 +388,48 @@ describe("FinancePage", () => {
     const section = await billsSection("Preferências de alerta de vencimento");
 
     fireEvent.click(within(section).getByLabelText("WhatsApp"));
-    fireEvent.change(within(section).getByLabelText("Número do WhatsApp"), {
-      target: { value: "+5511999999999" },
-    });
     fireEvent.click(within(section).getByText("Salvar"));
 
     await waitFor(() =>
       expect(client.setNotificationPreferences).toHaveBeenCalledWith({
         email_enabled: true,
         whatsapp_enabled: true,
-        whatsapp_phone: "+5511999999999",
       }),
+    );
+  });
+
+  it("cadastra um e-mail e um telefone de alerta na aba Configurações", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+    const section = await billsSection("Preferências de alerta de vencimento");
+
+    fireEvent.change(within(section).getByLabelText("E-mail de alerta"), {
+      target: { value: "spouse@example.com" },
+    });
+    fireEvent.click(within(section).getAllByRole("button", { name: "Adicionar" })[0]);
+    await waitFor(() => expect(client.addAlertEmail).toHaveBeenCalledWith("spouse@example.com"));
+
+    fireEvent.change(within(section).getByLabelText("Número do WhatsApp"), {
+      target: { value: "+5511999999999" },
+    });
+    fireEvent.click(within(section).getAllByRole("button", { name: "Adicionar" })[1]);
+    await waitFor(() =>
+      expect(client.addAlertPhone).toHaveBeenCalledWith("+5511999999999"),
+    );
+  });
+
+  it("mostra e edita os dados do usuário na aba Configurações", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+    const section = await billsSection("Dados do usuário");
+
+    expect(await within(section).findByDisplayValue("ada@example.com")).toBeDisabled();
+    const nameInput = await within(section).findByDisplayValue("Ada");
+    fireEvent.change(nameInput, { target: { value: "Ada Lovelace" } });
+    fireEvent.click(within(section).getByText("Salvar"));
+
+    await waitFor(() =>
+      expect(client.updateCurrentUser).toHaveBeenCalledWith({ display_name: "Ada Lovelace" }),
     );
   });
 });

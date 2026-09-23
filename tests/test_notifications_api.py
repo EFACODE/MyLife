@@ -62,15 +62,11 @@ def test_set_and_get_preferences(client: TestClient) -> None:
 
     response = client.put(
         "/notifications/preferences",
-        json={
-            "email_enabled": False,
-            "whatsapp_enabled": True,
-            "whatsapp_phone": "+5511999999999",
-        },
+        json={"email_enabled": False, "whatsapp_enabled": True},
         headers=auth,
     )
     assert response.status_code == 200
-    assert response.json()["whatsapp_phone"] == "+5511999999999"
+    assert response.json()["whatsapp_enabled"] is True
 
     fetched = client.get("/notifications/preferences", headers=auth)
     assert fetched.json()["email_enabled"] is False
@@ -79,3 +75,49 @@ def test_set_and_get_preferences(client: TestClient) -> None:
 def test_preferences_require_auth(client: TestClient) -> None:
     assert client.get("/notifications/preferences").status_code == 401
     assert client.put("/notifications/preferences", json={}).status_code == 401
+
+
+def test_add_list_and_delete_alert_email(client: TestClient) -> None:
+    auth = _auth(client)
+
+    created = client.post(
+        "/notifications/alert-emails", json={"email": "spouse@example.com"}, headers=auth
+    )
+    assert created.status_code == 201
+    alert_email_id = created.json()["alert_email_id"]
+
+    listed = client.get("/notifications/alert-emails", headers=auth)
+    assert [e["email"] for e in listed.json()] == ["spouse@example.com"]
+
+    duplicate = client.post(
+        "/notifications/alert-emails", json={"email": "spouse@example.com"}, headers=auth
+    )
+    assert duplicate.status_code == 409
+
+    deleted = client.delete(f"/notifications/alert-emails/{alert_email_id}", headers=auth)
+    assert deleted.status_code == 204
+    assert client.get("/notifications/alert-emails", headers=auth).json() == []
+
+
+def test_add_list_and_delete_alert_phone(client: TestClient) -> None:
+    auth = _auth(client)
+
+    created = client.post(
+        "/notifications/alert-phones", json={"phone": "+5511999999999"}, headers=auth
+    )
+    assert created.status_code == 201
+    alert_phone_id = created.json()["alert_phone_id"]
+
+    listed = client.get("/notifications/alert-phones", headers=auth)
+    assert [p["phone"] for p in listed.json()] == ["+5511999999999"]
+
+    deleted = client.delete(f"/notifications/alert-phones/{alert_phone_id}", headers=auth)
+    assert deleted.status_code == 204
+    assert client.get("/notifications/alert-phones", headers=auth).json() == []
+
+
+def test_alert_contacts_require_auth(client: TestClient) -> None:
+    assert client.get("/notifications/alert-emails").status_code == 401
+    assert client.post("/notifications/alert-emails", json={"email": "x@x.com"}).status_code == 401
+    assert client.get("/notifications/alert-phones").status_code == 401
+    assert client.post("/notifications/alert-phones", json={"phone": "+1"}).status_code == 401

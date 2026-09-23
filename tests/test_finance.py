@@ -82,6 +82,26 @@ def test_record_expense_stores_negative_and_emits_event(
     assert events[0].payload["amount_minor"] == -4599
 
 
+def test_record_expense_with_expense_type(service: FinanceService, session: Session) -> None:
+    user = uuid.uuid4()
+    account = service.create_account(user, "Checking", "BRL", now=NOW)
+
+    txn = service.record_expense(
+        user,
+        account.account_id,
+        1200,
+        "BRL",
+        "Netflix",
+        expense_type="fixed",
+        now=NOW,
+        correlation_id="c",
+    )
+
+    assert txn.expense_type == "fixed"
+    events = EventStore(session).read_stream(user)
+    assert events[0].payload["expense_type"] == "fixed"
+
+
 def test_import_transaction_keeps_sign(service: FinanceService, session: Session) -> None:
     user = uuid.uuid4()
     account = service.create_account(user, "Checking", "BRL", now=NOW)
