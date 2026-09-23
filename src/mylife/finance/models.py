@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mylife.core.events import LifeEvent, StoredEvent
@@ -50,6 +50,9 @@ class AccountRow(Base):
     """A user-scoped account transactions are recorded against."""
 
     __tablename__ = "accounts"
+    __table_args__ = (
+        Index("ix_accounts_external_ref", "user_id", "external_source", "external_id"),
+    )
 
     account_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(index=True)
