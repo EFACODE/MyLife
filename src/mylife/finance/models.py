@@ -24,6 +24,8 @@ TRANSACTION_IMPORTED: Final = "finance.transaction_imported"
 POSITION_VALUED: Final = "finance.position_valued"
 FINANCE_SOURCE = "finance"
 
+ExpenseType = Literal["fixed", "variable"]
+
 # The transaction ``kind`` surfaced by the read model, keyed by event type.
 KIND_BY_TYPE: Final[dict[str, str]] = {
     EXPENSE_CREATED: "expense",
@@ -61,6 +63,8 @@ class FinancePayload(BaseModel):
 
     ``amount_minor`` is a signed integer in the currency's minor units (money
     out is negative). ``currency`` is an ISO-4217 alphabetic code.
+    ``expense_type`` classifies a hand-recorded expense as a fixed or variable
+    cost; it is only ever set on ``ExpenseCreated`` facts.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -71,6 +75,7 @@ class FinancePayload(BaseModel):
     description: str
     category: str | None = None
     external_id: str | None = None
+    expense_type: ExpenseType | None = None
 
 
 class ExpenseCreated(LifeEvent[FinancePayload]):
@@ -116,6 +121,7 @@ class Transaction(BaseModel):
     currency: str
     description: str
     category: str | None
+    expense_type: ExpenseType | None = None
     occurred_at: datetime
 
 

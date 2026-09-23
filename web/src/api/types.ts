@@ -299,6 +299,8 @@ export interface Category {
   created_at: string;
 }
 
+export type ExpenseType = "fixed" | "variable";
+
 export interface Transaction {
   event_id: string;
   kind: string;
@@ -307,6 +309,7 @@ export interface Transaction {
   currency: string;
   description: string;
   category: string | null;
+  expense_type: ExpenseType | null;
   occurred_at: string;
 }
 
@@ -353,6 +356,7 @@ export interface ExpenseInput {
   currency: string;
   description: string;
   category?: string | null;
+  expense_type?: ExpenseType | null;
 }
 
 export interface TransactionInput extends ExpenseInput {

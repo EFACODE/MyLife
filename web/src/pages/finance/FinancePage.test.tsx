@@ -13,7 +13,6 @@ const client = vi.hoisted(() => ({
   recordTransaction: vi.fn(),
   listTransactions: vi.fn(),
   netWorth: vi.fn(),
-  cashFlow: vi.fn(),
   importBank: vi.fn(),
   listBills: vi.fn(),
   registerBill: vi.fn(),
@@ -78,9 +77,8 @@ describe("FinancePage", () => {
     ]);
     client.netWorth.mockResolvedValue({
       currencies: [{ currency: "BRL", total_minor: -25389 }],
-      accounts: [],
+      accounts: [{ account_id: "a1", currency: "BRL", balance_minor: -25389, as_of: "x" }],
     });
-    client.cashFlow.mockResolvedValue({ occurred_from: "x", occurred_to: "y", flows: [] });
     client.importBank.mockRejectedValue(new ApiError(403, "forbidden"));
     client.listBills.mockResolvedValue([
       {
@@ -134,9 +132,10 @@ describe("FinancePage", () => {
     });
   });
 
-  it("mostra a aba Visão geral por padrão, com patrimônio líquido e gastos por categoria", async () => {
+  it("mostra a aba Visão geral por padrão, com saldo das contas e gastos por categoria", async () => {
     render(<FinancePage />);
-    expect(await screen.findByText("BRL -253,89")).toBeInTheDocument();
+    expect(await screen.findByText("Conta Corrente")).toBeInTheDocument();
+    expect(await screen.findByText("-253,89 BRL")).toBeInTheDocument();
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
   });
 
@@ -185,20 +184,49 @@ describe("FinancePage", () => {
     expect(screen.getByText("Salário")).toBeInTheDocument();
   });
 
-  it("registra uma nova transação a partir da aba Transações", async () => {
+  it("registra uma despesa (valor negativo) com categoria e classificação", async () => {
     render(<FinancePage />);
     goToTab("Transações");
     await screen.findByText("Almoço");
 
     fireEvent.click(screen.getByText("+ Nova Transação"));
     await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
-    fireEvent.change(screen.getByLabelText("Valor"), { target: { value: "12.00" } });
+    const amountLabel = "Valor (negativo = despesa, positivo = receita)";
+    fireEvent.change(screen.getByLabelText(amountLabel), { target: { value: "-12.00" } });
     fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Café" } });
+    fireEvent.change(screen.getByLabelText("Categoria"), { target: { value: "Moradia" } });
+    fireEvent.change(screen.getByLabelText("Classificação"), { target: { value: "fixed" } });
     fireEvent.click(screen.getByText("Salvar"));
 
     await waitFor(() =>
       expect(client.recordExpense).toHaveBeenCalledWith(
-        expect.objectContaining({ account_id: "a1", amount_minor: 1200, description: "Café" }),
+        expect.objectContaining({
+          account_id: "a1",
+          amount_minor: 1200,
+          description: "Café",
+          category: "Moradia",
+          expense_type: "fixed",
+        }),
+      ),
+    );
+  });
+
+  it("registra uma receita (valor positivo) sem classificação", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    await screen.findByText("Almoço");
+
+    fireEvent.click(screen.getByText("+ Nova Transação"));
+    await waitFor(() => expect(screen.getByLabelText("Conta")).toHaveValue("a1"));
+    const amountLabel = "Valor (negativo = despesa, positivo = receita)";
+    fireEvent.change(screen.getByLabelText(amountLabel), { target: { value: "500.00" } });
+    fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Bônus" } });
+    expect(screen.queryByLabelText("Classificação")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() =>
+      expect(client.recordTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ account_id: "a1", amount_minor: 50000, description: "Bônus" }),
       ),
     );
   });

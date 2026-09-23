@@ -26,6 +26,7 @@ from mylife.finance.models import (
     Category,
     CategoryRow,
     ExpenseCreated,
+    ExpenseType,
     FinancePayload,
     PositionPayload,
     PositionValued,
@@ -68,6 +69,7 @@ class DuplicateCategoryError(Exception):
 def _to_transaction(event: TimelineEvent) -> Transaction:
     payload = event.payload
     category = payload.get("category")
+    expense_type = payload.get("expense_type")
     return Transaction(
         event_id=event.event_id,
         kind=KIND_BY_TYPE.get(event.event_type, event.event_type),
@@ -76,6 +78,7 @@ def _to_transaction(event: TimelineEvent) -> Transaction:
         currency=str(payload["currency"]),
         description=str(payload["description"]),
         category=str(category) if category is not None else None,
+        expense_type=expense_type,
         occurred_at=event.occurred_at,
     )
 
@@ -180,6 +183,7 @@ class FinanceService:
         description: str,
         *,
         category: str | None = None,
+        expense_type: ExpenseType | None = None,
         now: datetime,
         correlation_id: str,
     ) -> Transaction:
@@ -191,6 +195,7 @@ class FinanceService:
             currency=currency.strip().upper(),
             description=description,
             category=category,
+            expense_type=expense_type,
         )
         event = ExpenseCreated(
             user_id=user_id,
@@ -319,5 +324,6 @@ class FinanceService:
             currency=event.payload.currency,
             description=event.payload.description,
             category=event.payload.category,
+            expense_type=event.payload.expense_type,
             occurred_at=stored.occurred_at,
         )

@@ -17,7 +17,15 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { ApiError, type ApiClient } from "../../api/client";
-import type { Account, Bill, BillRecurrence, Category, Transaction } from "../../api/types";
+import type {
+  Account,
+  Balance,
+  Bill,
+  BillRecurrence,
+  Category,
+  ExpenseType,
+  Transaction,
+} from "../../api/types";
 import { useApiClient } from "../../api/useApiClient";
 import { CategoryAvatar } from "../../components/ui/CategoryAvatar";
 import { CategoryBadge } from "../../components/ui/CategoryBadge";
@@ -44,7 +52,6 @@ type FinanceApi = Pick<
   | "recordTransaction"
   | "listTransactions"
   | "netWorth"
-  | "cashFlow"
   | "importBank"
   | "listBills"
   | "registerBill"
@@ -79,7 +86,11 @@ export function FinancePage() {
       </p>
       <Tabs items={TABS} active={tab} onChange={setTab} />
       {tab === "overview" && (
-        <OverviewTab client={client} transactions={transactions.data ?? []} />
+        <OverviewTab
+          client={client}
+          accounts={accounts.data ?? []}
+          transactions={transactions.data ?? []}
+        />
       )}
       {tab === "transactions" && (
         <TransactionsTab
@@ -97,15 +108,65 @@ export function FinancePage() {
 
 // --- Visão geral ---------------------------------------------------------
 
-function OverviewTab({ client, transactions }: { client: FinanceApi; transactions: Transaction[] }) {
+function OverviewTab({
+  client,
+  accounts,
+  transactions,
+}: {
+  client: FinanceApi;
+  accounts: Account[];
+  transactions: Transaction[];
+}) {
   return (
     <>
-      <NetWorthView client={client} />
-      <CashFlowView client={client} />
+      <AccountBalances client={client} accounts={accounts} />
       <Section title="Gastos por categoria" icon={PiggyBank}>
         <CategorySpendBreakdown transactions={transactions} />
       </Section>
     </>
+  );
+}
+
+function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
+  const netWorth = useAsync(() => client.netWorth(), [client]);
+  const balanceByAccount = useMemo(() => {
+    const map = new Map<string, Balance>();
+    for (const balance of netWorth.data?.accounts ?? []) {
+      map.set(balance.account_id, balance);
+    }
+    return map;
+  }, [netWorth.data]);
+
+  return (
+    <Section
+      title="Saldo das contas"
+      icon={Wallet}
+      actions={<Button onClick={() => netWorth.run()}>Atualizar</Button>}
+    >
+      {netWorth.status === "error" && (
+        <ErrorText>Não foi possível carregar os saldos.</ErrorText>
+      )}
+      {accounts.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhuma conta cadastrada ainda.</p>
+      ) : (
+        <ul className="flex flex-col gap-1 text-sm">
+          {accounts.map((account) => {
+            const balance = balanceByAccount.get(account.account_id);
+            return (
+              <li
+                key={account.account_id}
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+              >
+                <span className="font-medium">{account.name}</span>
+                <span className="font-medium tabular-nums text-gray-900">
+                  {moneySuffixed(balance?.balance_minor ?? 0, account.currency)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Section>
   );
 }
 
@@ -168,83 +229,6 @@ function Accounts({
           <li key={account.account_id} className="rounded border border-gray-200 px-3 py-2">
             <span className="font-medium">{account.name}</span>
             <span className="text-gray-500"> · {account.currency}</span>
-          </li>
-        ))}
-      </ul>
-    </Section>
-  );
-}
-
-function NetWorthView({ client }: { client: FinanceApi }) {
-  const netWorth = useAsync(() => client.netWorth(), [client]);
-  return (
-    <Section
-      title="Patrimônio líquido"
-      icon={Scale}
-      actions={<Button onClick={() => netWorth.run()}>Atualizar</Button>}
-    >
-      {netWorth.status === "error" && (
-        <ErrorText>Não foi possível carregar o patrimônio líquido.</ErrorText>
-      )}
-      <ul className="flex flex-col gap-1 text-sm">
-        {(netWorth.data?.currencies ?? []).map((total) => (
-          <li key={total.currency}>
-            <span className="font-medium">{money(total.total_minor, total.currency)}</span>
-          </li>
-        ))}
-        {netWorth.status === "ready" && netWorth.data?.currencies.length === 0 && (
-          <li className="text-gray-500">Nenhum saldo ainda.</li>
-        )}
-      </ul>
-    </Section>
-  );
-}
-
-function CashFlowView({ client }: { client: FinanceApi }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const flow = useAsync(
-    () => client.cashFlow(new Date(from).toISOString(), new Date(to).toISOString()),
-    [client, from, to],
-    { immediate: false },
-  );
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    void flow.run();
-  }
-
-  return (
-    <Section title="Fluxo de caixa" icon={TrendingUp}>
-      <form onSubmit={submit} className="mb-3 flex items-end gap-2">
-        <Field label="De">
-          <TextInput
-            type="datetime-local"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Até">
-          <TextInput
-            type="datetime-local"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            required
-          />
-        </Field>
-        <Button type="submit">Calcular</Button>
-      </form>
-      {flow.status === "error" && (
-        <ErrorText>Não foi possível calcular o fluxo de caixa.</ErrorText>
-      )}
-      <ul className="flex flex-col gap-1 text-sm">
-        {(flow.data?.flows ?? []).map((currencyFlow) => (
-          <li key={currencyFlow.currency}>
-            <span className="font-medium">{currencyFlow.currency}</span>: entradas{" "}
-            {money(currencyFlow.inflow_minor, currencyFlow.currency)}, saídas{" "}
-            {money(currencyFlow.outflow_minor, currencyFlow.currency)}, líquido{" "}
-            {money(currencyFlow.net_minor, currencyFlow.currency)}
           </li>
         ))}
       </ul>
@@ -316,6 +300,7 @@ function TransactionsTab({
   accounts: Account[];
   transactions: AsyncResult<Transaction[]>;
 }) {
+  const categories = useAsync(() => client.listCategories(), [client]);
   const [accountFilter, setAccountFilter] = useState("");
   const [kindFilter, setKindFilter] = useState<TxKindFilter>("all");
   const [search, setSearch] = useState("");
@@ -402,6 +387,7 @@ function TransactionsTab({
         <NewTransactionForm
           client={client}
           accounts={accounts}
+          categories={categories.data ?? []}
           onCreated={() => {
             setShowForm(false);
             void transactions.run();
@@ -424,23 +410,28 @@ function TransactionsTab({
 function NewTransactionForm({
   client,
   accounts,
+  categories,
   onCreated,
 }: {
   client: FinanceApi;
   accounts: Account[];
+  categories: Category[];
   onCreated: () => void;
 }) {
   const [accountId, setAccountId] = useState("");
-  const [kind, setKind] = useState<"expense" | "income">("expense");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("BRL");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [expenseType, setExpenseType] = useState<ExpenseType>("variable");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accountId && accounts.length > 0) setAccountId(accounts[0].account_id);
   }, [accounts, accountId]);
+
+  const parsedAmount = parseMoneyInput(amount);
+  const isExpense = parsedAmount < 0;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -448,15 +439,15 @@ function NewTransactionForm({
     try {
       const input = {
         account_id: accountId,
-        amount_minor: parseMoneyInput(amount),
+        amount_minor: Math.abs(parsedAmount),
         currency: currency.trim().toUpperCase(),
         description: description.trim(),
         category: category.trim() || null,
       };
-      if (kind === "expense") {
-        await client.recordExpense(input);
+      if (isExpense) {
+        await client.recordExpense({ ...input, expense_type: expenseType });
       } else {
-        await client.recordTransaction(input);
+        await client.recordTransaction({ ...input, amount_minor: parsedAmount });
       }
       onCreated();
     } catch {
@@ -479,17 +470,10 @@ function NewTransactionForm({
             ))}
           </Select>
         </Field>
-        <Field label="Tipo">
-          <Select value={kind} onChange={(e) => setKind(e.target.value as "expense" | "income")}>
-            <option value="expense">Despesa</option>
-            <option value="income">Receita</option>
-          </Select>
-        </Field>
-        <Field label="Valor">
+        <Field label="Valor (negativo = despesa, positivo = receita)">
           <TextInput
             type="number"
             step="0.01"
-            min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="text-right tabular-nums"
@@ -507,8 +491,26 @@ function NewTransactionForm({
           />
         </Field>
         <Field label="Categoria">
-          <TextInput value={category} onChange={(e) => setCategory(e.target.value)} />
+          <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((c) => (
+              <option key={c.category_id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
         </Field>
+        {isExpense && (
+          <Field label="Classificação">
+            <Select
+              value={expenseType}
+              onChange={(e) => setExpenseType(e.target.value as ExpenseType)}
+            >
+              <option value="variable">Variável</option>
+              <option value="fixed">Fixa</option>
+            </Select>
+          </Field>
+        )}
         <Button type="submit">Salvar</Button>
       </form>
       {error && <ErrorText>{error}</ErrorText>}
@@ -538,6 +540,7 @@ function TransactionsTable({
           <tr>
             <th className="px-4 py-2 font-medium">Descrição</th>
             <th className="px-4 py-2 font-medium">Categoria</th>
+            <th className="px-4 py-2 font-medium">Classificação</th>
             <th className="px-4 py-2 font-medium">Conta</th>
             <th className="px-4 py-2 font-medium">Data</th>
             <th className="px-4 py-2 text-right font-medium">Valor</th>
@@ -554,6 +557,13 @@ function TransactionsTable({
               </td>
               <td className="px-4 py-2.5">
                 <CategoryBadge category={t.category} />
+              </td>
+              <td className="px-4 py-2.5 text-gray-500">
+                {t.expense_type === "fixed"
+                  ? "Fixa"
+                  : t.expense_type === "variable"
+                    ? "Variável"
+                    : "—"}
               </td>
               <td className="px-4 py-2.5 text-gray-500">{accountName(t.account_id)}</td>
               <td className="px-4 py-2.5 text-gray-500">{shortDate(t.occurred_at)}</td>

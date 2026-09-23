@@ -32,6 +32,7 @@ from mylife.finance import (
     CashFlow,
     Category,
     DuplicateCategoryError,
+    ExpenseType,
     FinanceService,
     InvalidBillRecurrenceError,
     NetWorth,
@@ -72,6 +73,7 @@ class ExpenseRequest(BaseModel):
     currency: str = Field(min_length=3, max_length=3)
     description: str = Field(min_length=1)
     category: str | None = None
+    expense_type: ExpenseType | None = None
 
 
 class TransactionRequest(BaseModel):
@@ -229,6 +231,7 @@ def record_expense(
             request.currency,
             request.description,
             category=request.category,
+            expense_type=request.expense_type,
             now=utcnow(),
             correlation_id=correlation_id,
         )
