@@ -35,7 +35,9 @@ from mylife.finance.bills_service import (
 from mylife.finance.models import (
     EXPENSE_CREATED,
     POSITION_VALUED,
+    TRANSACTION_DELETED,
     TRANSACTION_IMPORTED,
+    TRANSACTION_UPDATED,
     Account,
     AccountRow,
     Category,
@@ -46,7 +48,11 @@ from mylife.finance.models import (
     PositionPayload,
     PositionValued,
     Transaction,
+    TransactionDeleted,
+    TransactionDeletedPayload,
     TransactionImported,
+    TransactionUpdated,
+    TransactionUpdatedPayload,
 )
 from mylife.finance.net_worth import (
     Balance,
@@ -61,6 +67,7 @@ from mylife.finance.service import (
     FinanceService,
     UnknownAccountError,
     UnknownCategoryError,
+    UnknownTransactionError,
 )
 
 __all__ = [
@@ -71,7 +78,9 @@ __all__ = [
     "BILL_UPDATED",
     "EXPENSE_CREATED",
     "POSITION_VALUED",
+    "TRANSACTION_DELETED",
     "TRANSACTION_IMPORTED",
+    "TRANSACTION_UPDATED",
     "Account",
     "AccountRow",
     "Balance",
@@ -109,8 +118,13 @@ __all__ = [
     "PositionPayload",
     "PositionValued",
     "Transaction",
+    "TransactionDeleted",
+    "TransactionDeletedPayload",
     "TransactionImported",
+    "TransactionUpdated",
+    "TransactionUpdatedPayload",
     "UnknownAccountError",
     "UnknownBillError",
     "UnknownCategoryError",
+    "UnknownTransactionError",
 ]
