@@ -9,6 +9,7 @@ override them through the environment.
 import secrets
 from functools import lru_cache
 
+from cryptography.fernet import Fernet
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -74,6 +75,19 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     whatsapp_phone_number_id: str | None = None
     whatsapp_access_token: str | None = None
+
+    # Third-party credential vault (T4.9). Encrypts secrets such as a user's
+    # Open Finance aggregator API key at rest (Fernet). Like ``jwt_secret``,
+    # this has NO hardcoded value: it defaults to a random per-process value so
+    # local dev/tests work without config, but any deployment that restarts or
+    # runs more than one process MUST set MYLIFE_CREDENTIAL_ENCRYPTION_KEY (a
+    # stable Fernet key, e.g. ``Fernet.generate_key().decode()``) or every
+    # previously stored secret becomes undecryptable.
+    credential_encryption_key: str = Field(default_factory=lambda: Fernet.generate_key().decode())
+
+    # Open Finance connector (T4.9). Pierre Finance is the first aggregator;
+    # the base URL is overridable for tests and any future sandbox.
+    pierre_finance_base_url: str = "https://www.pierre.finance"
 
     @property
     def broker_url(self) -> str:

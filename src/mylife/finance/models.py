@@ -21,6 +21,7 @@ from mylife.db.base import Base
 
 EXPENSE_CREATED: Final = "finance.expense_created"
 TRANSACTION_IMPORTED: Final = "finance.transaction_imported"
+OPENFINANCE_TRANSACTION_IMPORTED: Final = "finance.openfinance_transaction_imported"
 POSITION_VALUED: Final = "finance.position_valued"
 FINANCE_SOURCE = "finance"
 
@@ -30,9 +31,14 @@ ExpenseType = Literal["fixed", "variable"]
 KIND_BY_TYPE: Final[dict[str, str]] = {
     EXPENSE_CREATED: "expense",
     TRANSACTION_IMPORTED: "import",
+    OPENFINANCE_TRANSACTION_IMPORTED: "openfinance_import",
 }
 # The finance event types that move money (transactions), vs. valuations.
-TRANSACTION_TYPES: Final[tuple[str, ...]] = (EXPENSE_CREATED, TRANSACTION_IMPORTED)
+TRANSACTION_TYPES: Final[tuple[str, ...]] = (
+    EXPENSE_CREATED,
+    TRANSACTION_IMPORTED,
+    OPENFINANCE_TRANSACTION_IMPORTED,
+)
 
 
 class AccountRow(Base):
@@ -45,6 +51,13 @@ class AccountRow(Base):
     name: Mapped[str] = mapped_column(String)
     currency: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Set when the account was auto-created/linked by a pull connector (T4.9)
+    # rather than opened by hand — e.g. ``external_source="openfinance"``,
+    # ``external_id=<the aggregator's account id>``. Both null for a
+    # hand-opened account. Unique together with ``user_id`` when set (enforced
+    # in ``FinanceService.get_or_create_external_account`` — see T4.9 spec §6).
+    external_source: Mapped[str | None] = mapped_column(String, nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class Account(BaseModel):
@@ -89,6 +102,20 @@ class TransactionImported(LifeEvent[FinancePayload]):
     """Emitted when a transaction is imported from a source (Finance context)."""
 
     event_type: Literal["finance.transaction_imported"] = TRANSACTION_IMPORTED
+    schema_version: Literal[1] = 1
+
+
+class OpenFinanceTransactionImported(LifeEvent[FinancePayload]):
+    """Emitted when a transaction is imported via an Open Finance aggregator (T4.9).
+
+    Same payload shape as :class:`TransactionImported`; a distinct event type
+    so this data's provenance (aggregator-sourced, not a manual CSV) stays
+    visible on the timeline. See ``specs/domain/finance/openfinance-connector.md``.
+    """
+
+    event_type: Literal["finance.openfinance_transaction_imported"] = (
+        OPENFINANCE_TRANSACTION_IMPORTED
+    )
     schema_version: Literal[1] = 1
 
 

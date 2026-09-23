@@ -17,10 +17,9 @@ from sqlalchemy.orm import Session
 from mylife.core.events import EventBus, EventDispatchError, EventStore
 from mylife.core.events.store import _stored_utc
 from mylife.finance.models import (
-    EXPENSE_CREATED,
     FINANCE_SOURCE,
     KIND_BY_TYPE,
-    TRANSACTION_IMPORTED,
+    TRANSACTION_TYPES,
     Account,
     AccountRow,
     Category,
@@ -136,6 +135,49 @@ class FinanceService:
             )
             for row in rows
         ]
+
+    def get_or_create_external_account(
+        self,
+        user_id: uuid.UUID,
+        external_source: str,
+        external_id: str,
+        *,
+        name: str,
+        currency: str,
+        now: datetime,
+    ) -> Account:
+        """Return the account linked to ``(external_source, external_id)``, creating it once.
+
+        Used by pull connectors (T4.9) that auto-create/link accounts from an
+        aggregator's own account list instead of asking the user to pick one
+        (unlike the CSV connectors' caller-chosen ``account_id``). Idempotent:
+        a second call with the same external ref returns the same account.
+        """
+        row = self._session.scalars(
+            select(AccountRow).where(
+                AccountRow.user_id == user_id,
+                AccountRow.external_source == external_source,
+                AccountRow.external_id == external_id,
+            )
+        ).one_or_none()
+        if row is None:
+            row = AccountRow(
+                account_id=uuid.uuid4(),
+                user_id=user_id,
+                name=name.strip(),
+                currency=currency.strip().upper(),
+                created_at=now,
+                external_source=external_source,
+                external_id=external_id,
+            )
+            self._session.add(row)
+            self._session.commit()
+        return Account(
+            account_id=row.account_id,
+            name=row.name,
+            currency=row.currency,
+            created_at=_stored_utc(row.created_at),
+        )
 
     def create_category(self, user_id: uuid.UUID, name: str, *, now: datetime) -> Category:
         """Register a category for ``user_id``, rejecting a case-insensitive duplicate."""
@@ -288,7 +330,7 @@ class FinanceService:
         page = TimelineQueryService(self._session).query(
             TimelineQueryFilter(
                 user_id=user_id,
-                event_types=(EXPENSE_CREATED, TRANSACTION_IMPORTED),
+                event_types=TRANSACTION_TYPES,
                 limit=fetch_limit,
             )
         )

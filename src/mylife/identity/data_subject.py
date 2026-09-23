@@ -29,6 +29,7 @@ from mylife.goals.models import Goal, GoalRow
 from mylife.goals.service import _to_goal
 from mylife.identity.audit import AuditEntry, AuditLogRow, AuditService
 from mylife.identity.consent import Consent, ConsentRow, ConsentService
+from mylife.identity.credential_vault import ThirdPartyCredentialRow
 from mylife.identity.models import CredentialRow, User, UserRow
 from mylife.identity.service import _to_user
 from mylife.knowledge.blob_store import BlobNotFoundError, BlobStore, FilesystemBlobStore
@@ -167,6 +168,10 @@ class DataSubjectService:
             ("raw_records", delete(RawRecordRow).where(RawRecordRow.user_id == user_id)),
             ("events", delete(EventRow).where(EventRow.user_id == user_id)),
             ("credentials", delete(CredentialRow).where(CredentialRow.user_id == user_id)),
+            (
+                "third_party_credentials",
+                delete(ThirdPartyCredentialRow).where(ThirdPartyCredentialRow.user_id == user_id),
+            ),
             ("users", delete(UserRow).where(UserRow.user_id == user_id)),
         ]
         deleted = {

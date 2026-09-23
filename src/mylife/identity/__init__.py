@@ -5,6 +5,7 @@ other domain references by ``user_id``. Authentication (T2.2), consent (T2.3),
 audit (T2.4) and data-subject rights (T2.5) build on this.
 """
 
+from mylife.identity.credential_vault import CredentialVault, ThirdPartyCredentialRow
 from mylife.identity.models import (
     Household,
     User,
@@ -21,10 +22,12 @@ from mylife.identity.service import (
 )
 
 __all__ = [
+    "CredentialVault",
     "DuplicateUserError",
     "Household",
     "IdentityService",
     "InvalidEmailError",
+    "ThirdPartyCredentialRow",
     "UnknownHouseholdError",
     "User",
     "UserRegistered",
