@@ -34,6 +34,7 @@ from mylife.finance.bills_service import (
 )
 from mylife.finance.models import (
     EXPENSE_CREATED,
+    OPENFINANCE_TRANSACTION_IMPORTED,
     POSITION_VALUED,
     TRANSACTION_DELETED,
     TRANSACTION_IMPORTED,
@@ -45,6 +46,7 @@ from mylife.finance.models import (
     ExpenseCreated,
     ExpenseType,
     FinancePayload,
+    OpenFinanceTransactionImported,
     PositionPayload,
     PositionValued,
     Transaction,
@@ -61,6 +63,14 @@ from mylife.finance.net_worth import (
     CurrencyTotal,
     NetWorth,
     NetWorthService,
+)
+from mylife.finance.openfinance import (
+    OPENFINANCE_SOURCE,
+    PIERRE_PROVIDER,
+    MissingCredentialError,
+    PierreApiError,
+    PierreFinanceClient,
+    PierreFinanceConnector,
 )
 from mylife.finance.service import (
     DuplicateCategoryError,
@@ -113,8 +123,16 @@ __all__ = [
     "FinancePayload",
     "FinanceService",
     "InvalidBillRecurrenceError",
+    "MissingCredentialError",
     "NetWorth",
     "NetWorthService",
+    "OPENFINANCE_SOURCE",
+    "OPENFINANCE_TRANSACTION_IMPORTED",
+    "OpenFinanceTransactionImported",
+    "PIERRE_PROVIDER",
+    "PierreApiError",
+    "PierreFinanceClient",
+    "PierreFinanceConnector",
     "PositionPayload",
     "PositionValued",
     "Transaction",

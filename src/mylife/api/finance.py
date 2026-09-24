@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from mylife.api.auth import get_current_user
-from mylife.api.deps import get_event_bus
+from mylife.api.deps import get_event_bus, get_pierre_client
 from mylife.connectors import ConnectorRunner, ConsentRequiredError, FetchContext
 from mylife.core.config import get_settings
 from mylife.core.context import get_correlation_id, new_correlation_id
@@ -46,8 +46,16 @@ from mylife.finance import (
 from mylife.finance.bank_csv import BankCsvConnector
 from mylife.finance.bill_alerts import BillAlertsService
 from mylife.finance.bills import Recurrence
+from mylife.finance.openfinance import (
+    PIERRE_PROVIDER,
+    MissingCredentialError,
+    PierreApiError,
+    PierreFinanceClient,
+    PierreFinanceConnector,
+)
 from mylife.identity import User
 from mylife.identity.consent import ConsentService
+from mylife.identity.credential_vault import CredentialVault
 from mylife.notifications import NotificationOutcome, build_channels_from_settings
 
 router = APIRouter(tags=["finance"])
@@ -115,6 +123,21 @@ class BankImportRequest(BaseModel):
 
 class BankImportResult(BaseModel):
     """The outcome of a bank CSV import."""
+
+    source: str
+    raw_ingested: int
+    events_created: int
+    skipped_duplicates: int
+
+
+class OpenFinanceCredentialRequest(BaseModel):
+    """Request to store the user's Pierre Finance API key."""
+
+    api_key: str = Field(min_length=1)
+
+
+class OpenFinanceSyncResult(BaseModel):
+    """The outcome of an Open Finance sync."""
 
     source: str
     raw_ingested: int
@@ -425,6 +448,76 @@ def import_bank_csv(
     except ConsentRequiredError as exc:
         raise HTTPException(status_code=403, detail="consent required for 'bank'") from exc
     return BankImportResult(
+        source=result.source,
+        raw_ingested=result.raw_ingested,
+        events_created=result.events_created,
+        skipped_duplicates=result.skipped_duplicates,
+    )
+
+
+@router.post("/finance/connectors/openfinance/credentials", status_code=204)
+def store_openfinance_credentials(
+    request: OpenFinanceCredentialRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    """Store (or replace) the authenticated user's Pierre Finance API key.
+
+    Auth only, not consent-gated: storing a key is setup, not ingestion — the
+    sync endpoint below is what's gated on consent scope ``"openfinance"``.
+    """
+    settings = get_settings()
+    CredentialVault(session, settings.credential_encryption_key).store(
+        current_user.user_id, PIERRE_PROVIDER, request.api_key, now=utcnow()
+    )
+
+
+@router.delete("/finance/connectors/openfinance/credentials", status_code=204)
+def delete_openfinance_credentials(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    """Disconnect the authenticated user's Pierre Finance account."""
+    settings = get_settings()
+    CredentialVault(session, settings.credential_encryption_key).delete(
+        current_user.user_id, PIERRE_PROVIDER
+    )
+
+
+@router.post(
+    "/finance/connectors/openfinance/sync", response_model=OpenFinanceSyncResult, status_code=201
+)
+def sync_openfinance(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+    client: Annotated[PierreFinanceClient, Depends(get_pierre_client)],
+) -> OpenFinanceSyncResult:
+    """Pull accounts/transactions/balances from Pierre Finance for the user.
+
+    Consent-gated on scope ``"openfinance"`` (fail-closed): without consent →
+    ``403``; no Pierre API key stored → ``409``; a Pierre API error → ``502``.
+    Accounts are auto-created/linked from Pierre's own account list — no
+    ``account_id`` to pick, unlike the bank CSV import above.
+    """
+    correlation_id = get_correlation_id() or new_correlation_id()
+    vault = CredentialVault(session, get_settings().credential_encryption_key)
+    connector = PierreFinanceConnector(FinanceService(session, bus), vault, client, now=utcnow())
+    try:
+        result = ConnectorRunner(session, bus).sync(
+            connector,
+            FetchContext(user_id=current_user.user_id, correlation_id=correlation_id),
+            consent=ConsentService(session, bus),
+        )
+    except ConsentRequiredError as exc:
+        raise HTTPException(status_code=403, detail="consent required for 'openfinance'") from exc
+    except MissingCredentialError as exc:
+        raise HTTPException(
+            status_code=409, detail="connect your Pierre Finance account first"
+        ) from exc
+    except PierreApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return OpenFinanceSyncResult(
         source=result.source,
         raw_ingested=result.raw_ingested,
         events_created=result.events_created,

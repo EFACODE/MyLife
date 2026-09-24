@@ -26,6 +26,7 @@ from mylife.forecast import outcome as _forecast_outcome  # noqa: F401
 from mylife.goals import models as _goals_models  # noqa: F401
 from mylife.identity import audit as _identity_audit  # noqa: F401
 from mylife.identity import consent as _identity_consent  # noqa: F401
+from mylife.identity import credential_vault as _identity_credential_vault  # noqa: F401
 from mylife.identity import models as _identity_models  # noqa: F401
 from mylife.knowledge import extraction as _knowledge_extraction  # noqa: F401
 from mylife.knowledge import models as _knowledge_models  # noqa: F401
