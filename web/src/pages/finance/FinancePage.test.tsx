@@ -16,6 +16,10 @@ const client = vi.hoisted(() => ({
   deleteTransaction: vi.fn(),
   netWorth: vi.fn(),
   importBank: vi.fn(),
+  openFinanceStatus: vi.fn(),
+  connectOpenFinance: vi.fn(),
+  disconnectOpenFinance: vi.fn(),
+  syncOpenFinance: vi.fn(),
   listBills: vi.fn(),
   registerBill: vi.fn(),
   updateBill: vi.fn(),
@@ -92,6 +96,15 @@ describe("FinancePage", () => {
       accounts: [{ account_id: "a1", currency: "BRL", balance_minor: -25389, as_of: "x" }],
     });
     client.importBank.mockRejectedValue(new ApiError(403, "forbidden"));
+    client.openFinanceStatus.mockResolvedValue({ connected: false, updated_at: null });
+    client.connectOpenFinance.mockResolvedValue(undefined);
+    client.disconnectOpenFinance.mockResolvedValue(undefined);
+    client.syncOpenFinance.mockResolvedValue({
+      source: "openfinance",
+      raw_ingested: 3,
+      events_created: 3,
+      skipped_duplicates: 0,
+    });
     client.listBills.mockResolvedValue([
       {
         bill_id: "b1",
@@ -195,6 +208,64 @@ describe("FinancePage", () => {
     fireEvent.change(screen.getByLabelText("CSV"), { target: { value: "a,b" } });
     fireEvent.click(screen.getByText("Importar"));
     expect(await screen.findByText(/Conceda o consentimento 'bank' primeiro/)).toBeInTheDocument();
+  });
+
+  it("conecta a Pierre Finance informando a chave de API na aba Configurações", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+    fireEvent.change(await screen.findByLabelText("Chave de API (sk-...)"), {
+      target: { value: "sk-test" },
+    });
+    fireEvent.click(screen.getByText("Conectar"));
+    await waitFor(() => expect(client.connectOpenFinance).toHaveBeenCalledWith("sk-test"));
+  });
+
+  it("mostra sincronizar/desconectar quando a Pierre Finance já está conectada", async () => {
+    client.openFinanceStatus.mockResolvedValue({
+      connected: true,
+      updated_at: "2026-09-24T00:00:00Z",
+    });
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    expect(await screen.findByText(/Conectado desde/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Sincronizar agora"));
+    expect(
+      await screen.findByText("3 evento(s) importado(s) (0 duplicado(s) ignorado(s))."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Desconectar"));
+    await waitFor(() => expect(client.disconnectOpenFinance).toHaveBeenCalled());
+  });
+
+  it("mostra a dica de consentimento ao sincronizar a Pierre Finance sem consentimento (403)", async () => {
+    client.openFinanceStatus.mockResolvedValue({
+      connected: true,
+      updated_at: "2026-09-24T00:00:00Z",
+    });
+    client.syncOpenFinance.mockRejectedValue(new ApiError(403, "forbidden"));
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    fireEvent.click(await screen.findByText("Sincronizar agora"));
+    expect(
+      await screen.findByText(/Conceda o consentimento 'openfinance' primeiro/),
+    ).toBeInTheDocument();
+  });
+
+  it("avisa para conectar a chave quando a sincronização retorna 409", async () => {
+    client.openFinanceStatus.mockResolvedValue({
+      connected: true,
+      updated_at: "2026-09-24T00:00:00Z",
+    });
+    client.syncOpenFinance.mockRejectedValue(new ApiError(409, "missing credential"));
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    fireEvent.click(await screen.findByText("Sincronizar agora"));
+    expect(
+      await screen.findByText(/Conecte sua chave de API da Pierre Finance primeiro/),
+    ).toBeInTheDocument();
   });
 
   it("mostra a tabela de transações com cards e categorias", async () => {

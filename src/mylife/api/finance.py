@@ -145,6 +145,13 @@ class OpenFinanceSyncResult(BaseModel):
     skipped_duplicates: int
 
 
+class OpenFinanceCredentialStatus(BaseModel):
+    """Whether the user has a Pierre Finance API key stored (never the secret itself)."""
+
+    connected: bool
+    updated_at: datetime | None
+
+
 class RegisterBillRequest(BaseModel):
     """Request to register a recurring or one-off bill."""
 
@@ -453,6 +460,25 @@ def import_bank_csv(
         events_created=result.events_created,
         skipped_duplicates=result.skipped_duplicates,
     )
+
+
+@router.get(
+    "/finance/connectors/openfinance/credentials", response_model=OpenFinanceCredentialStatus
+)
+def get_openfinance_credential_status(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> OpenFinanceCredentialStatus:
+    """Whether the authenticated user has a Pierre Finance API key stored.
+
+    Never returns the secret itself — just enough for the UI to show a
+    connected/not-connected state.
+    """
+    settings = get_settings()
+    updated_at = CredentialVault(session, settings.credential_encryption_key).updated_at(
+        current_user.user_id, PIERRE_PROVIDER
+    )
+    return OpenFinanceCredentialStatus(connected=updated_at is not None, updated_at=updated_at)
 
 
 @router.post("/finance/connectors/openfinance/credentials", status_code=204)

@@ -148,3 +148,26 @@ def test_delete_credentials_then_sync_is_409(client: TestClient) -> None:
     response = client.post("/finance/connectors/openfinance/sync", headers=auth)
 
     assert response.status_code == 409
+
+
+def test_credential_status_reflects_connect_and_disconnect(client: TestClient) -> None:
+    auth = _auth(client)
+
+    status = client.get("/finance/connectors/openfinance/credentials", headers=auth).json()
+    assert status == {"connected": False, "updated_at": None}
+
+    client.post(
+        "/finance/connectors/openfinance/credentials", json={"api_key": "sk-test"}, headers=auth
+    )
+    status = client.get("/finance/connectors/openfinance/credentials", headers=auth).json()
+    assert status["connected"] is True
+    assert status["updated_at"] is not None
+
+    client.delete("/finance/connectors/openfinance/credentials", headers=auth)
+    status = client.get("/finance/connectors/openfinance/credentials", headers=auth).json()
+    assert status == {"connected": False, "updated_at": None}
+
+
+def test_credential_status_requires_auth(client: TestClient) -> None:
+    response = client.get("/finance/connectors/openfinance/credentials")
+    assert response.status_code == 401

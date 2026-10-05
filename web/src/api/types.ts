@@ -355,6 +355,20 @@ export interface BankImportResult {
   skipped_duplicates: number;
 }
 
+// --- Open Finance connector (T4.9) ---
+
+export interface OpenFinanceCredentialStatus {
+  connected: boolean;
+  updated_at: string | null;
+}
+
+export interface OpenFinanceSyncResult {
+  source: string;
+  raw_ingested: number;
+  events_created: number;
+  skipped_duplicates: number;
+}
+
 export interface ExpenseInput {
   account_id: string;
   amount_minor: number;

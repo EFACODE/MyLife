@@ -36,6 +36,8 @@ import type {
   Milestone,
   NotificationOutcome,
   NotificationPreference,
+  OpenFinanceCredentialStatus,
+  OpenFinanceSyncResult,
   RelationshipRecord,
   SearchHit,
   NetWorth,
@@ -273,6 +275,31 @@ export class ApiClient {
     return this.request<BankImportResult>("/finance/connectors/bank/import", {
       method: "POST",
       body: { account_id: accountId, csv },
+    });
+  }
+
+  // --- Open Finance connector (T4.9) ---
+
+  openFinanceStatus(): Promise<OpenFinanceCredentialStatus> {
+    return this.request<OpenFinanceCredentialStatus>("/finance/connectors/openfinance/credentials");
+  }
+
+  connectOpenFinance(apiKey: string): Promise<void> {
+    return this.request<void>("/finance/connectors/openfinance/credentials", {
+      method: "POST",
+      body: { api_key: apiKey },
+    });
+  }
+
+  disconnectOpenFinance(): Promise<void> {
+    return this.request<void>("/finance/connectors/openfinance/credentials", {
+      method: "DELETE",
+    });
+  }
+
+  syncOpenFinance(): Promise<OpenFinanceSyncResult> {
+    return this.request<OpenFinanceSyncResult>("/finance/connectors/openfinance/sync", {
+      method: "POST",
     });
   }
 
