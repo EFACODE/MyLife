@@ -229,13 +229,31 @@ describe("FinancePage", () => {
     goToTab("Configurações");
 
     expect(await screen.findByText(/Conectado desde/)).toBeInTheDocument();
+    client.listAccounts.mockClear();
+    client.listTransactions.mockClear();
     fireEvent.click(screen.getByText("Sincronizar agora"));
     expect(
       await screen.findByText("3 evento(s) importado(s) (0 duplicado(s) ignorado(s))."),
     ).toBeInTheDocument();
+    await waitFor(() => expect(client.listAccounts).toHaveBeenCalled());
+    await waitFor(() => expect(client.listTransactions).toHaveBeenCalled());
 
     fireEvent.click(screen.getByText("Desconectar"));
     await waitFor(() => expect(client.disconnectOpenFinance).toHaveBeenCalled());
+  });
+
+  it("mascara a chave de API da Pierre Finance por padrão e permite revelar", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    const input = await screen.findByLabelText("Chave de API (sk-...)");
+    expect(input).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByText("Mostrar"));
+    expect(input).toHaveAttribute("type", "text");
+
+    fireEvent.click(screen.getByText("Ocultar"));
+    expect(input).toHaveAttribute("type", "password");
   });
 
   it("mostra a dica de consentimento ao sincronizar a Pierre Finance sem consentimento (403)", async () => {
