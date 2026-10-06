@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -24,20 +24,59 @@ describe("Layout", () => {
     );
   });
 
-  it("renders the sidebar nav, logout, and the routed page", async () => {
-    render(
+  function renderLayout(path = "/") {
+    return render(
       <AuthProvider>
-        <MemoryRouter initialEntries={["/"]}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<div>dashboard content</div>} />
+              <Route path="/finance" element={<div>finance content</div>} />
             </Route>
           </Routes>
         </MemoryRouter>
       </AuthProvider>,
     );
-    expect(screen.getByText("Painel")).toBeInTheDocument();
-    expect(screen.getByText("Sair")).toBeInTheDocument();
+  }
+
+  it("renders the sidebar nav, logout, and the routed page", async () => {
+    renderLayout();
+    expect(screen.getByRole("link", { name: "Painel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sair" })).toBeInTheDocument();
     expect(await screen.findByText("dashboard content")).toBeInTheDocument();
+  });
+
+  it("shows the current page title in the mobile top bar", async () => {
+    renderLayout("/finance");
+    expect(await screen.findByText("finance content")).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toHaveTextContent("Finanças");
+  });
+
+  it("opens the mobile drawer and closes it on navigation", async () => {
+    renderLayout();
+    const toggle = screen.getByRole("button", { name: "Abrir menu" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.click(screen.getByRole("link", { name: "Finanças" }));
+    expect(await screen.findByText("finance content")).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("closes the mobile drawer with Escape and the close button", () => {
+    renderLayout();
+    const toggle = screen.getByRole("button", { name: "Abrir menu" });
+
+    fireEvent.click(toggle);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name: "Fechar menu" }));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 });

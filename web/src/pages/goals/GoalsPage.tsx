@@ -78,7 +78,7 @@ function CreateGoal({ client, onCreated }: { client: GoalsApi; onCreated: () => 
 
   return (
     <Section title="Criar meta">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="Título">
           <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required />
         </Field>
@@ -124,7 +124,7 @@ function RecordMilestone({ client, onRecorded }: { client: GoalsApi; onRecorded:
 
   return (
     <Section title="Registrar marco">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="Id da meta">
           <TextInput value={goalId} onChange={(e) => setGoalId(e.target.value)} required />
         </Field>

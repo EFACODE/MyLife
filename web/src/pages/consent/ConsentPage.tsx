@@ -37,7 +37,7 @@ export function ConsentPage() {
 
   return (
     <Section title="Consentimentos">
-      <form onSubmit={grant} className="mb-4 flex items-end gap-2">
+      <form onSubmit={grant} className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Escopo (ex.: banco, saúde)">
           <TextInput value={scope} onChange={(e) => setScope(e.target.value)} required />
         </Field>
@@ -53,7 +53,7 @@ export function ConsentPage() {
         {(consents.data ?? []).map((consent) => (
           <li
             key={consent.scope}
-            className="flex items-center justify-between rounded border border-gray-200 px-3 py-2 text-sm"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded border border-gray-200 px-3 py-2 text-sm"
           >
             <span>
               <span className="font-medium">{consent.scope}</span>

@@ -216,7 +216,7 @@ function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: A
             return (
               <li
                 key={account.account_id}
-                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2"
               >
                 <span className="font-medium">{account.name}</span>
                 <span className="font-medium tabular-nums text-gray-900">
@@ -277,7 +277,7 @@ function UserProfile({ client }: { client: FinanceApi }) {
       {user.status === "error" && (
         <ErrorText>Não foi possível carregar os dados do usuário.</ErrorText>
       )}
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="E-mail">
           <TextInput value={user.data?.email ?? ""} disabled readOnly />
         </Field>
@@ -354,7 +354,7 @@ function Accounts({
 
   return (
     <Section title="Contas" icon={Wallet}>
-      <form onSubmit={create} className="mb-4 flex items-end gap-2">
+      <form onSubmit={create} className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Nome">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
@@ -372,7 +372,7 @@ function Accounts({
               key={account.account_id}
               className="rounded border border-gray-200 px-3 py-2"
             >
-              <form onSubmit={saveEdit} className="flex items-end gap-2">
+              <form onSubmit={saveEdit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
                 <Field label="Nome">
                   <TextInput
                     value={editingName}
@@ -399,8 +399,8 @@ function Accounts({
               key={account.account_id}
               className="rounded border border-gray-200 px-3 py-2"
             >
-              <div className="flex items-center justify-between">
-                <span>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <span className="min-w-0 break-words">
                   <span className="font-medium">{account.name}</span>
                   <span className="text-gray-500"> · {account.currency}</span>
                 </span>
@@ -578,7 +578,7 @@ function OpenFinanceConnect({
               Desconectar
             </button>
           </div>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             <Field label="Buscar desde (backfill)">
               <TextInput
                 type="date"
@@ -597,7 +597,7 @@ function OpenFinanceConnect({
           </div>
         </div>
       ) : (
-        <form onSubmit={connect} className="flex flex-wrap items-end gap-2">
+        <form onSubmit={connect} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
           <Field label="Chave de API (sk-...)">
             <div className="flex items-center gap-1">
               <TextInput
@@ -607,11 +607,12 @@ function OpenFinanceConnect({
                 placeholder="sk-..."
                 autoComplete="off"
                 required
+                className="min-w-0 flex-1"
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey((v) => !v)}
-                className="shrink-0 text-xs text-gray-500 hover:underline"
+                className="shrink-0 px-2 py-2 text-xs text-gray-500 hover:underline"
               >
                 {showApiKey ? "Ocultar" : "Mostrar"}
               </button>
@@ -687,7 +688,7 @@ function TransactionsTab({
 
   return (
     <div>
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Total de transações"
           value={String(totals.count)}
@@ -705,7 +706,7 @@ function TransactionsTab({
           placeholder="Buscar transações..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm sm:min-w-[220px] sm:flex-1"
+          className="min-h-11 w-full rounded border border-gray-300 px-3 py-2 text-base sm:min-h-0 sm:min-w-[220px] sm:flex-1 sm:py-1.5 sm:text-sm"
         />
         <Select
           aria-label="Filtrar por conta"
@@ -1025,9 +1026,9 @@ function TransactionsTable({
     return <p className="text-sm text-gray-500">Nenhuma transação encontrada.</p>;
   }
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+    <div className="overflow-hidden rounded-lg border border-gray-200 md:overflow-x-auto">
+      <table className="block w-full text-sm md:table">
+        <thead className="hidden bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 md:table-header-group">
           <tr>
             <th className="px-4 py-2 font-medium">Descrição</th>
             <th className="px-4 py-2 font-medium">Categoria</th>
@@ -1038,48 +1039,62 @@ function TransactionsTable({
             <th className="px-4 py-2 text-right font-medium">Ações</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="block divide-y divide-gray-100 md:table-row-group">
           {transactions.map((t) => (
-            <tr key={t.event_id} className="hover:bg-gray-50">
-              <td className="px-4 py-2.5">
-                <div className="flex items-center gap-3">
+            <tr
+              key={t.event_id}
+              className="flex flex-wrap items-center gap-y-1.5 px-4 py-3 md:table-row md:p-0 md:hover:bg-gray-50"
+            >
+              <td className="order-1 w-2/3 pr-2 md:w-auto md:px-4 md:py-2.5">
+                <div className="flex min-w-0 items-center gap-3">
                   <CategoryAvatar label={t.description} category={t.category} />
-                  <span className="font-medium text-gray-900">{t.description}</span>
+                  <span className="min-w-0 break-words font-medium text-gray-900">
+                    {t.description}
+                  </span>
                 </div>
               </td>
-              <td className="px-4 py-2.5">
+              <td className="order-3 pr-2 md:px-4 md:py-2.5">
                 <CategoryBadge category={t.category} />
               </td>
-              <td className="px-4 py-2.5 text-gray-500">
+              <td
+                className={
+                  "order-3 pr-2 text-xs text-gray-500 md:table-cell md:px-4 md:py-2.5 md:text-sm" +
+                  (t.expense_type ? "" : " hidden")
+                }
+              >
                 {t.expense_type === "fixed"
                   ? "Fixa"
                   : t.expense_type === "variable"
                     ? "Variável"
                     : "—"}
               </td>
-              <td className="px-4 py-2.5 text-gray-500">{accountName(t.account_id)}</td>
-              <td className="px-4 py-2.5 text-gray-500">{shortDate(t.occurred_at)}</td>
+              <td className="order-3 pr-2 text-xs text-gray-500 md:px-4 md:py-2.5 md:text-sm">
+                {accountName(t.account_id)}
+              </td>
+              <td className="order-3 text-xs text-gray-500 md:px-4 md:py-2.5 md:text-sm">
+                {shortDate(t.occurred_at)}
+              </td>
               <td
                 className={
-                  "px-4 py-2.5 text-right font-medium " +
+                  "order-2 w-1/3 whitespace-nowrap text-right font-medium md:w-auto md:px-4 md:py-2.5 " +
                   (t.amount_minor < 0 ? "text-red-600" : "text-green-700")
                 }
               >
                 {money(t.amount_minor, t.currency)}
               </td>
-              <td className="px-4 py-2.5">
+              <td className="order-4 w-full pt-1 md:w-auto md:px-4 md:py-2.5">
                 <span className="flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => onEdit(t)}
-                    className="shrink-0 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                    className="shrink-0 rounded-lg border border-blue-200 px-4 py-2 text-sm md:px-3 md:py-1.5 md:text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
                   >
                     Editar
                   </button>
                   <button
                     type="button"
                     onClick={() => onDelete(t.event_id)}
-                    className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+                    className="shrink-0 rounded-lg border border-red-200 px-4 py-2 text-sm md:px-3 md:py-1.5 md:text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
                   >
                     Excluir
                   </button>
@@ -1152,7 +1167,7 @@ function RegisterCategory({
 
   return (
     <Section title="Cadastrar categoria" icon={PlusCircle}>
-      <form onSubmit={submit} className="flex items-end gap-2">
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Nome">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>
@@ -1197,7 +1212,7 @@ function RegisteredCategoriesList({
         {(categories.data ?? []).map((category) => (
           <li
             key={category.category_id}
-            className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+            className="flex items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2"
           >
             <CategoryBadge category={category.name} />
             <button
@@ -1247,10 +1262,10 @@ function CategorySpendBreakdown({ transactions }: { transactions: Transaction[] 
   return (
     <div className="flex flex-col gap-2">
       {rows.map((row) => (
-        <div key={row.category} className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="mb-2 flex items-center justify-between">
+        <div key={row.category} className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <CategoryBadge category={row.category === "Sem categoria" ? null : row.category} />
-            <span className="text-sm font-medium text-gray-900">{row.formatted}</span>
+            <span className="text-sm font-medium tabular-nums text-gray-900">{row.formatted}</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-gray-100">
             <div
@@ -1342,7 +1357,7 @@ function BillsSummary({ client }: { client: FinanceApi }) {
   }, [report.data]);
 
   return (
-    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
       <StatCard
         label="A vencer em breve"
         value={String(summary.dueSoonCount)}
@@ -1563,9 +1578,9 @@ function RegisteredBillsList({
       {bills.status === "ready" && (bills.data ?? []).length === 0 ? (
         <p className="text-sm text-gray-500">Nenhuma conta cadastrada ainda.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="md:overflow-x-auto">
+          <table className="block w-full text-left text-sm md:table">
+            <thead className="hidden md:table-header-group">
               <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
                 <th className="py-2 pr-3 font-medium">Beneficiário</th>
                 <th className="py-2 pr-3 text-right font-medium">Valor</th>
@@ -1575,45 +1590,46 @@ function RegisteredBillsList({
                 <th className="py-2 pl-3 text-right font-medium">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="block divide-y divide-gray-100 md:table-row-group">
               {(bills.data ?? []).map((bill) => (
                 <tr
                   key={bill.bill_id}
                   className={
-                    "transition-colors hover:bg-gray-50" + (bill.active ? "" : " opacity-60")
+                    "flex flex-wrap items-center gap-y-1.5 py-3 transition-colors md:table-row md:py-0 md:hover:bg-gray-50" + (bill.active ? "" : " opacity-60")
                   }
                 >
-                  <td className="py-3 pr-3">
-                    <span className="flex items-center gap-2">
+                  <td className="order-1 w-2/3 pr-2 md:w-auto md:py-3 md:pr-3">
+                    <span className="flex min-w-0 items-center gap-2">
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                         <Wallet className="h-3.5 w-3.5" />
                       </span>
-                      <span className="font-medium text-gray-900">{bill.payee}</span>
+                      <span className="min-w-0 break-words font-medium text-gray-900">{bill.payee}</span>
                       {!bill.active && (
                         <span className="text-xs text-gray-400">(cancelada)</span>
                       )}
                     </span>
                   </td>
-                  <td className="py-3 pr-3 text-right tabular-nums text-gray-700">
+                  <td className="order-2 w-1/3 whitespace-nowrap text-right font-medium tabular-nums text-gray-700 md:w-auto md:py-3 md:pr-3 md:font-normal">
                     {moneySuffixed(bill.amount_minor, bill.currency)}
                   </td>
-                  <td className="py-3 pr-3 text-gray-700">
+                  <td className="order-3 pr-3 text-xs text-gray-500 md:py-3 md:text-sm md:text-gray-700">
                     {bill.recurrence === "monthly"
                       ? `todo dia ${bill.due_day}`
                       : bill.due_at && shortDate(bill.due_at)}
                   </td>
-                  <td className="py-3 pr-3">
+                  <td className="order-3 pr-3 md:py-3">
                     {bill.category ? <CategoryBadge category={bill.category} /> : "—"}
                   </td>
-                  <td className="py-3 pr-3 text-gray-700">
+                  <td className="order-3 text-xs text-gray-500 md:py-3 md:pr-3 md:text-sm md:text-gray-700">
+                    <span className="md:hidden">Ocorrências: </span>
                     {bill.max_occurrences > 0 ? bill.max_occurrences : "Ilimitada"}
                   </td>
-                  <td className="py-3 pl-3">
+                  <td className="order-4 w-full pt-1 md:w-auto md:py-3 md:pl-3">
                     <span className="flex justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setEditingBillId(bill.bill_id)}
-                        className="shrink-0 rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
+                        className="shrink-0 rounded-lg border border-blue-200 px-4 py-2 text-sm md:px-3 md:py-1.5 md:text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
                       >
                         Editar
                       </button>
@@ -1621,7 +1637,7 @@ function RegisteredBillsList({
                         <button
                           type="button"
                           onClick={() => void cancel(bill.bill_id)}
-                          className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
+                          className="shrink-0 rounded-lg border border-red-200 px-4 py-2 text-sm md:px-3 md:py-1.5 md:text-xs font-medium text-red-700 transition-colors hover:bg-red-50"
                         >
                           Cancelar
                         </button>
@@ -1861,7 +1877,7 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
         </Button>
       }
     >
-      <div className="mb-3 flex flex-wrap items-end gap-2">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="De">
           <TextInput
             type="datetime-local"
@@ -1907,7 +1923,7 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
             <li
               key={key}
               className={
-                "flex items-center justify-between gap-2 rounded-lg border border-gray-200 border-l-4 px-4 py-3 transition-colors hover:bg-gray-50 " +
+                "flex flex-col gap-2 rounded-lg border border-gray-200 border-l-4 px-4 py-3 transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between " +
                 accent
               }
             >
@@ -1915,12 +1931,13 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
                 <StatusIcon className={"h-4 w-4 shrink-0 " + statusTextClass} />
                 <span className="font-medium text-gray-900">{occurrence.payee}</span>
                 <span className="text-gray-500">
-                  · {money(occurrence.amount_minor, occurrence.currency)} · vence em{" "}
+                  <span className="hidden sm:inline">· </span>
+                  {money(occurrence.amount_minor, occurrence.currency)} · vence em{" "}
                   {shortDate(occurrence.due_at)}
                 </span>
                 {occurrence.category && <CategoryBadge category={occurrence.category} />}
               </span>
-              <span className="flex shrink-0 items-center gap-2">
+              <span className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
                 <span className={"text-xs font-medium " + statusTextClass}>
                   {occurrence.paid ? "Paga" : occurrence.overdue ? "Vencida" : "A vencer"}
                 </span>
@@ -1929,7 +1946,7 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
                     type="button"
                     onClick={() => void markPaid(occurrence.bill_id, occurrence.due_at, key)}
                     disabled={payingKey === key}
-                    className="rounded-lg border border-green-200 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-50 disabled:opacity-50"
+                    className="rounded-lg border border-green-200 px-4 py-2 text-sm font-medium sm:px-3 sm:py-1.5 sm:text-xs text-green-700 transition-colors hover:bg-green-50 disabled:opacity-50"
                   >
                     {payingKey === key ? "Marcando…" : "Marcar como paga"}
                   </button>
@@ -2072,7 +2089,7 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-900">E-mails de alerta</h3>
-          <form onSubmit={addEmail} className="mb-2 flex items-end gap-2">
+          <form onSubmit={addEmail} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-end">
             <Field label="E-mail de alerta">
               <TextInput
                 type="email"
@@ -2094,7 +2111,7 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
             {(alertEmails.data ?? []).map((entry: AlertEmail) => (
               <li
                 key={entry.alert_email_id}
-                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2"
               >
                 <span>{entry.email}</span>
                 <button
@@ -2111,7 +2128,7 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
 
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-900">Telefones (WhatsApp)</h3>
-          <form onSubmit={addPhone} className="mb-2 flex items-end gap-2">
+          <form onSubmit={addPhone} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-end">
             <Field label="Número do WhatsApp">
               <TextInput
                 value={newPhone}
@@ -2132,7 +2149,7 @@ function AlertPreferences({ client }: { client: FinanceApi }) {
             {(alertPhones.data ?? []).map((entry: AlertPhone) => (
               <li
                 key={entry.alert_phone_id}
-                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded border border-gray-200 px-3 py-2"
               >
                 <span>{entry.phone}</span>
                 <button

@@ -1,6 +1,22 @@
+import {
+  Bot,
+  Brain,
+  FileClock,
+  HeartPulse,
+  LayoutDashboard,
+  LineChart,
+  PenLine,
+  ShieldCheck,
+  Target,
+  UserCheck,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+
 export interface NavItem {
   path: string;
   label: string;
+  icon: LucideIcon;
 }
 
 /**
@@ -8,15 +24,22 @@ export interface NavItem {
  * here as their pages land.
  */
 export const NAV: NavItem[] = [
-  { path: "/", label: "Painel" },
-  { path: "/capture", label: "Registrar" },
-  { path: "/finance", label: "Finanças" },
-  { path: "/health", label: "Saúde" },
-  { path: "/goals", label: "Metas" },
-  { path: "/knowledge", label: "Conhecimento" },
-  { path: "/assistant", label: "Assistente" },
-  { path: "/forecast", label: "Previsões" },
-  { path: "/consent", label: "Consentimentos" },
-  { path: "/audit", label: "Auditoria" },
-  { path: "/privacy", label: "Privacidade" },
+  { path: "/", label: "Painel", icon: LayoutDashboard },
+  { path: "/capture", label: "Registrar", icon: PenLine },
+  { path: "/finance", label: "Finanças", icon: Wallet },
+  { path: "/health", label: "Saúde", icon: HeartPulse },
+  { path: "/goals", label: "Metas", icon: Target },
+  { path: "/knowledge", label: "Conhecimento", icon: Brain },
+  { path: "/assistant", label: "Assistente", icon: Bot },
+  { path: "/forecast", label: "Previsões", icon: LineChart },
+  { path: "/consent", label: "Consentimentos", icon: UserCheck },
+  { path: "/audit", label: "Auditoria", icon: FileClock },
+  { path: "/privacy", label: "Privacidade", icon: ShieldCheck },
 ];
+
+/** The nav entry that owns `pathname` (exact match for "/", prefix otherwise). */
+export function navItemFor(pathname: string): NavItem | undefined {
+  return NAV.find((item) =>
+    item.path === "/" ? pathname === "/" : pathname === item.path || pathname.startsWith(item.path + "/"),
+  );
+}

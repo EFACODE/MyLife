@@ -28,7 +28,7 @@ build, set `VITE_API_BASE_URL` to the API's URL (see `.env.example`).
 
 **3. Sign in.** Create a user first (via the API `POST /users`, or the interactive
 docs at `http://127.0.0.1:8000/docs`), then log in on the web app. Use the sidebar
-to reach each feature area.
+(on phones, the ☰ menu in the top bar) to reach each feature area.
 
 ## Scripts
 
