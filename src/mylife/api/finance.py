@@ -469,16 +469,23 @@ def get_openfinance_credential_status(
     current_user: Annotated[User, Depends(get_current_user)],
     session: Annotated[Session, Depends(get_session)],
 ) -> OpenFinanceCredentialStatus:
-    """Whether the authenticated user has a Pierre Finance API key stored.
+    """Whether the authenticated user has a *usable* Pierre Finance API key stored.
 
     Never returns the secret itself — just enough for the UI to show a
-    connected/not-connected state.
+    connected/not-connected state. Checks that the stored secret still
+    decrypts (not just that a row exists): if ``MYLIFE_CREDENTIAL_ENCRYPTION_KEY``
+    ever changes (e.g. a deployment that never pinned it, so it defaults to a
+    new random value on every restart — see ``Settings.credential_encryption_key``),
+    every previously stored secret becomes permanently undecryptable even
+    though its row/`updated_at` still exists. Reporting "connected" in that
+    case would strand the user on a sync screen with no way to re-enter the
+    key (the "connected" branch hides the credential form).
     """
     settings = get_settings()
-    updated_at = CredentialVault(session, settings.credential_encryption_key).updated_at(
-        current_user.user_id, PIERRE_PROVIDER
-    )
-    return OpenFinanceCredentialStatus(connected=updated_at is not None, updated_at=updated_at)
+    vault = CredentialVault(session, settings.credential_encryption_key)
+    usable = vault.get(current_user.user_id, PIERRE_PROVIDER) is not None
+    updated_at = vault.updated_at(current_user.user_id, PIERRE_PROVIDER) if usable else None
+    return OpenFinanceCredentialStatus(connected=usable, updated_at=updated_at)
 
 
 @router.post("/finance/connectors/openfinance/credentials", status_code=204)

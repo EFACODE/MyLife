@@ -112,7 +112,7 @@ exactly like the CSV connectors (`T4.2`, `T3.5`) but without a file upload.
 | FR-7 | Functional | `Account` gains nullable `external_source`/`external_id` columns (unique together with `user_id` when set) so a Pierre account is only ever created once per user across syncs. |
 | FR-8 | Functional | `POST /finance/connectors/openfinance/sync` (`get_current_user`): builds the connector, runs `ConnectorRunner.sync(..., consent=ConsentService(...))` synchronously; `ConsentRequiredError` → `403`; `MissingCredentialError` → `409`; `PierreApiError` → `502`. Returns a `SyncResult` view, like `T4.2`'s bank import endpoint. |
 | FR-9 | Functional | `POST /finance/connectors/openfinance/credentials {api_key}` / `DELETE .../credentials` store/remove the key via `CredentialVault` under provider `"pierre_finance"`. Both require auth only (not consent — storing a key is not itself "ingesting"; the sync call is what's consent-gated, matching `T4.2`'s pattern of gating ingestion, not account setup). |
-| FR-10 | Functional | `GET /finance/connectors/openfinance/credentials` returns `OpenFinanceCredentialStatus {connected, updated_at}` from `CredentialVault.updated_at(...)` — auth only, never returns the secret. Backs the web console's connected/not-connected indicator (FR-11). |
+| FR-10 | Functional | `GET /finance/connectors/openfinance/credentials` returns `OpenFinanceCredentialStatus {connected, updated_at}` — auth only, never returns the secret. `connected` reflects whether the stored secret still *decrypts* (`CredentialVault.get(...)`), not merely whether a row exists: if `MYLIFE_CREDENTIAL_ENCRYPTION_KEY` ever changes (e.g. a deployment that never pinned it — see `Settings.credential_encryption_key` — defaults to a new random key every restart), every previously stored secret becomes permanently undecryptable even though its row/`updated_at` persists; reporting "connected" in that case strands the user, since the web console's "connected" branch (FR-11) hides the credential form. `updated_at` is only returned when `connected` is `true`. Backs the web console's connected/not-connected indicator (FR-11). |
 | FR-11 | Functional | Web console (Finanças → Configurações → "Open Finance (Pierre Finance)"): not connected → a masked (password-style, with a "Mostrar"/"Ocultar" reveal toggle) API-key input + "Conectar" (`POST .../credentials`); connected → "Conectado desde `<data>`", a "Sincronizar agora" button (`POST .../sync`, shows the resulting counts or a friendly message for `403`/`409`/other errors, and refreshes the Visão geral/Transações data on success) and a "Desconectar" action (`DELETE .../credentials`). |
 | FR-12 | Functional | When "Sincronizar agora" fails with `403` (no `"openfinance"` consent), the web console also shows a "Conceder consentimento e sincronizar" button that calls the generic `POST /consents {scope: "openfinance"}` (`T10.2`) and immediately retries the sync — so granting consent and completing the first sync no longer requires navigating away to the Consentimentos page and typing the scope by hand. |
 | NFR-1 | Security | Consent scope `"openfinance"` enforced fail-closed on sync (`T2.3`); the Pierre API key is never logged, never echoed back by any endpoint (including the status check, FR-10), stored only via `CredentialVault`. |
@@ -194,6 +194,11 @@ POST /finance/connectors/openfinance/sync   (auth + consent "openfinance")
 - **Credential status (AC2b, FR-10):** not connected → `{connected: false,
   updated_at: null}`; after connecting → `connected: true` with a timestamp;
   after disconnecting → back to `false`/`null`.
+- **Credential status fails closed on key rotation (FR-10):** connect, then
+  rotate `MYLIFE_CREDENTIAL_ENCRYPTION_KEY` so the stored secret no longer
+  decrypts (its row still exists) → status reports `{connected: false,
+  updated_at: null}`, and sync still returns `409` (not a silent success
+  with a bad key).
 - **Web console (FR-11):** not connected → the API-key form, masked by
   default with a working reveal toggle; submitting calls `connectOpenFinance`
   and refreshes status. Connected → "Sincronizar agora" shows the resulting

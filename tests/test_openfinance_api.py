@@ -4,12 +4,14 @@ from collections.abc import Iterator
 
 import httpx
 import pytest
+from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from mylife.api.deps import get_pierre_client
+from mylife.core.config import get_settings
 from mylife.db.base import Base, get_session
 from mylife.finance.openfinance import PierreFinanceClient
 from mylife.main import create_app
@@ -171,3 +173,29 @@ def test_credential_status_reflects_connect_and_disconnect(client: TestClient) -
 def test_credential_status_requires_auth(client: TestClient) -> None:
     response = client.get("/finance/connectors/openfinance/credentials")
     assert response.status_code == 401
+
+
+def test_credential_status_is_not_connected_when_key_rotated(client: TestClient) -> None:
+    """If MYLIFE_CREDENTIAL_ENCRYPTION_KEY changes, a stored secret becomes
+    undecryptable (e.g. a deployment that never pinned it, defaulting to a new
+    random key on every restart). Status must reflect that as "not connected"
+    rather than reporting a row/`updated_at` the vault can no longer read —
+    otherwise the UI hides the credential form behind the "connected" branch,
+    leaving the user with no way to re-enter the key (see FR-10 note)."""
+    auth = _auth(client)
+    _grant_openfinance(client, auth)
+    client.post(
+        "/finance/connectors/openfinance/credentials", json={"api_key": "sk-test"}, headers=auth
+    )
+
+    settings = get_settings()
+    original_key = settings.credential_encryption_key
+    settings.credential_encryption_key = Fernet.generate_key().decode()
+    try:
+        status = client.get("/finance/connectors/openfinance/credentials", headers=auth).json()
+        sync_response = client.post("/finance/connectors/openfinance/sync", headers=auth)
+    finally:
+        settings.credential_encryption_key = original_key
+
+    assert status == {"connected": False, "updated_at": None}
+    assert sync_response.status_code == 409
