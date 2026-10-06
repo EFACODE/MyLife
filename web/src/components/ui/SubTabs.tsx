@@ -19,7 +19,7 @@ export function SubTabs({
   return (
     <div
       role="tablist"
-      className="mb-6 inline-flex flex-wrap gap-1 rounded-xl bg-gray-100 p-1"
+      className="no-scrollbar mb-6 flex max-w-full gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1 sm:inline-flex sm:flex-wrap"
     >
       {items.map((item) => {
         const Icon = item.icon;
@@ -30,9 +30,13 @@ export function SubTabs({
             type="button"
             role="tab"
             aria-selected={isActive}
-            onClick={() => onChange(item.id)}
+            onClick={(e) => {
+              onChange(item.id);
+              // Keep the chosen tab fully visible when the strip scrolls sideways on phones.
+              e.currentTarget.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "smooth" });
+            }}
             className={
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors " +
+              "flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:py-1.5 " +
               (isActive
                 ? "bg-white text-blue-700 shadow-sm"
                 : "text-gray-600 hover:text-gray-900")

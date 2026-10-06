@@ -35,7 +35,7 @@ export function ForecastPage() {
       <Section
         title="Previsões"
         actions={
-          <span className="flex items-end gap-2">
+          <span className="flex flex-wrap items-end gap-2">
             <Field label="Horizonte (dias)">
               <TextInput
                 type="number"
@@ -94,7 +94,7 @@ function Simulate({ client, onDone }: { client: ForecastApi; onDone: () => void 
 
   return (
     <Section title="Cenário hipotético">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="Id da previsão">
           <TextInput value={forecastId} onChange={(e) => setForecastId(e.target.value)} required />
         </Field>
@@ -141,7 +141,7 @@ function RecordOutcome({ client }: { client: ForecastApi }) {
 
   return (
     <Section title="Registrar resultado">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="Id da previsão">
           <TextInput value={forecastId} onChange={(e) => setForecastId(e.target.value)} required />
         </Field>

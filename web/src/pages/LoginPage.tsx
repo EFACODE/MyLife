@@ -26,7 +26,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto mt-24 max-w-sm px-4">
+    <main className="mx-auto mt-12 max-w-sm px-4 sm:mt-24">
       <h1 className="mb-6 text-2xl font-semibold">Entrar no My Life</h1>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -35,7 +35,7 @@ export function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1"
+            className="rounded border border-gray-300 px-3 py-2 text-base sm:px-2 sm:py-1 sm:text-sm"
             required
           />
         </label>
@@ -45,14 +45,14 @@ export function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-gray-300 px-2 py-1"
+            className="rounded border border-gray-300 px-3 py-2 text-base sm:px-2 sm:py-1 sm:text-sm"
             required
           />
         </label>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
-          className="mt-2 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white"
+          className="mt-2 rounded bg-blue-600 px-3 py-3 text-base font-medium text-white sm:py-2 sm:text-sm"
         >
           Entrar
         </button>

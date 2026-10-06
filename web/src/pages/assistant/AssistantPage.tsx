@@ -51,7 +51,7 @@ function Ask({ client }: { client: AssistantApi }) {
 
   return (
     <Section title="Perguntar">
-      <form onSubmit={submit} className="mb-3 flex items-end gap-2">
+      <form onSubmit={submit} className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Pergunta">
           <TextInput value={question} onChange={(e) => setQuestion(e.target.value)} required />
         </Field>

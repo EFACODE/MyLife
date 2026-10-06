@@ -55,7 +55,7 @@ function SleepSection({ client }: { client: HealthApi }) {
 
   return (
     <Section title="Sono">
-      <form onSubmit={submit} className="mb-3 flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="Ocorrido em">
           <TextInput
             type="datetime-local"
@@ -123,7 +123,7 @@ function WorkoutSection({ client }: { client: HealthApi }) {
 
   return (
     <Section title="Treinos">
-      <form onSubmit={submit} className="mb-3 flex flex-wrap items-end gap-2">
+      <form onSubmit={submit} className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <Field label="Ocorrido em">
           <TextInput
             type="datetime-local"
@@ -198,7 +198,7 @@ function HealthImport({ client }: { client: HealthApi }) {
             value={csv}
             onChange={(e) => setCsv(e.target.value)}
             rows={4}
-            className="rounded border border-gray-300 px-2 py-1 font-mono text-xs"
+            className="rounded border border-gray-300 px-3 py-2 font-mono text-base sm:px-2 sm:py-1 sm:text-xs"
             required
           />
         </label>

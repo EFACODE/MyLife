@@ -63,6 +63,7 @@ spec is the contract they reference. The web consumes only the public API.
 | FR-5 | Functional | `ApiClient.upload<T>(path, file: File)`: `POST` `FormData` (`file` field) with bearer token, no JSON content-type; parse JSON or throw `ApiError`. |
 | FR-6 | Functional | `web/vite.config.ts` `server.proxy` maps the API path prefixes to `http://127.0.0.1:8000` (dev only). `web/.env.example` (`VITE_API_BASE_URL`), `web/README.md` runbook. |
 | FR-7 | Functional | UI primitives `Field`(label+input), `Button`, `Section`(titled card), `ErrorText`(`role="alert"`). |
+| NFR-3 | Usability (mobile, T10.11) | The console is usable on a phone (~360–430px wide) with no horizontal page scroll. Below `md` the sidebar collapses into a sticky top bar (hamburger + current page title) that opens an off-canvas drawer; the drawer closes on navigation, backdrop tap, the close button and `Escape`, and locks page scroll while open. `NavItem` gains an `icon`. Tab strips scroll sideways; wide tables (transactions, bills) reflow into stacked cards; inline forms stack; inputs use 16px text and ≥44px touch targets on phones (no iOS focus-zoom). Desktop layout unchanged. |
 | NFR-1 | Testability | Vitest: `useAsync` (ready/error/reload); `Layout` (nav links + logout); `ApiClient.upload` + `onUnauthorized` (fetch mocked). |
 | NFR-2 | Tooling | `tsc --noEmit`, `eslint`, `vitest run` green; the `web` CI job enforces them. |
 

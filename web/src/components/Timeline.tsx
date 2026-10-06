@@ -29,14 +29,14 @@ export function Timeline({ client, userId }: { client: TimelineApi; userId: stri
 
   return (
     <section className="mt-8">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">Linha do tempo</h2>
         <input
           aria-label="Filtrar por tipo de evento"
           placeholder="tipo de evento…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="rounded border border-gray-300 px-2 py-1 text-sm"
+          className="min-h-11 rounded border border-gray-300 px-3 py-2 text-base sm:min-h-0 sm:px-2 sm:py-1 sm:text-sm"
         />
       </div>
       {status === "loading" && <p className="text-sm text-gray-500">Carregando…</p>}

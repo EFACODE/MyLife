@@ -79,7 +79,7 @@ export function PrivacyPage() {
             Apagar conta
           </button>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <span className="text-sm text-red-600">Tem certeza? Isso não pode ser desfeito.</span>
             <button
               type="button"

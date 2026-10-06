@@ -68,8 +68,13 @@ function Documents({ client }: { client: KnowledgeApi }) {
 
   return (
     <Section title="Documentos">
-      <form onSubmit={upload} className="mb-3 flex items-center gap-2">
-        <input aria-label="Arquivo do documento" type="file" onChange={pick} />
+      <form onSubmit={upload} className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          aria-label="Arquivo do documento"
+          type="file"
+          onChange={pick}
+          className="min-w-0 max-w-full text-sm"
+        />
         <Button type="submit" disabled={!file}>
           Enviar
         </Button>
@@ -80,9 +85,9 @@ function Documents({ client }: { client: KnowledgeApi }) {
         {(documents.data ?? []).map((doc) => (
           <li
             key={doc.document_id}
-            className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded border border-gray-200 px-3 py-2"
           >
-            <span>
+            <span className="min-w-0 break-words">
               <span className="font-medium">{doc.filename}</span>
               <span className="text-gray-500"> · {doc.byte_size} bytes</span>
             </span>
@@ -126,7 +131,7 @@ function MemorySearch({ client }: { client: KnowledgeApi }) {
 
   return (
     <Section title="Busca na memória">
-      <form onSubmit={submit} className="mb-3 flex items-end gap-2">
+      <form onSubmit={submit} className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field label="Consulta">
           <TextInput value={query} onChange={(e) => setQuery(e.target.value)} required />
         </Field>

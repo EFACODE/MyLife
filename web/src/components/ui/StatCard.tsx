@@ -30,15 +30,15 @@ export function StatCard({
   icon?: ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-sm text-gray-500">{label}</div>
-          <div className={"mt-1 text-2xl font-semibold " + VALUE_CLASSES[tone]}>{value}</div>
-          {hint && <div className="mt-0.5 text-xs text-gray-400">{hint}</div>}
+        <div className="min-w-0">
+          <div className="text-xs text-gray-500 sm:text-sm">{label}</div>
+          <div className={"mt-1 text-lg font-semibold [overflow-wrap:anywhere] sm:text-2xl " + VALUE_CLASSES[tone]}>{value}</div>
+          {hint && <div className="mt-0.5 text-xs text-gray-400 [overflow-wrap:anywhere]">{hint}</div>}
         </div>
         {Icon && (
-          <span className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-lg " + ICON_CLASSES[tone]}>
+          <span className={"hidden h-9 w-9 shrink-0 sm:flex items-center justify-center rounded-lg " + ICON_CLASSES[tone]}>
             <Icon className="h-4 w-4" />
           </span>
         )}
