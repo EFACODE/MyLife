@@ -63,6 +63,7 @@ type FinanceApi = Pick<
   | "connectOpenFinance"
   | "disconnectOpenFinance"
   | "syncOpenFinance"
+  | "grantConsent"
   | "listBills"
   | "registerBill"
   | "updateBill"
@@ -371,6 +372,8 @@ function OpenFinanceConnect({
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [missingConsent, setMissingConsent] = useState(false);
+  const [grantingConsent, setGrantingConsent] = useState(false);
 
   async function connect(event: FormEvent) {
     event.preventDefault();
@@ -388,6 +391,7 @@ function OpenFinanceConnect({
   async function disconnect() {
     setError(null);
     setSyncResult(null);
+    setMissingConsent(false);
     try {
       await client.disconnectOpenFinance();
       await status.run();
@@ -399,6 +403,7 @@ function OpenFinanceConnect({
   async function sync() {
     setError(null);
     setSyncResult(null);
+    setMissingConsent(false);
     setSyncing(true);
     try {
       const outcome = await client.syncOpenFinance();
@@ -408,15 +413,32 @@ function OpenFinanceConnect({
       onSynced();
     } catch (caught) {
       const httpStatus = (caught as { status?: number }).status;
-      setError(
-        httpStatus === 403
-          ? "Conceda o consentimento 'openfinance' primeiro (página Consentimentos)."
-          : httpStatus === 409
+      if (httpStatus === 403) {
+        setMissingConsent(true);
+        setError("Conceda o consentimento 'openfinance' primeiro.");
+      } else {
+        setError(
+          httpStatus === 409
             ? "Conecte sua chave de API da Pierre Finance primeiro."
             : "Não foi possível sincronizar com a Pierre Finance.",
-      );
+        );
+      }
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function grantConsentAndSync() {
+    setError(null);
+    setGrantingConsent(true);
+    try {
+      await client.grantConsent("openfinance");
+      setMissingConsent(false);
+      await sync();
+    } catch {
+      setError("Não foi possível conceder o consentimento 'openfinance'.");
+    } finally {
+      setGrantingConsent(false);
     }
   }
 
@@ -491,6 +513,16 @@ function OpenFinanceConnect({
       )}
       {syncResult && <p className="mt-2 text-sm text-green-700">{syncResult}</p>}
       {error && <ErrorText>{error}</ErrorText>}
+      {missingConsent && (
+        <Button
+          type="button"
+          onClick={() => void grantConsentAndSync()}
+          disabled={grantingConsent || syncing}
+          className="mt-2"
+        >
+          {grantingConsent ? "Concedendo…" : "Conceder consentimento e sincronizar"}
+        </Button>
+      )}
     </Section>
   );
 }
