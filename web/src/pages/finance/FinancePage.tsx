@@ -374,7 +374,7 @@ function OpenFinanceConnect({
   const [syncing, setSyncing] = useState(false);
   const [missingConsent, setMissingConsent] = useState(false);
   const [grantingConsent, setGrantingConsent] = useState(false);
-  const [backfillSince, setBackfillSince] = useState("");
+  const [backfillSince, setBackfillSince] = useState("2026-07-01");
 
   async function connect(event: FormEvent) {
     event.preventDefault();
