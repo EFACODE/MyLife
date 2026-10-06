@@ -220,6 +220,14 @@ export class ApiClient {
     return this.request<Account>("/accounts", { method: "POST", body: { name, currency } });
   }
 
+  renameAccount(accountId: string, name: string): Promise<Account> {
+    return this.request<Account>(`/accounts/${accountId}`, { method: "PATCH", body: { name } });
+  }
+
+  deleteAccount(accountId: string): Promise<void> {
+    return this.request<void>(`/accounts/${accountId}`, { method: "DELETE" });
+  }
+
   listCategories(): Promise<Category[]> {
     return this.request<Category[]>("/finance/categories");
   }

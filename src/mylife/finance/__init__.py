@@ -73,6 +73,7 @@ from mylife.finance.openfinance import (
     PierreFinanceConnector,
 )
 from mylife.finance.service import (
+    AccountHasActivityError,
     DuplicateCategoryError,
     FinanceService,
     UnknownAccountError,
@@ -92,6 +93,7 @@ __all__ = [
     "TRANSACTION_IMPORTED",
     "TRANSACTION_UPDATED",
     "Account",
+    "AccountHasActivityError",
     "AccountRow",
     "Balance",
     "BankCsvConnector",

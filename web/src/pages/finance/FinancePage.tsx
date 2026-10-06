@@ -7,6 +7,7 @@ import {
   Clock,
   Link2,
   ListChecks,
+  Pencil,
   PiggyBank,
   PlusCircle,
   Receipt,
@@ -49,6 +50,8 @@ type FinanceApi = Pick<
   ApiClient,
   | "listAccounts"
   | "createAccount"
+  | "renameAccount"
+  | "deleteAccount"
   | "listCategories"
   | "createCategory"
   | "deleteCategory"
@@ -58,7 +61,6 @@ type FinanceApi = Pick<
   | "updateTransaction"
   | "deleteTransaction"
   | "netWorth"
-  | "importBank"
   | "openFinanceStatus"
   | "connectOpenFinance"
   | "disconnectOpenFinance"
@@ -214,7 +216,6 @@ function SettingsTab({
       <UserProfile client={client} />
       <Accounts client={client} accounts={accounts} />
       <AlertPreferences client={client} />
-      <BankImport client={client} />
       <OpenFinanceConnect client={client} onSynced={onOpenFinanceSynced} />
     </>
   );
@@ -270,6 +271,9 @@ function Accounts({
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("BRL");
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [rowError, setRowError] = useState<{ accountId: string; message: string } | null>(null);
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -280,6 +284,40 @@ function Accounts({
       await accounts.run();
     } catch {
       setError("Não foi possível criar a conta.");
+    }
+  }
+
+  function startEdit(account: Account) {
+    setRowError(null);
+    setEditingId(account.account_id);
+    setEditingName(account.name);
+  }
+
+  async function saveEdit(event: FormEvent) {
+    event.preventDefault();
+    if (!editingId) return;
+    setRowError(null);
+    try {
+      await client.renameAccount(editingId, editingName.trim());
+      setEditingId(null);
+      await accounts.run();
+    } catch {
+      setRowError({ accountId: editingId, message: "Não foi possível renomear a conta." });
+    }
+  }
+
+  async function remove(account: Account) {
+    setRowError(null);
+    try {
+      await client.deleteAccount(account.account_id);
+      await accounts.run();
+    } catch (caught) {
+      const message =
+        caught instanceof ApiError && caught.status === 409
+          ? "Esta conta tem transações ou saldos registrados e não pode ser excluída. " +
+            "Renomeie a conta em vez de excluí-la."
+          : "Não foi possível excluir a conta.";
+      setRowError({ accountId: account.account_id, message });
     }
   }
 
@@ -297,64 +335,69 @@ function Accounts({
       {error && <ErrorText>{error}</ErrorText>}
       {accounts.status === "error" && <ErrorText>Não foi possível carregar as contas.</ErrorText>}
       <ul className="flex flex-col gap-1 text-sm">
-        {(accounts.data ?? []).map((account) => (
-          <li key={account.account_id} className="rounded border border-gray-200 px-3 py-2">
-            <span className="font-medium">{account.name}</span>
-            <span className="text-gray-500"> · {account.currency}</span>
-          </li>
-        ))}
+        {(accounts.data ?? []).map((account) =>
+          editingId === account.account_id ? (
+            <li
+              key={account.account_id}
+              className="rounded border border-gray-200 px-3 py-2"
+            >
+              <form onSubmit={saveEdit} className="flex items-end gap-2">
+                <Field label="Nome">
+                  <TextInput
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </Field>
+                <Button type="submit">Salvar</Button>
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="text-sm text-gray-600 hover:underline"
+                >
+                  Cancelar
+                </button>
+              </form>
+              {rowError?.accountId === account.account_id && (
+                <ErrorText>{rowError.message}</ErrorText>
+              )}
+            </li>
+          ) : (
+            <li
+              key={account.account_id}
+              className="rounded border border-gray-200 px-3 py-2"
+            >
+              <div className="flex items-center justify-between">
+                <span>
+                  <span className="font-medium">{account.name}</span>
+                  <span className="text-gray-500"> · {account.currency}</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(account)}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:underline"
+                  >
+                    <Pencil size={14} />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void remove(account)}
+                    className="text-sm text-red-600 hover:underline"
+                  >
+                    Excluir
+                  </button>
+                </span>
+              </div>
+              {rowError?.accountId === account.account_id && (
+                <ErrorText>{rowError.message}</ErrorText>
+              )}
+            </li>
+          ),
+        )}
       </ul>
-    </Section>
-  );
-}
-
-function BankImport({ client }: { client: FinanceApi }) {
-  const [accountId, setAccountId] = useState("");
-  const [csv, setCsv] = useState("");
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setResult(null);
-    try {
-      const outcome = await client.importBank(accountId.trim(), csv);
-      setResult(
-        `${outcome.events_created} transação(ões) importada(s) (${outcome.skipped_duplicates} duplicada(s) ignorada(s)).`,
-      );
-    } catch (caught) {
-      const status = (caught as { status?: number }).status;
-      setError(
-        status === 403
-          ? "Conceda o consentimento 'bank' primeiro (página Consentimentos)."
-          : "Não foi possível importar o CSV.",
-      );
-    }
-  }
-
-  return (
-    <Section title="Importar extrato bancário (CSV)" icon={Receipt}>
-      <form onSubmit={submit} className="flex flex-col gap-2">
-        <Field label="ID da conta">
-          <TextInput value={accountId} onChange={(e) => setAccountId(e.target.value)} required />
-        </Field>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-gray-700">CSV</span>
-          <textarea
-            value={csv}
-            onChange={(e) => setCsv(e.target.value)}
-            rows={4}
-            className="rounded border border-gray-300 px-2 py-1 font-mono text-xs"
-            required
-          />
-        </label>
-        <div>
-          <Button type="submit">Importar</Button>
-        </div>
-      </form>
-      {result && <p className="mt-2 text-sm text-green-700">{result}</p>}
-      {error && <ErrorText>{error}</ErrorText>}
     </Section>
   );
 }
@@ -383,9 +426,23 @@ function OpenFinanceConnect({
       await client.connectOpenFinance(apiKey.trim());
       setApiKey("");
       setShowApiKey(false);
-      await status.run();
-    } catch {
-      setError("Não foi possível salvar a chave de API.");
+      const refreshed = await status.run();
+      if (refreshed && !refreshed.connected) {
+        // The key was accepted, but it doesn't decrypt back right away — most
+        // likely MYLIFE_CREDENTIAL_ENCRYPTION_KEY isn't pinned to a stable
+        // value across the backend's processes (see DEPLOY.md).
+        setError(
+          "A chave foi enviada, mas o status ainda mostra desconectado. Verifique se " +
+            "MYLIFE_CREDENTIAL_ENCRYPTION_KEY está configurada com um valor fixo no deploy.",
+        );
+      }
+    } catch (caught) {
+      const httpMessage = caught instanceof Error ? caught.message : undefined;
+      setError(
+        httpMessage
+          ? `Não foi possível salvar a chave de API: ${httpMessage}`
+          : "Não foi possível salvar a chave de API.",
+      );
     }
   }
 
