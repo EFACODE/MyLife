@@ -21,6 +21,7 @@ from mylife.finance.models import (
     FINANCE_SOURCE,
     KIND_BY_TYPE,
     OPENFINANCE_TRANSACTION_IMPORTED,
+    POSITION_VALUED,
     TRANSACTION_DELETED,
     TRANSACTION_IMPORTED,
     TRANSACTION_UPDATED,
@@ -87,6 +88,22 @@ class UnknownTransactionError(Exception):
     def __init__(self, transaction_event_id: uuid.UUID) -> None:
         super().__init__(f"transaction {transaction_event_id} not found")
         self.transaction_event_id = transaction_event_id
+
+
+class AccountHasActivityError(Exception):
+    """Raised when deleting an account that already has events recorded against it.
+
+    Transactions and balance marks are immutable Life Events (never mutated or
+    deleted — see CLAUDE.md's "preserve immutable history" invariant), so an
+    account that already has any linked event can't be deleted without either
+    losing that history or leaving orphaned events with no visible account.
+    Renaming (``rename_account``) has no such restriction — the account's
+    name/currency are plain mutable metadata, not facts.
+    """
+
+    def __init__(self, account_id: uuid.UUID) -> None:
+        super().__init__(f"account {account_id} has transactions or balance marks recorded")
+        self.account_id = account_id
 
 
 def _to_transaction(event: StoredEvent) -> Transaction:
@@ -202,6 +219,45 @@ class FinanceService:
             currency=row.currency,
             created_at=_stored_utc(row.created_at),
         )
+
+    def rename_account(self, user_id: uuid.UUID, account_id: uuid.UUID, name: str) -> Account:
+        """Rename a user's account; raises :class:`UnknownAccountError` if not theirs.
+
+        The name is plain presentation metadata, not a fact, so this is a
+        direct mutation — unlike transactions/balances, which are immutable
+        Life Events and only ever corrected via a new event.
+        """
+        row = self._require_account(user_id, account_id)
+        assert row is not None
+        row.name = name.strip()
+        self._session.commit()
+        return Account(
+            account_id=row.account_id,
+            name=row.name,
+            currency=row.currency,
+            created_at=_stored_utc(row.created_at),
+        )
+
+    def delete_account(self, user_id: uuid.UUID, account_id: uuid.UUID) -> None:
+        """Delete a user's account; raises :class:`UnknownAccountError` if not theirs.
+
+        Raises :class:`AccountHasActivityError` if the account has any
+        transaction or balance-mark event recorded against it — deleting such
+        an account would either silently lose that immutable history or leave
+        its events orphaned with no visible account (see that error's
+        docstring). Only a never-used account can be deleted.
+        """
+        row = self._require_account(user_id, account_id)
+        assert row is not None
+        has_activity = any(
+            str(event.payload.get("account_id")) == str(account_id)
+            for event in EventStore(self._session).read_stream(user_id, limit=_UNBOUNDED)
+            if event.event_type in _TRANSACTION_EVENT_TYPES or event.event_type == POSITION_VALUED
+        )
+        if has_activity:
+            raise AccountHasActivityError(account_id)
+        self._session.delete(row)
+        self._session.commit()
 
     def create_category(self, user_id: uuid.UUID, name: str, *, now: datetime) -> Category:
         """Register a category for ``user_id``, rejecting a case-insensitive duplicate."""

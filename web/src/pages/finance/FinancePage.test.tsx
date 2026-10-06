@@ -6,6 +6,8 @@ import { ApiError } from "../../api/client";
 const client = vi.hoisted(() => ({
   listAccounts: vi.fn(),
   createAccount: vi.fn(),
+  renameAccount: vi.fn(),
+  deleteAccount: vi.fn(),
   listCategories: vi.fn(),
   createCategory: vi.fn(),
   deleteCategory: vi.fn(),
@@ -15,7 +17,6 @@ const client = vi.hoisted(() => ({
   updateTransaction: vi.fn(),
   deleteTransaction: vi.fn(),
   netWorth: vi.fn(),
-  importBank: vi.fn(),
   openFinanceStatus: vi.fn(),
   connectOpenFinance: vi.fn(),
   disconnectOpenFinance: vi.fn(),
@@ -61,6 +62,13 @@ describe("FinancePage", () => {
       { account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" },
     ]);
     client.createAccount.mockResolvedValue({ account_id: "a2" });
+    client.renameAccount.mockResolvedValue({
+      account_id: "a1",
+      name: "Conta Renomeada",
+      currency: "BRL",
+      created_at: "x",
+    });
+    client.deleteAccount.mockResolvedValue(undefined);
     client.listCategories.mockResolvedValue([
       { category_id: "c1", name: "Moradia", created_at: "x" },
     ]);
@@ -96,7 +104,6 @@ describe("FinancePage", () => {
       currencies: [{ currency: "BRL", total_minor: -25389 }],
       accounts: [{ account_id: "a1", currency: "BRL", balance_minor: -25389, as_of: "x" }],
     });
-    client.importBank.mockRejectedValue(new ApiError(403, "forbidden"));
     client.openFinanceStatus.mockResolvedValue({ connected: false, updated_at: null });
     client.connectOpenFinance.mockResolvedValue(undefined);
     client.disconnectOpenFinance.mockResolvedValue(undefined);
@@ -203,13 +210,38 @@ describe("FinancePage", () => {
     await waitFor(() => expect(client.createAccount).toHaveBeenCalledWith("Poupança", "BRL"));
   });
 
-  it("mostra a dica de consentimento em uma importação bancária com 403 na aba Configurações", async () => {
+  it("renomeia uma conta na aba Configurações", async () => {
     render(<FinancePage />);
     goToTab("Configurações");
-    fireEvent.change(await screen.findByLabelText("ID da conta"), { target: { value: "a1" } });
-    fireEvent.change(screen.getByLabelText("CSV"), { target: { value: "a,b" } });
-    fireEvent.click(screen.getByText("Importar"));
-    expect(await screen.findByText(/Conceda o consentimento 'bank' primeiro/)).toBeInTheDocument();
+    const section = await billsSection("Contas");
+    fireEvent.click(within(section).getByText("Editar"));
+    const editForm = within(section).getByText("Salvar").closest("form")!;
+    fireEvent.change(within(editForm).getByLabelText("Nome"), {
+      target: { value: "Conta Renomeada" },
+    });
+    fireEvent.click(within(editForm).getByText("Salvar"));
+    await waitFor(() =>
+      expect(client.renameAccount).toHaveBeenCalledWith("a1", "Conta Renomeada"),
+    );
+  });
+
+  it("exclui uma conta sem transações na aba Configurações", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+    const section = await billsSection("Contas");
+    fireEvent.click(within(section).getByText("Excluir"));
+    await waitFor(() => expect(client.deleteAccount).toHaveBeenCalledWith("a1"));
+  });
+
+  it("avisa para renomear em vez de excluir uma conta com transações", async () => {
+    client.deleteAccount.mockRejectedValue(new ApiError(409, "has activity"));
+    render(<FinancePage />);
+    goToTab("Configurações");
+    const section = await billsSection("Contas");
+    fireEvent.click(within(section).getByText("Excluir"));
+    expect(
+      await within(section).findByText(/Renomeie a conta em vez de excluí-la/),
+    ).toBeInTheDocument();
   });
 
   it("conecta a Pierre Finance informando a chave de API na aba Configurações", async () => {
@@ -220,6 +252,23 @@ describe("FinancePage", () => {
     });
     fireEvent.click(screen.getByText("Conectar"));
     await waitFor(() => expect(client.connectOpenFinance).toHaveBeenCalledWith("sk-test"));
+  });
+
+  it("avisa quando a chave é aceita mas o status continua desconectado", async () => {
+    // connectOpenFinance resolves (the key was accepted), but the status
+    // check right after still reports not connected — most likely a
+    // MYLIFE_CREDENTIAL_ENCRYPTION_KEY that isn't pinned across processes.
+    client.openFinanceStatus.mockResolvedValue({ connected: false, updated_at: null });
+    render(<FinancePage />);
+    goToTab("Configurações");
+    fireEvent.change(await screen.findByLabelText("Chave de API (sk-...)"), {
+      target: { value: "sk-test" },
+    });
+    fireEvent.click(screen.getByText("Conectar"));
+
+    expect(
+      await screen.findByText(/A chave foi enviada, mas o status ainda mostra desconectado/),
+    ).toBeInTheDocument();
   });
 
   it("mostra sincronizar/desconectar quando a Pierre Finance já está conectada", async () => {

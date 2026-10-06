@@ -61,6 +61,95 @@ def test_create_account_and_list(client: TestClient) -> None:
     assert [a["account_id"] for a in listed.json()] == [account_id]
 
 
+def test_rename_account(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+
+    response = client.patch(f"/accounts/{account_id}", json={"name": "Savings"}, headers=auth)
+    assert response.status_code == 200
+    assert response.json()["name"] == "Savings"
+
+    listed = client.get("/accounts", headers=auth)
+    assert listed.json()[0]["name"] == "Savings"
+
+
+def test_rename_unknown_account_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    response = client.patch(
+        "/accounts/00000000-0000-0000-0000-000000000000",
+        json={"name": "Savings"},
+        headers=auth,
+    )
+    assert response.status_code == 404
+
+
+def test_rename_foreign_account_is_404(client: TestClient) -> None:
+    owner_auth = _auth(client, "owner@example.com")
+    account_id = _account(client, owner_auth)
+
+    intruder_auth = _auth(client, "intruder@example.com")
+    response = client.patch(
+        f"/accounts/{account_id}", json={"name": "hijacked"}, headers=intruder_auth
+    )
+    assert response.status_code == 404
+
+
+def test_delete_account(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+
+    response = client.delete(f"/accounts/{account_id}", headers=auth)
+    assert response.status_code == 204
+    assert client.get("/accounts", headers=auth).json() == []
+
+
+def test_delete_unknown_account_is_404(client: TestClient) -> None:
+    auth = _auth(client)
+    response = client.delete("/accounts/00000000-0000-0000-0000-000000000000", headers=auth)
+    assert response.status_code == 404
+
+
+def test_delete_foreign_account_is_404(client: TestClient) -> None:
+    owner_auth = _auth(client, "owner@example.com")
+    account_id = _account(client, owner_auth)
+
+    intruder_auth = _auth(client, "intruder@example.com")
+    response = client.delete(f"/accounts/{account_id}", headers=intruder_auth)
+    assert response.status_code == 404
+
+
+def test_delete_account_with_transactions_is_409(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    client.post(
+        "/finance/expenses",
+        json={
+            "account_id": account_id,
+            "amount_minor": 1000,
+            "currency": "BRL",
+            "description": "keeps account alive",
+        },
+        headers=auth,
+    )
+
+    response = client.delete(f"/accounts/{account_id}", headers=auth)
+    assert response.status_code == 409
+
+    listed = client.get("/accounts", headers=auth)
+    assert [a["account_id"] for a in listed.json()] == [account_id]
+
+
+def test_account_edit_endpoints_require_auth(client: TestClient) -> None:
+    assert (
+        client.patch(
+            "/accounts/00000000-0000-0000-0000-000000000000",
+            json={"name": "x"},
+        ).status_code
+        == 401
+    )
+    assert client.delete("/accounts/00000000-0000-0000-0000-000000000000").status_code == 401
+
+
 def test_record_expense_returns_money_out(client: TestClient) -> None:
     auth = _auth(client)
     account_id = _account(client, auth)

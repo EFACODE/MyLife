@@ -23,6 +23,7 @@ from mylife.core.events.envelope import ensure_utc, utcnow
 from mylife.db.base import get_session
 from mylife.finance import (
     Account,
+    AccountHasActivityError,
     Balance,
     Bill,
     BillOccurrence,
@@ -66,6 +67,12 @@ class CreateAccountRequest(BaseModel):
 
     name: str = Field(min_length=1)
     currency: str = Field(min_length=3, max_length=3)
+
+
+class RenameAccountRequest(BaseModel):
+    """Request to rename an account."""
+
+    name: str = Field(min_length=1)
 
 
 class CreateCategoryRequest(BaseModel):
@@ -213,6 +220,50 @@ def list_accounts(
 ) -> list[Account]:
     """List the authenticated user's accounts."""
     return FinanceService(session, bus).list_accounts(current_user.user_id)
+
+
+@router.patch("/accounts/{account_id}", response_model=Account)
+def rename_account(
+    account_id: uuid.UUID,
+    request: RenameAccountRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> Account:
+    """Rename one of the user's accounts."""
+    try:
+        return FinanceService(session, bus).rename_account(
+            current_user.user_id, account_id, request.name
+        )
+    except UnknownAccountError as exc:
+        raise HTTPException(status_code=404, detail="account not found") from exc
+
+
+@router.delete("/accounts/{account_id}", status_code=204)
+def delete_account(
+    account_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> None:
+    """Delete one of the user's accounts.
+
+    Only a never-used account (no transactions or balance marks recorded
+    against it) can be deleted, to preserve the immutable event history —
+    see :class:`AccountHasActivityError`. An account with activity → `409`;
+    rename it instead (`PATCH` above).
+    """
+    try:
+        FinanceService(session, bus).delete_account(current_user.user_id, account_id)
+    except UnknownAccountError as exc:
+        raise HTTPException(status_code=404, detail="account not found") from exc
+    except AccountHasActivityError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "account has transactions or balance marks and can't be deleted; rename it instead"
+            ),
+        ) from exc
 
 
 @router.post("/finance/categories", response_model=Category, status_code=201)
