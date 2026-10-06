@@ -80,16 +80,20 @@ Edit `.env.prod`:
 | `MYLIFE_REDIS_URL` | Leave as `redis://redis:6379/0`. |
 | `MYLIFE_ENVIRONMENT` | `production`. |
 | `MYLIFE_JWT_SECRET` | **Generate a long random secret** (below). Must stay stable across restarts, or every existing session/token is invalidated. |
+| `MYLIFE_CREDENTIAL_ENCRYPTION_KEY` | **Generate a Fernet key** (below). Must stay stable across restarts, like `MYLIFE_JWT_SECRET` — if left unset it defaults to a new random key every restart, which silently and permanently breaks every connector credential a user has stored (e.g. the Open Finance/Pierre Finance API key, `T4.9`): the "connected" status keeps showing even though the key can no longer be decrypted, until the user disconnects and reconnects. |
 
-Generate the JWT secret and a DB password:
+Generate the JWT secret, the credential encryption key, and a DB password:
 
 ```bash
 python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # MYLIFE_JWT_SECRET
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"  # MYLIFE_CREDENTIAL_ENCRYPTION_KEY
 python3 -c "import secrets; print(secrets.token_urlsafe(24))"   # POSTGRES_PASSWORD
 ```
 
 > `.env.prod` holds real secrets and is **git-ignored** — never commit it. Keep
-> a copy in your password manager; losing `MYLIFE_JWT_SECRET` logs everyone out.
+> a copy in your password manager; losing `MYLIFE_JWT_SECRET` logs everyone out,
+> and losing `MYLIFE_CREDENTIAL_ENCRYPTION_KEY` permanently strands every
+> stored connector credential (users must reconnect).
 
 Sanity-check the rendered config before starting anything:
 
