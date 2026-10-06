@@ -413,13 +413,16 @@ function OpenFinanceConnect({
       onSynced();
     } catch (caught) {
       const httpStatus = (caught as { status?: number }).status;
+      const httpMessage = caught instanceof Error ? caught.message : undefined;
       if (httpStatus === 403) {
         setMissingConsent(true);
         setError("Conceda o consentimento 'openfinance' primeiro.");
+      } else if (httpStatus === 409) {
+        setError("Conecte sua chave de API da Pierre Finance primeiro.");
       } else {
         setError(
-          httpStatus === 409
-            ? "Conecte sua chave de API da Pierre Finance primeiro."
+          httpMessage
+            ? `Não foi possível sincronizar com a Pierre Finance: ${httpMessage}`
             : "Não foi possível sincronizar com a Pierre Finance.",
         );
       }

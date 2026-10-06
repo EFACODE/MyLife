@@ -342,6 +342,23 @@ describe("FinancePage", () => {
     ).toBeInTheDocument();
   });
 
+  it("mostra o motivo real da Pierre Finance quando a sincronização falha com outro erro (502)", async () => {
+    client.openFinanceStatus.mockResolvedValue({
+      connected: true,
+      updated_at: "2026-09-24T00:00:00Z",
+    });
+    client.syncOpenFinance.mockRejectedValue(
+      new ApiError(502, "Pierre API error (502): rate limited"),
+    );
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    fireEvent.click(await screen.findByText("Sincronizar agora"));
+    expect(
+      await screen.findByText(/Pierre API error \(502\): rate limited/),
+    ).toBeInTheDocument();
+  });
+
   it("mostra a tabela de transações com cards e categorias", async () => {
     render(<FinancePage />);
     goToTab("Transações");

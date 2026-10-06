@@ -37,6 +37,29 @@ describe("ApiClient", () => {
     await expect(client.request("/x")).rejects.toMatchObject({ status: 401 });
   });
 
+  it("uses the backend's `detail` body as the error message when present", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(okResponse({ detail: "Pierre API error (502): rate limited" }, 502)),
+    );
+    const client = new ApiClient("http://api", () => null);
+
+    await expect(client.request("/x")).rejects.toMatchObject({
+      status: 502,
+      message: "Pierre API error (502): rate limited",
+    });
+  });
+
+  it("falls back to the generic message when the error body has no `detail`", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okResponse({}, 500)));
+    const client = new ApiClient("http://api", () => null);
+
+    await expect(client.request("/x")).rejects.toMatchObject({
+      status: 500,
+      message: "GET /x -> 500",
+    });
+  });
+
   it("login posts form-encoded credentials and returns the token", async () => {
     const fetchMock = vi
       .fn()
