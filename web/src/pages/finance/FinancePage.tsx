@@ -378,6 +378,7 @@ function OpenFinanceConnect({
     try {
       await client.connectOpenFinance(apiKey.trim());
       setApiKey("");
+      setShowApiKey(false);
       await status.run();
     } catch {
       setError("Não foi possível salvar a chave de API.");

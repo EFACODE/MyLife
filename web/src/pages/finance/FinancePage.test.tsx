@@ -256,6 +256,28 @@ describe("FinancePage", () => {
     expect(input).toHaveAttribute("type", "password");
   });
 
+  it("não deixa a chave revelada depois de conectar e desconectar de novo", async () => {
+    client.openFinanceStatus
+      .mockResolvedValueOnce({ connected: false, updated_at: null })
+      .mockResolvedValueOnce({ connected: true, updated_at: "2026-09-24T00:00:00Z" })
+      .mockResolvedValueOnce({ connected: false, updated_at: null });
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    fireEvent.click(await screen.findByText("Mostrar"));
+    expect(screen.getByLabelText("Chave de API (sk-...)")).toHaveAttribute("type", "text");
+
+    fireEvent.change(screen.getByLabelText("Chave de API (sk-...)"), {
+      target: { value: "sk-test" },
+    });
+    fireEvent.click(screen.getByText("Conectar"));
+    await screen.findByText(/Conectado desde/);
+
+    fireEvent.click(screen.getByText("Desconectar"));
+    const revealedInput = await screen.findByLabelText("Chave de API (sk-...)");
+    expect(revealedInput).toHaveAttribute("type", "password");
+  });
+
   it("mostra a dica de consentimento ao sincronizar a Pierre Finance sem consentimento (403)", async () => {
     client.openFinanceStatus.mockResolvedValue({
       connected: true,
