@@ -113,7 +113,7 @@ exactly like the CSV connectors (`T4.2`, `T3.5`) but without a file upload.
 | FR-8 | Functional | `POST /finance/connectors/openfinance/sync` (`get_current_user`): builds the connector, runs `ConnectorRunner.sync(..., consent=ConsentService(...))` synchronously; `ConsentRequiredError` → `403`; `MissingCredentialError` → `409`; `PierreApiError` → `502`. Returns a `SyncResult` view, like `T4.2`'s bank import endpoint. |
 | FR-9 | Functional | `POST /finance/connectors/openfinance/credentials {api_key}` / `DELETE .../credentials` store/remove the key via `CredentialVault` under provider `"pierre_finance"`. Both require auth only (not consent — storing a key is not itself "ingesting"; the sync call is what's consent-gated, matching `T4.2`'s pattern of gating ingestion, not account setup). |
 | FR-10 | Functional | `GET /finance/connectors/openfinance/credentials` returns `OpenFinanceCredentialStatus {connected, updated_at}` — auth only, never returns the secret. `connected` reflects whether the stored secret still *decrypts* (`CredentialVault.get(...)`), not merely whether a row exists: if `MYLIFE_CREDENTIAL_ENCRYPTION_KEY` ever changes (e.g. a deployment that never pinned it — see `Settings.credential_encryption_key` — defaults to a new random key every restart), every previously stored secret becomes permanently undecryptable even though its row/`updated_at` persists; reporting "connected" in that case strands the user, since the web console's "connected" branch (FR-11) hides the credential form. `updated_at` is only returned when `connected` is `true`. Backs the web console's connected/not-connected indicator (FR-11). |
-| FR-11 | Functional | Web console (Finanças → Configurações → "Open Finance (Pierre Finance)"): not connected → a masked (password-style, with a "Mostrar"/"Ocultar" reveal toggle) API-key input + "Conectar" (`POST .../credentials`); connected → "Conectado desde `<data>`", a "Sincronizar agora" button (`POST .../sync`, shows the resulting counts or a friendly message for `403`/`409`/other errors, and refreshes the Visão geral/Transações data on success) and a "Desconectar" action (`DELETE .../credentials`). |
+| FR-11 | Functional | Web console (Finanças → Configurações → "Open Finance (Pierre Finance)"): not connected → a masked (password-style, with a "Mostrar"/"Ocultar" reveal toggle) API-key input + "Conectar" (`POST .../credentials`); connected → "Conectado desde `<data>`", a "Sincronizar agora" button (`POST .../sync`, shows the resulting counts on success and refreshes the Visão geral/Transações data; on failure shows a friendly message for `403`/`409`, or for any other status the backend's own `detail` text — e.g. the upstream Pierre API error — appended to the generic message, rather than a bare status code) and a "Desconectar" action (`DELETE .../credentials`). |
 | FR-12 | Functional | When "Sincronizar agora" fails with `403` (no `"openfinance"` consent), the web console also shows a "Conceder consentimento e sincronizar" button that calls the generic `POST /consents {scope: "openfinance"}` (`T10.2`) and immediately retries the sync — so granting consent and completing the first sync no longer requires navigating away to the Consentimentos page and typing the scope by hand. |
 | NFR-1 | Security | Consent scope `"openfinance"` enforced fail-closed on sync (`T2.3`); the Pierre API key is never logged, never echoed back by any endpoint (including the status check, FR-10), stored only via `CredentialVault`. |
 | NFR-2 | Typing/Deps | Passes `mypy --strict`; adds `httpx` (already a dev/test dependency) as a runtime dependency and `cryptography` (via the vault spec). |
@@ -203,8 +203,16 @@ POST /finance/connectors/openfinance/sync   (auth + consent "openfinance")
   default with a working reveal toggle; submitting calls `connectOpenFinance`
   and refreshes status. Connected → "Sincronizar agora" shows the resulting
   counts and refreshes the accounts/transactions lists, a `403` shows the
-  consent hint, a `409` shows the "connect first" hint; "Desconectar" calls
-  `disconnectOpenFinance` and refreshes status back to the form.
+  consent hint, a `409` shows the "connect first" hint, any other status
+  (e.g. a `502` from the Pierre API) shows the backend's `detail` text
+  rather than a generic "could not sync" with no explanation; "Desconectar"
+  calls `disconnectOpenFinance` and refreshes status back to the form.
+- **API client surfaces `detail` (FR-11):** `ApiClient`'s error path reads
+  the failed response body's `detail` field and uses it as the thrown
+  `ApiError`'s message when present, falling back to the generic
+  `"<method> <path> -> <status>"` only when the body has none — so any
+  backend-provided explanation (Pierre API errors, consent/credential
+  hints, etc.) reaches the UI instead of being discarded.
 - **Web console consent shortcut (FR-12):** a `403` on sync shows a
   "Conceder consentimento e sincronizar" button; clicking it calls
   `grantConsent("openfinance")` then re-runs the sync, landing on the same

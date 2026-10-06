@@ -85,9 +85,19 @@ export class ApiClient {
     private readonly onUnauthorized?: () => void,
   ) {}
 
-  private fail(status: number, message: string): never {
-    if (status === 401) this.onUnauthorized?.();
-    throw new ApiError(status, message);
+  /** Raise an ApiError, preferring the backend's `detail` body over the generic fallback. */
+  private async fail(response: Response, fallback: string): Promise<never> {
+    if (response.status === 401) this.onUnauthorized?.();
+    let detail: string | undefined;
+    try {
+      const body: unknown = await response.json();
+      if (body && typeof body === "object" && typeof (body as { detail?: unknown }).detail === "string") {
+        detail = (body as { detail: string }).detail;
+      }
+    } catch {
+      // Body wasn't JSON (or was empty) — fall back to the generic message.
+    }
+    throw new ApiError(response.status, detail ?? fallback);
   }
 
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -103,7 +113,7 @@ export class ApiClient {
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!response.ok) this.fail(response.status, `${method} ${path} -> ${response.status}`);
+    if (!response.ok) await this.fail(response, `${method} ${path} -> ${response.status}`);
     if (response.status === 204) return undefined as T;
     return (await response.json()) as T;
   }
@@ -120,7 +130,7 @@ export class ApiClient {
       headers,
       body: form,
     });
-    if (!response.ok) this.fail(response.status, `POST ${path} -> ${response.status}`);
+    if (!response.ok) await this.fail(response, `POST ${path} -> ${response.status}`);
     return (await response.json()) as T;
   }
 
