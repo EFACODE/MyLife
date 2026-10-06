@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../api/client";
 
@@ -58,6 +58,9 @@ async function billsSection(heading: string): Promise<HTMLElement> {
 
 describe("FinancePage", () => {
   beforeEach(() => {
+    // Fixa o "hoje" no mesmo mês das transações mockadas (setembro/2026), já
+    // que a aba Visão geral filtra o gráfico de gastos pelo mês atual por padrão.
+    vi.setSystemTime(new Date("2026-09-20T12:00:00Z"));
     client.listAccounts.mockResolvedValue([
       { account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" },
     ]);
@@ -194,11 +197,52 @@ describe("FinancePage", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("mostra a aba Visão geral por padrão, com saldo das contas e gastos por categoria", async () => {
     render(<FinancePage />);
     expect(await screen.findByText("Conta Corrente")).toBeInTheDocument();
     expect(await screen.findByText("-253,89 BRL")).toBeInTheDocument();
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
+  });
+
+  it("filtra o gráfico de gastos por categoria pelo período selecionado", async () => {
+    render(<FinancePage />);
+    expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByLabelText("Filtrar período do gráfico de gastos por categoria"),
+      { target: { value: "2026-08" } },
+    );
+
+    const section = await billsSection("Gastos por categoria");
+    expect(within(section).queryByText("Alimentos e bebidas")).not.toBeInTheDocument();
+    expect(
+      within(section).getByText(
+        "Nenhuma transação ainda — as categorias aparecerão aqui assim que você registrar alguma.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("oculta contas com saldo zerado na aba Visão geral", async () => {
+    client.listAccounts.mockResolvedValue([
+      { account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" },
+      { account_id: "a2", name: "Conta Zerada", currency: "BRL", created_at: "x" },
+    ]);
+    client.netWorth.mockResolvedValue({
+      currencies: [{ currency: "BRL", total_minor: -25389 }],
+      accounts: [
+        { account_id: "a1", currency: "BRL", balance_minor: -25389, as_of: "x" },
+        { account_id: "a2", currency: "BRL", balance_minor: 0, as_of: "x" },
+      ],
+    });
+
+    render(<FinancePage />);
+    const section = await billsSection("Saldo das contas");
+    expect(within(section).getByText("Conta Corrente")).toBeInTheDocument();
+    expect(within(section).queryByText("Conta Zerada")).not.toBeInTheDocument();
   });
 
   it("cria uma conta na aba Configurações", async () => {
