@@ -49,8 +49,11 @@ exactly like the CSV connectors (`T4.2`, `T3.5`) but without a file upload.
   - `POST /finance/connectors/openfinance/sync` — authenticated,
     consent-gated (`"openfinance"`), synchronous (mirrors `T4.2`'s import
     endpoint) manual trigger.
-  - `POST/DELETE /finance/connectors/openfinance/credentials` — store/remove
-    the Pierre API key.
+  - `GET/POST/DELETE /finance/connectors/openfinance/credentials` — check
+    connection status / store / remove the Pierre API key (the `GET` never
+    returns the secret itself — see §5).
+  - A web console section (Finanças → Configurações) to connect/disconnect
+    and trigger a manual sync, mirroring the bank CSV import section.
 - **Out of scope (later):**
   - Scheduled/periodic sync (Celery beat) — the connector is written so a
     worker *can* run it (its `fetch` needs only `(source, user_id)`, like
@@ -73,6 +76,10 @@ exactly like the CSV connectors (`T4.2`, `T3.5`) but without a file upload.
     "sk-..."}` (authenticated) stores the key; a second call replaces it.
   - **AC2:** `DELETE /finance/connectors/openfinance/credentials`
     disconnects (future syncs fail with "not connected" until reconnected).
+  - **AC2b:** `GET /finance/connectors/openfinance/credentials` returns
+    `{"connected": bool, "updated_at": …|null}` reflecting the current state —
+    never the key itself — so the web console can show a connected/not-
+    connected indicator without ever handling the secret after it's sent.
 - As a **user**, I sync my transactions and see them in My Life.
   - **AC3:** `POST /finance/connectors/openfinance/sync` (authenticated,
     consent `"openfinance"` granted, key stored) creates/links one `Account`
@@ -105,13 +112,18 @@ exactly like the CSV connectors (`T4.2`, `T3.5`) but without a file upload.
 | FR-7 | Functional | `Account` gains nullable `external_source`/`external_id` columns (unique together with `user_id` when set) so a Pierre account is only ever created once per user across syncs. |
 | FR-8 | Functional | `POST /finance/connectors/openfinance/sync` (`get_current_user`): builds the connector, runs `ConnectorRunner.sync(..., consent=ConsentService(...))` synchronously; `ConsentRequiredError` → `403`; `MissingCredentialError` → `409`; `PierreApiError` → `502`. Returns a `SyncResult` view, like `T4.2`'s bank import endpoint. |
 | FR-9 | Functional | `POST /finance/connectors/openfinance/credentials {api_key}` / `DELETE .../credentials` store/remove the key via `CredentialVault` under provider `"pierre_finance"`. Both require auth only (not consent — storing a key is not itself "ingesting"; the sync call is what's consent-gated, matching `T4.2`'s pattern of gating ingestion, not account setup). |
-| NFR-1 | Security | Consent scope `"openfinance"` enforced fail-closed on sync (`T2.3`); the Pierre API key is never logged, never echoed back by any endpoint, stored only via `CredentialVault`. |
+| FR-10 | Functional | `GET /finance/connectors/openfinance/credentials` returns `OpenFinanceCredentialStatus {connected, updated_at}` from `CredentialVault.updated_at(...)` — auth only, never returns the secret. Backs the web console's connected/not-connected indicator (FR-11). |
+| FR-11 | Functional | Web console (Finanças → Configurações → "Open Finance (Pierre Finance)"): not connected → an API-key input + "Conectar" (`POST .../credentials`); connected → "Conectado desde `<data>`", a "Sincronizar agora" button (`POST .../sync`, shows the resulting counts or a friendly message for `403`/`409`/other errors) and a "Desconectar" action (`DELETE .../credentials`). |
+| NFR-1 | Security | Consent scope `"openfinance"` enforced fail-closed on sync (`T2.3`); the Pierre API key is never logged, never echoed back by any endpoint (including the status check, FR-10), stored only via `CredentialVault`. |
 | NFR-2 | Typing/Deps | Passes `mypy --strict`; adds `httpx` (already a dev/test dependency) as a runtime dependency and `cryptography` (via the vault spec). |
 | NFR-3 | Testability | `PierreFinanceClient` takes an injectable `httpx.Client`/transport so tests run against `httpx.MockTransport` — no real network call in the test suite (consistent with this environment's network egress policy). Connector tested via `ConnectorRunner` on SQLite (sync → accounts auto-created, transactions + balance queryable, provenance-linked, idempotent on re-run); endpoint tested (auth, consent `403`, missing-credential `409`, happy path). |
 
 ## 5. API & event contracts
 
 ```
+GET /finance/connectors/openfinance/credentials     (auth only)
+  -> 200 { "connected": true, "updated_at": "2026-09-24T12:00:00Z" }
+
 POST /finance/connectors/openfinance/credentials   (auth only)
   { "api_key": "sk-..." }
   -> 204
@@ -178,6 +190,14 @@ POST /finance/connectors/openfinance/sync   (auth + consent "openfinance")
   (fail-closed, consistent with `T4.2`/`T3.5`).
 - **Upstream error (AC8):** a fake 401/500 from Pierre → `PierreApiError` →
   endpoint returns `502`.
+- **Credential status (AC2b, FR-10):** not connected → `{connected: false,
+  updated_at: null}`; after connecting → `connected: true` with a timestamp;
+  after disconnecting → back to `false`/`null`.
+- **Web console (FR-11):** not connected → the API-key form; submitting calls
+  `connectOpenFinance` and refreshes status. Connected → "Sincronizar agora"
+  shows the resulting counts, a `403` shows the consent hint, a `409` shows
+  the "connect first" hint; "Desconectar" calls `disconnectOpenFinance` and
+  refreshes status back to the form.
 
 ## 9. Dependencies, open decisions, risks & future work
 
@@ -271,3 +291,5 @@ POST /finance/connectors/openfinance/sync   (auth + consent "openfinance")
 - [x] End-to-end proven against a mocked Pierre API (no real network call in
       CI); the Transaction-schema risk (§9) is documented, not hidden, and
       flagged to the user as needing live verification before production use.
+- [x] Web console section (Finanças → Configurações) to connect/disconnect
+      and trigger a sync; `npm test`/`lint`/`typecheck` green.

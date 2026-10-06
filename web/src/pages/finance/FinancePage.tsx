@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
+  Link2,
   ListChecks,
   PiggyBank,
   PlusCircle,
@@ -58,6 +59,10 @@ type FinanceApi = Pick<
   | "deleteTransaction"
   | "netWorth"
   | "importBank"
+  | "openFinanceStatus"
+  | "connectOpenFinance"
+  | "disconnectOpenFinance"
+  | "syncOpenFinance"
   | "listBills"
   | "registerBill"
   | "updateBill"
@@ -198,6 +203,7 @@ function SettingsTab({
       <Accounts client={client} accounts={accounts} />
       <AlertPreferences client={client} />
       <BankImport client={client} />
+      <OpenFinanceConnect client={client} />
     </>
   );
 }
@@ -336,6 +342,123 @@ function BankImport({ client }: { client: FinanceApi }) {
         </div>
       </form>
       {result && <p className="mt-2 text-sm text-green-700">{result}</p>}
+      {error && <ErrorText>{error}</ErrorText>}
+    </Section>
+  );
+}
+
+function OpenFinanceConnect({ client }: { client: FinanceApi }) {
+  const status = useAsync(() => client.openFinanceStatus(), [client]);
+  const [apiKey, setApiKey] = useState("");
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  async function connect(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    try {
+      await client.connectOpenFinance(apiKey.trim());
+      setApiKey("");
+      await status.run();
+    } catch {
+      setError("Não foi possível salvar a chave de API.");
+    }
+  }
+
+  async function disconnect() {
+    setError(null);
+    setSyncResult(null);
+    try {
+      await client.disconnectOpenFinance();
+      await status.run();
+    } catch {
+      setError("Não foi possível desconectar.");
+    }
+  }
+
+  async function sync() {
+    setError(null);
+    setSyncResult(null);
+    setSyncing(true);
+    try {
+      const outcome = await client.syncOpenFinance();
+      setSyncResult(
+        `${outcome.events_created} evento(s) importado(s) (${outcome.skipped_duplicates} duplicado(s) ignorado(s)).`,
+      );
+    } catch (caught) {
+      const httpStatus = (caught as { status?: number }).status;
+      setError(
+        httpStatus === 403
+          ? "Conceda o consentimento 'openfinance' primeiro (página Consentimentos)."
+          : httpStatus === 409
+            ? "Conecte sua chave de API da Pierre Finance primeiro."
+            : "Não foi possível sincronizar com a Pierre Finance.",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <Section title="Open Finance (Pierre Finance)" icon={Link2}>
+      <p className="mb-3 text-sm text-gray-500">
+        Conecte seus bancos dentro do app da Pierre Finance (
+        <a
+          href="https://pierre.finance/connect"
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          pierre.finance/connect
+        </a>
+        ) e cole aqui a chave de API gerada em{" "}
+        <a
+          href="https://pierre.finance/api-key"
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          pierre.finance/api-key
+        </a>
+        .
+      </p>
+      {status.status === "error" && (
+        <ErrorText>Não foi possível carregar o status da conexão.</ErrorText>
+      )}
+      {status.data?.connected ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-green-700">
+            Conectado
+            {status.data.updated_at ? ` desde ${shortDate(status.data.updated_at)}` : ""}.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" onClick={sync} disabled={syncing}>
+              {syncing ? "Sincronizando…" : "Sincronizar agora"}
+            </Button>
+            <button
+              type="button"
+              onClick={disconnect}
+              className="text-sm text-red-600 hover:underline"
+            >
+              Desconectar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={connect} className="flex flex-wrap items-end gap-2">
+          <Field label="Chave de API (sk-...)">
+            <TextInput
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="sk-..."
+              required
+            />
+          </Field>
+          <Button type="submit">Conectar</Button>
+        </form>
+      )}
+      {syncResult && <p className="mt-2 text-sm text-green-700">{syncResult}</p>}
       {error && <ErrorText>{error}</ErrorText>}
     </Section>
   );
