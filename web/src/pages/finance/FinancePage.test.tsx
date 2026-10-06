@@ -20,6 +20,7 @@ const client = vi.hoisted(() => ({
   connectOpenFinance: vi.fn(),
   disconnectOpenFinance: vi.fn(),
   syncOpenFinance: vi.fn(),
+  grantConsent: vi.fn(),
   listBills: vi.fn(),
   registerBill: vi.fn(),
   updateBill: vi.fn(),
@@ -105,6 +106,7 @@ describe("FinancePage", () => {
       events_created: 3,
       skipped_duplicates: 0,
     });
+    client.grantConsent.mockResolvedValue({ scope: "openfinance", granted: true });
     client.listBills.mockResolvedValue([
       {
         bill_id: "b1",
@@ -229,13 +231,53 @@ describe("FinancePage", () => {
     goToTab("Configurações");
 
     expect(await screen.findByText(/Conectado desde/)).toBeInTheDocument();
+    client.listAccounts.mockClear();
+    client.listTransactions.mockClear();
     fireEvent.click(screen.getByText("Sincronizar agora"));
     expect(
       await screen.findByText("3 evento(s) importado(s) (0 duplicado(s) ignorado(s))."),
     ).toBeInTheDocument();
+    await waitFor(() => expect(client.listAccounts).toHaveBeenCalled());
+    await waitFor(() => expect(client.listTransactions).toHaveBeenCalled());
 
     fireEvent.click(screen.getByText("Desconectar"));
     await waitFor(() => expect(client.disconnectOpenFinance).toHaveBeenCalled());
+  });
+
+  it("mascara a chave de API da Pierre Finance por padrão e permite revelar", async () => {
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    const input = await screen.findByLabelText("Chave de API (sk-...)");
+    expect(input).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByText("Mostrar"));
+    expect(input).toHaveAttribute("type", "text");
+
+    fireEvent.click(screen.getByText("Ocultar"));
+    expect(input).toHaveAttribute("type", "password");
+  });
+
+  it("não deixa a chave revelada depois de conectar e desconectar de novo", async () => {
+    client.openFinanceStatus
+      .mockResolvedValueOnce({ connected: false, updated_at: null })
+      .mockResolvedValueOnce({ connected: true, updated_at: "2026-09-24T00:00:00Z" })
+      .mockResolvedValueOnce({ connected: false, updated_at: null });
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    fireEvent.click(await screen.findByText("Mostrar"));
+    expect(screen.getByLabelText("Chave de API (sk-...)")).toHaveAttribute("type", "text");
+
+    fireEvent.change(screen.getByLabelText("Chave de API (sk-...)"), {
+      target: { value: "sk-test" },
+    });
+    fireEvent.click(screen.getByText("Conectar"));
+    await screen.findByText(/Conectado desde/);
+
+    fireEvent.click(screen.getByText("Desconectar"));
+    const revealedInput = await screen.findByLabelText("Chave de API (sk-...)");
+    expect(revealedInput).toHaveAttribute("type", "password");
   });
 
   it("mostra a dica de consentimento ao sincronizar a Pierre Finance sem consentimento (403)", async () => {
@@ -251,6 +293,38 @@ describe("FinancePage", () => {
     expect(
       await screen.findByText(/Conceda o consentimento 'openfinance' primeiro/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("Conceder consentimento e sincronizar"),
+    ).toBeInTheDocument();
+  });
+
+  it("concede o consentimento 'openfinance' e sincroniza direto da tela de Finanças", async () => {
+    client.openFinanceStatus.mockResolvedValue({
+      connected: true,
+      updated_at: "2026-09-24T00:00:00Z",
+    });
+    client.syncOpenFinance
+      .mockRejectedValueOnce(new ApiError(403, "forbidden"))
+      .mockResolvedValueOnce({
+        source: "openfinance",
+        raw_ingested: 2,
+        events_created: 2,
+        skipped_duplicates: 0,
+      });
+    client.syncOpenFinance.mockClear();
+    client.grantConsent.mockClear();
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    fireEvent.click(await screen.findByText("Sincronizar agora"));
+    fireEvent.click(await screen.findByText("Conceder consentimento e sincronizar"));
+
+    await waitFor(() => expect(client.grantConsent).toHaveBeenCalledWith("openfinance"));
+    await waitFor(() => expect(client.syncOpenFinance).toHaveBeenCalledTimes(2));
+    expect(
+      await screen.findByText("2 evento(s) importado(s) (0 duplicado(s) ignorado(s))."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Conceder consentimento e sincronizar")).not.toBeInTheDocument();
   });
 
   it("avisa para conectar a chave quando a sincronização retorna 409", async () => {

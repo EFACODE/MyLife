@@ -63,6 +63,7 @@ type FinanceApi = Pick<
   | "connectOpenFinance"
   | "disconnectOpenFinance"
   | "syncOpenFinance"
+  | "grantConsent"
   | "listBills"
   | "registerBill"
   | "updateBill"
@@ -119,7 +120,16 @@ export function FinancePage() {
       )}
       {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
       {tab === "categories" && <CategoriesTab client={client} />}
-      {tab === "settings" && <SettingsTab client={client} accounts={accounts} />}
+      {tab === "settings" && (
+        <SettingsTab
+          client={client}
+          accounts={accounts}
+          onOpenFinanceSynced={() => {
+            void accounts.run();
+            void transactions.run();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -193,9 +203,11 @@ function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: A
 function SettingsTab({
   client,
   accounts,
+  onOpenFinanceSynced,
 }: {
   client: FinanceApi;
   accounts: AsyncResult<Account[]>;
+  onOpenFinanceSynced: () => void;
 }) {
   return (
     <>
@@ -203,7 +215,7 @@ function SettingsTab({
       <Accounts client={client} accounts={accounts} />
       <AlertPreferences client={client} />
       <BankImport client={client} />
-      <OpenFinanceConnect client={client} />
+      <OpenFinanceConnect client={client} onSynced={onOpenFinanceSynced} />
     </>
   );
 }
@@ -347,12 +359,21 @@ function BankImport({ client }: { client: FinanceApi }) {
   );
 }
 
-function OpenFinanceConnect({ client }: { client: FinanceApi }) {
+function OpenFinanceConnect({
+  client,
+  onSynced,
+}: {
+  client: FinanceApi;
+  onSynced: () => void;
+}) {
   const status = useAsync(() => client.openFinanceStatus(), [client]);
   const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [missingConsent, setMissingConsent] = useState(false);
+  const [grantingConsent, setGrantingConsent] = useState(false);
 
   async function connect(event: FormEvent) {
     event.preventDefault();
@@ -360,6 +381,7 @@ function OpenFinanceConnect({ client }: { client: FinanceApi }) {
     try {
       await client.connectOpenFinance(apiKey.trim());
       setApiKey("");
+      setShowApiKey(false);
       await status.run();
     } catch {
       setError("Não foi possível salvar a chave de API.");
@@ -369,6 +391,7 @@ function OpenFinanceConnect({ client }: { client: FinanceApi }) {
   async function disconnect() {
     setError(null);
     setSyncResult(null);
+    setMissingConsent(false);
     try {
       await client.disconnectOpenFinance();
       await status.run();
@@ -380,23 +403,42 @@ function OpenFinanceConnect({ client }: { client: FinanceApi }) {
   async function sync() {
     setError(null);
     setSyncResult(null);
+    setMissingConsent(false);
     setSyncing(true);
     try {
       const outcome = await client.syncOpenFinance();
       setSyncResult(
         `${outcome.events_created} evento(s) importado(s) (${outcome.skipped_duplicates} duplicado(s) ignorado(s)).`,
       );
+      onSynced();
     } catch (caught) {
       const httpStatus = (caught as { status?: number }).status;
-      setError(
-        httpStatus === 403
-          ? "Conceda o consentimento 'openfinance' primeiro (página Consentimentos)."
-          : httpStatus === 409
+      if (httpStatus === 403) {
+        setMissingConsent(true);
+        setError("Conceda o consentimento 'openfinance' primeiro.");
+      } else {
+        setError(
+          httpStatus === 409
             ? "Conecte sua chave de API da Pierre Finance primeiro."
             : "Não foi possível sincronizar com a Pierre Finance.",
-      );
+        );
+      }
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function grantConsentAndSync() {
+    setError(null);
+    setGrantingConsent(true);
+    try {
+      await client.grantConsent("openfinance");
+      setMissingConsent(false);
+      await sync();
+    } catch {
+      setError("Não foi possível conceder o consentimento 'openfinance'.");
+    } finally {
+      setGrantingConsent(false);
     }
   }
 
@@ -448,18 +490,39 @@ function OpenFinanceConnect({ client }: { client: FinanceApi }) {
       ) : (
         <form onSubmit={connect} className="flex flex-wrap items-end gap-2">
           <Field label="Chave de API (sk-...)">
-            <TextInput
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              required
-            />
+            <div className="flex items-center gap-1">
+              <TextInput
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                autoComplete="off"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey((v) => !v)}
+                className="shrink-0 text-xs text-gray-500 hover:underline"
+              >
+                {showApiKey ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
           </Field>
           <Button type="submit">Conectar</Button>
         </form>
       )}
       {syncResult && <p className="mt-2 text-sm text-green-700">{syncResult}</p>}
       {error && <ErrorText>{error}</ErrorText>}
+      {missingConsent && (
+        <Button
+          type="button"
+          onClick={() => void grantConsentAndSync()}
+          disabled={grantingConsent || syncing}
+          className="mt-2"
+        >
+          {grantingConsent ? "Concedendo…" : "Conceder consentimento e sincronizar"}
+        </Button>
+      )}
     </Section>
   );
 }
