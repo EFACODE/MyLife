@@ -145,11 +145,35 @@ function OverviewTab({
   accounts: Account[];
   transactions: Transaction[];
 }) {
+  const [period, setPeriod] = useState(currentYearMonth());
+
+  const transactionsInPeriod = useMemo(() => {
+    const anchor = parseYearMonth(period);
+    if (!anchor) return transactions;
+    return transactions.filter((t) => {
+      const occurredAt = new Date(t.occurred_at);
+      return occurredAt.getFullYear() === anchor.year && occurredAt.getMonth() + 1 === anchor.month;
+    });
+  }, [transactions, period]);
+
   return (
     <>
       <AccountBalances client={client} accounts={accounts} />
-      <Section title="Gastos por categoria" icon={PiggyBank}>
-        <CategorySpendBreakdown transactions={transactions} />
+      <Section
+        title="Gastos por categoria"
+        icon={PiggyBank}
+        actions={
+          <Field label="Período">
+            <TextInput
+              type="month"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              aria-label="Filtrar período do gráfico de gastos por categoria"
+            />
+          </Field>
+        }
+      >
+        <CategorySpendBreakdown transactions={transactionsInPeriod} />
       </Section>
     </>
   );
@@ -165,6 +189,11 @@ function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: A
     return map;
   }, [netWorth.data]);
 
+  const accountsWithBalance = useMemo(
+    () => accounts.filter((account) => (balanceByAccount.get(account.account_id)?.balance_minor ?? 0) !== 0),
+    [accounts, balanceByAccount],
+  );
+
   return (
     <Section
       title="Saldo das contas"
@@ -176,9 +205,11 @@ function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: A
       )}
       {accounts.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhuma conta cadastrada ainda.</p>
+      ) : accountsWithBalance.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhuma conta com saldo diferente de zero.</p>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
-          {accounts.map((account) => {
+          {accountsWithBalance.map((account) => {
             const balance = balanceByAccount.get(account.account_id);
             return (
               <li
