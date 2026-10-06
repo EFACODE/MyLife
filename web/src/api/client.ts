@@ -307,8 +307,10 @@ export class ApiClient {
     });
   }
 
-  syncOpenFinance(): Promise<OpenFinanceSyncResult> {
-    return this.request<OpenFinanceSyncResult>("/finance/connectors/openfinance/sync", {
+  /** `since` (YYYY-MM-DD) backfills from that date instead of the default 30-day window. */
+  syncOpenFinance(since?: string): Promise<OpenFinanceSyncResult> {
+    const query = since ? `?since=${since}` : "";
+    return this.request<OpenFinanceSyncResult>(`/finance/connectors/openfinance/sync${query}`, {
       method: "POST",
     });
   }

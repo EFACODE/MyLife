@@ -182,6 +182,11 @@ class PierreFinanceConnector:
     vault, not a per-request upload) — unlike the CSV connectors, so it could
     later be registered on the shared connector registry for scheduled runs
     (deferred, see the spec's §9).
+
+    ``since``, when given, overrides the trailing ``lookback_days`` window
+    with an explicit start date — a one-off manual backfill (e.g. to pull a
+    month that predates the regular 30-day window) rather than a change to
+    the default sync behavior.
     """
 
     source = OPENFINANCE_SOURCE
@@ -194,12 +199,14 @@ class PierreFinanceConnector:
         *,
         now: datetime,
         lookback_days: int = 30,
+        since: date | None = None,
     ) -> None:
         self._finance = finance
         self._vault = vault
         self._client = client
         self._now = ensure_utc(now)
         self._lookback_days = lookback_days
+        self._since = since
 
     def fetch(self, context: FetchContext) -> Iterable[RawPayload]:
         api_key = self._vault.get(context.user_id, PIERRE_PROVIDER)
@@ -237,7 +244,11 @@ class PierreFinanceConnector:
             )
 
         end_date = self._now.date()
-        start_date = end_date - timedelta(days=self._lookback_days)
+        start_date = (
+            self._since
+            if self._since is not None
+            else end_date - timedelta(days=self._lookback_days)
+        )
         transactions = self._client.get_transactions(
             api_key, start_date=start_date, end_date=end_date
         )

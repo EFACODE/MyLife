@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import httpx
 import pytest
@@ -214,6 +214,46 @@ def test_transaction_missing_recognized_fields_fails_the_batch(
         # Nothing left half-ingested (the balance raw record rolled back too).
         finance = FinanceService(session, InProcessEventBus())
         assert finance.list_transactions(user) == []
+
+
+def test_since_overrides_the_default_lookback_window(factory: sessionmaker[Session]) -> None:
+    """A manual backfill (``since``) requests ``[since, today]`` instead of
+    the default trailing 30-day window — e.g. to pull a month that predates
+    when the connector was first set up (see spec FR-2/FR-3)."""
+    user = uuid.uuid4()
+    requested_params: list[dict[str, str]] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/tools/api/get-transactions":
+            requested_params.append(dict(request.url.params))
+            return httpx.Response(200, json={"success": True, "data": TRANSACTIONS})
+        if request.url.path == "/tools/api/get-accounts":
+            return httpx.Response(200, json={"success": True, "data": [ACCOUNT]})
+        return httpx.Response(404, json={"success": False, "error": "not found"})
+
+    with factory() as session:
+        CredentialVault(session, KEY).store(user, PIERRE_PROVIDER, "sk-test", now=NOW)
+        http_client = httpx.Client(
+            transport=httpx.MockTransport(handle), base_url="https://fake.test"
+        )
+        client = PierreFinanceClient(base_url="https://fake.test", http_client=http_client)
+        connector = PierreFinanceConnector(
+            FinanceService(session, InProcessEventBus()),
+            CredentialVault(session, KEY),
+            client,
+            now=NOW,
+            since=date(2026, 9, 1),
+        )
+        ConnectorRunner(session, InProcessEventBus()).sync(connector, _context(user))
+
+    assert requested_params == [
+        {
+            "startDate": "2026-09-01",
+            "endDate": "2026-09-23",
+            "includeStatus": "POSTED",
+            "format": "raw",
+        }
+    ]
 
 
 def test_upstream_error_raises_pierre_api_error(factory: sessionmaker[Session]) -> None:

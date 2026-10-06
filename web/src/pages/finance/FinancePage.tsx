@@ -374,6 +374,7 @@ function OpenFinanceConnect({
   const [syncing, setSyncing] = useState(false);
   const [missingConsent, setMissingConsent] = useState(false);
   const [grantingConsent, setGrantingConsent] = useState(false);
+  const [backfillSince, setBackfillSince] = useState("");
 
   async function connect(event: FormEvent) {
     event.preventDefault();
@@ -400,13 +401,13 @@ function OpenFinanceConnect({
     }
   }
 
-  async function sync() {
+  async function sync(since?: string) {
     setError(null);
     setSyncResult(null);
     setMissingConsent(false);
     setSyncing(true);
     try {
-      const outcome = await client.syncOpenFinance();
+      const outcome = await client.syncOpenFinance(since);
       setSyncResult(
         `${outcome.events_created} evento(s) importado(s) (${outcome.skipped_duplicates} duplicado(s) ignorado(s)).`,
       );
@@ -478,7 +479,7 @@ function OpenFinanceConnect({
             {status.data.updated_at ? ` desde ${shortDate(status.data.updated_at)}` : ""}.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" onClick={sync} disabled={syncing}>
+            <Button type="button" onClick={() => void sync()} disabled={syncing}>
               {syncing ? "Sincronizando…" : "Sincronizar agora"}
             </Button>
             <button
@@ -487,6 +488,23 @@ function OpenFinanceConnect({
               className="text-sm text-red-600 hover:underline"
             >
               Desconectar
+            </button>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="Buscar desde (backfill)">
+              <TextInput
+                type="date"
+                value={backfillSince}
+                onChange={(e) => setBackfillSince(e.target.value)}
+              />
+            </Field>
+            <button
+              type="button"
+              onClick={() => backfillSince && void sync(backfillSince)}
+              disabled={syncing || !backfillSince}
+              className="text-sm text-blue-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-400"
+            >
+              Sincronizar a partir dessa data
             </button>
           </div>
         </div>
