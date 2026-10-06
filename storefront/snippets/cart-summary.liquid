@@ -1,0 +1,105 @@
+{%- comment -%}
+  Discount field, totals and checkout. Shared by the drawer and the cart page.
+  Accepts: form_id (unique per placement), show_view_cart (bool)
+{%- endcomment -%}
+
+{%- liquid
+  assign form_id = form_id | default: 'cart'
+-%}
+
+{%- if settings.cart_discount_field -%}
+  <cart-discount class="cart-discount">
+    {%- if cart.cart_level_discount_applications.size > 0 -%}
+      <div class="cart-discount__applied">
+        {%- for discount in cart.cart_level_discount_applications -%}
+          <span class="active-facet" style="padding-right: 14px;">
+            {{ discount.title }} &minus;{{ discount.total_allocated_amount | money }}
+          </span>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
+    <button type="button" class="cart-discount__toggle" data-discount-toggle>
+      {{ 'cart.discount.label' | t }}
+    </button>
+
+    <form class="cart-discount__form" data-discount-form>
+      <label class="visually-hidden" for="DiscountCode-{{ form_id }}">
+        {{ 'cart.discount.label' | t }}
+      </label>
+      <input
+        id="DiscountCode-{{ form_id }}"
+        class="field__input"
+        type="text"
+        name="discount"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        placeholder="{{ 'cart.discount.placeholder' | t }}"
+      >
+      <button type="submit" class="button button--secondary button--small">
+        <span class="button__label">{{ 'cart.discount.apply' | t }}</span>
+        <span class="button__spinner"><span class="spinner"></span></span>
+      </button>
+    </form>
+
+    <p class="form__message form__message--error" data-discount-message role="status"></p>
+  </cart-discount>
+{%- endif -%}
+
+<div class="cart-totals">
+  {%- if cart.cart_level_discount_applications.size > 0 -%}
+    <div class="cart-totals__row">
+      <span>{{ 'cart.general.subtotal' | t }}</span>
+      <span>{{ cart.original_total_price | money }}</span>
+    </div>
+    {%- for discount in cart.cart_level_discount_applications -%}
+      <div class="cart-totals__row text-muted">
+        <span>{{ discount.title }}</span>
+        <span>&minus;{{ discount.total_allocated_amount | money }}</span>
+      </div>
+    {%- endfor -%}
+  {%- endif -%}
+
+  <div class="cart-totals__row cart-totals__row--total">
+    <span>{{ 'cart.general.total' | t }}</span>
+    <span>{{ cart.total_price | money }}</span>
+  </div>
+
+  <p class="cart-totals__note">{{ 'cart.general.taxes_and_shipping' | t }}</p>
+</div>
+
+<div class="stack" style="--stack-gap: 8px;">
+  <button
+    type="submit"
+    form="{{ form_id }}"
+    name="checkout"
+    class="button button--primary button--full button--large"
+    {% if cart.item_count == 0 %}disabled{% endif %}
+  >
+    <span class="button__label">{{ 'cart.general.checkout' | t }} &middot; {{ cart.total_price | money }}</span>
+  </button>
+
+  {%- if show_view_cart -%}
+    <a class="button button--secondary button--full" href="{{ routes.cart_url }}">
+      {{ 'cart.general.view_cart' | t }}
+    </a>
+  {%- endif -%}
+</div>
+
+{%- if settings.cart_note_placeholder != blank -%}
+  <cart-note class="cart-note">
+    <details>
+      <summary>{{ 'cart.general.note' | t }}</summary>
+      <label class="visually-hidden" for="CartNote-{{ form_id }}">{{ 'cart.general.note' | t }}</label>
+      <textarea
+        id="CartNote-{{ form_id }}"
+        class="field__input"
+        form="{{ form_id }}"
+        name="note"
+        rows="3"
+        placeholder="{{ settings.cart_note_placeholder }}"
+      >{{ cart.note }}</textarea>
+    </details>
+  </cart-note>
+{%- endif -%}

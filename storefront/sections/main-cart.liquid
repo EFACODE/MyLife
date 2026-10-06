@@ -1,0 +1,61 @@
+{%- comment -%}
+  The data attribute carries the *section id*, which is what the Section
+  Rendering API expects — not the section type.
+{%- endcomment -%}
+<section class="section section--tight" data-cart-section="{{ section.id }}">
+  <div class="page-width">
+    {%- if cart.item_count == 0 -%}
+      <div class="empty-state">
+        <h1 class="h2">{{ 'cart.general.empty' | t }}</h1>
+        <p class="text-lead" style="text-align: center;">
+          {{ section.settings.empty_text | default: 'Everything you save will appear here.' }}
+        </p>
+        <a class="button button--primary button--large" href="{{ routes.all_products_collection_url }}">
+          {{ 'cart.general.empty_cta' | t }}
+        </a>
+      </div>
+    {%- else -%}
+      <div class="collection-hero" data-reveal>
+        <h1 class="h1">{{ 'cart.general.heading' | t }}</h1>
+        <p class="text-body">{{ 'cart.general.item_count' | t: count: cart.item_count }}</p>
+      </div>
+
+      <div class="cart-page">
+        <div>
+          <form action="{{ routes.cart_url }}" method="post" id="cart-page-form" novalidate>
+            <cart-items class="contents">
+              {%- for item in cart.items -%}
+                {% render 'cart-item', item: item %}
+              {%- endfor -%}
+            </cart-items>
+          </form>
+
+          {%- if settings.cart_upsell -%}
+            {% render 'cart-upsell' %}
+          {%- endif -%}
+        </div>
+
+        <aside class="cart-page__summary" data-reveal>
+          {% render 'shipping-bar' %}
+          {% render 'cart-summary', form_id: 'cart-page-form', show_view_cart: false %}
+        </aside>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Cart",
+  "tag": "div",
+  "class": "main-cart-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "empty_text",
+      "default": "Everything you save will appear here.",
+      "label": "t:sections.all.body"
+    }
+  ]
+}
+{% endschema %}

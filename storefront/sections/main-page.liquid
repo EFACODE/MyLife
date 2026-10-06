@@ -1,0 +1,22 @@
+{% render 'breadcrumbs' %}
+
+<section class="section section--tight">
+  <div class="page-width page-width--narrow">
+    <header class="collection-hero" data-reveal>
+      <h1 class="h1">{{ page.title | escape }}</h1>
+    </header>
+
+    <div class="rte measure" data-reveal style="--reveal-delay: 80ms;">
+      {{ page.content }}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Page",
+  "tag": "div",
+  "class": "main-page-section",
+  "settings": []
+}
+{% endschema %}

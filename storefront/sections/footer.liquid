@@ -1,0 +1,267 @@
+<footer class="footer">
+  <div class="page-width">
+    <div class="footer__top">
+      <div class="footer__brand" data-reveal>
+        {%- if section.settings.logo != blank -%}
+          <img
+            src="{{ section.settings.logo | image_url: width: 320 }}"
+            width="160"
+            height="{{ 160 | divided_by: section.settings.logo.aspect_ratio | round }}"
+            alt="{{ shop.name | escape }}"
+            loading="lazy"
+            decoding="async"
+          >
+        {%- else -%}
+          <span class="header__logo">{{ shop.name }}</span>
+        {%- endif -%}
+
+        {%- if section.settings.text != blank -%}
+          <div class="rte text-body">{{ section.settings.text }}</div>
+        {%- endif -%}
+
+        {%- if section.settings.show_newsletter -%}
+          <div style="margin-top: 6px;">
+            <p class="footer__heading">{{ 'general.newsletter.heading' | t }}</p>
+
+            <div
+              class="newsletter__form"
+              data-newsletter-form
+              data-error-message="{{ 'general.newsletter.error' | t | escape }}"
+              style="width: 100%; max-width: 380px;"
+            >
+              {%- form 'customer' -%}
+                <input type="hidden" name="contact[tags]" value="newsletter">
+
+                {%- if form.posted_successfully? -%}
+                  <p class="form__message" role="status">
+                    {% render 'icon', name: 'check', size: 16 %}
+                    {{ 'general.newsletter.success' | t }}
+                  </p>
+                {%- else -%}
+                  <div class="newsletter__row">
+                    <label class="visually-hidden" for="FooterNewsletter-{{ section.id }}">
+                      {{ 'general.newsletter.label' | t }}
+                    </label>
+                    <input
+                      id="FooterNewsletter-{{ section.id }}"
+                      class="newsletter__input"
+                      type="email"
+                      name="contact[email]"
+                      value="{{ form.email }}"
+                      placeholder="{{ 'general.newsletter.placeholder' | t }}"
+                      autocomplete="email"
+                      required
+                    >
+                    <button type="submit" class="button button--primary button--small" aria-label="{{ 'general.newsletter.submit' | t }}">
+                      {% render 'icon', name: 'arrow-right', size: 16 %}
+                    </button>
+                  </div>
+
+                  <p class="form__message" data-newsletter-message role="status">
+                    {%- if form.errors -%}
+                      {{ form.errors.messages.email }}
+                    {%- endif -%}
+                  </p>
+                {%- endif -%}
+              {%- endform -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.show_social -%}
+          {% render 'social-icons' %}
+        {%- endif -%}
+      </div>
+
+      <div class="footer__menus" data-reveal style="--reveal-delay: 80ms;">
+        {%- for block in section.blocks -%}
+          {%- case block.type -%}
+            {%- when 'menu' -%}
+              {%- if block.settings.menu != blank -%}
+                <div {{ block.shopify_attributes }}>
+                  <p class="footer__heading">
+                    {{ block.settings.heading | default: block.settings.menu.title }}
+                  </p>
+                  <ul class="footer__list" role="list">
+                    {%- for link in block.settings.menu.links -%}
+                      <li><a class="footer__link" href="{{ link.url }}">{{ link.title }}</a></li>
+                    {%- endfor -%}
+                  </ul>
+                </div>
+              {%- endif -%}
+
+            {%- when 'contact' -%}
+              <div {{ block.shopify_attributes }}>
+                <p class="footer__heading">
+                  {{ block.settings.heading | default: 'Contact' }}
+                </p>
+                <div class="footer__list">
+                  {%- if block.settings.email != blank -%}
+                    <a class="footer__link" href="mailto:{{ block.settings.email }}">{{ block.settings.email }}</a>
+                  {%- endif -%}
+                  {%- if block.settings.phone != blank -%}
+                    <a class="footer__link" href="tel:{{ block.settings.phone | remove: ' ' }}">{{ block.settings.phone }}</a>
+                  {%- endif -%}
+                  {%- if block.settings.text != blank -%}
+                    <div class="rte text-body" style="font-size: 0.875rem;">{{ block.settings.text }}</div>
+                  {%- endif -%}
+                </div>
+              </div>
+
+            {%- when 'text' -%}
+              <div {{ block.shopify_attributes }}>
+                {%- if block.settings.heading != blank -%}
+                  <p class="footer__heading">{{ block.settings.heading }}</p>
+                {%- endif -%}
+                <div class="rte text-body">{{ block.settings.text }}</div>
+              </div>
+          {%- endcase -%}
+        {%- endfor -%}
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      {%- assign current_year = 'now' | date: '%Y' -%}
+      <p>{{ 'sections.footer.copyright' | t: year: current_year, shop: shop.name }}</p>
+
+      {%- if section.settings.show_policies -%}
+        <ul class="footer__policies" role="list">
+          {%- for policy in shop.policies -%}
+            {%- if policy != blank -%}
+              <li><a class="footer__link" href="{{ policy.url }}">{{ policy.title }}</a></li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+
+      {%- if section.settings.show_payment_icons and shop.enabled_payment_types.size > 0 -%}
+        <div class="footer__payment">
+          <span class="visually-hidden">Accepted payment methods</span>
+          {%- for type in shop.enabled_payment_types -%}
+            {{ type | payment_type_svg_tag: class: 'payment-icon' }}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "t:sections.footer.name",
+  "tag": "div",
+  "class": "footer-section",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "t:sections.header.logo"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "default": "<p>Considered pieces for the modern home, made with honest materials and lasting craft.</p>",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_newsletter",
+      "default": true,
+      "label": "t:sections.footer.show_newsletter"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social",
+      "default": true,
+      "label": "t:sections.footer.show_social"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_policies",
+      "default": true,
+      "label": "t:sections.footer.name"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_icons",
+      "default": true,
+      "label": "t:sections.footer.show_payment_icons"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "menu",
+      "name": "t:sections.footer.menu_column",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:sections.all.heading"
+        },
+        {
+          "type": "link_list",
+          "id": "menu",
+          "default": "footer",
+          "label": "t:sections.header.menu"
+        }
+      ]
+    },
+    {
+      "type": "contact",
+      "name": "Contact",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "default": "Contact",
+          "label": "t:sections.footer.contact_heading"
+        },
+        {
+          "type": "text",
+          "id": "email",
+          "default": "studio@example.com",
+          "label": "Email"
+        },
+        {
+          "type": "text",
+          "id": "phone",
+          "label": "Phone"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "default": "<p>Mon–Fri, 9–17 CET</p>",
+          "label": "t:sections.footer.contact_body"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "t:sections.rich_text.name",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:sections.all.heading"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "t:sections.all.body"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.footer.name",
+      "blocks": [
+        { "type": "menu", "settings": { "heading": "Shop" } },
+        { "type": "menu", "settings": { "heading": "About" } },
+        { "type": "contact" }
+      ]
+    }
+  ]
+}
+{% endschema %}

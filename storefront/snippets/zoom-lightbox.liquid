@@ -1,0 +1,17 @@
+{%- comment -%}
+  Full-bleed image viewer used by the product gallery on tap or click.
+{%- endcomment -%}
+
+<zoom-lightbox
+  id="ZoomLightbox"
+  class="zoom-lightbox"
+  data-zoom-lightbox
+  role="dialog"
+  aria-modal="true"
+  aria-label="{{ 'products.product.media.zoom' | t }}"
+  aria-hidden="true"
+>
+  <div data-overlay-panel tabindex="-1">
+    <img src="" alt="" decoding="async">
+  </div>
+</zoom-lightbox>

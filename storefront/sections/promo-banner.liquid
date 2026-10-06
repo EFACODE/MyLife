@@ -1,0 +1,200 @@
+<section
+  class="section"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="{% if section.settings.full_width %}page-width--flush{% else %}page-width{% endif %}">
+    <div
+      class="promo"
+      data-reveal="scale"
+      style="
+        --promo-from: {{ section.settings.gradient_from }};
+        --promo-to: {{ section.settings.gradient_to }};
+        {% if section.settings.text_color != blank %}color: {{ section.settings.text_color }};{% endif %}
+      "
+    >
+      <span class="promo__glow" aria-hidden="true"></span>
+
+      <div
+        class="promo__inner{% if section.settings.image != blank %} promo__inner--with-image{% endif %}{% if section.settings.image_position == 'left' %} promo__inner--image-first{% endif %}"
+      >
+        <div class="promo__content">
+          {%- if section.settings.eyebrow != blank -%}
+            <span class="eyebrow" data-reveal style="--reveal-delay: 80ms;">
+              {{ section.settings.eyebrow | escape }}
+            </span>
+          {%- endif -%}
+
+          {%- if section.settings.heading != blank -%}
+            <h2 class="h1" data-reveal style="--reveal-delay: 140ms;">
+              {{ section.settings.heading | escape }}
+            </h2>
+          {%- endif -%}
+
+          {%- if section.settings.text != blank -%}
+            <div class="rte text-lead" data-reveal style="--reveal-delay: 220ms;">
+              {{ section.settings.text }}
+            </div>
+          {%- endif -%}
+
+          {%- if section.settings.cta_label != blank -%}
+            <a
+              class="button button--primary button--large"
+              href="{{ section.settings.cta_link | default: routes.all_products_collection_url }}"
+              data-reveal
+              style="--reveal-delay: 300ms;"
+            >
+              {{ section.settings.cta_label | escape }}
+            </a>
+          {%- endif -%}
+
+          {%- if section.settings.footnote != blank -%}
+            <p class="text-body" data-reveal style="font-size: 0.75rem; --reveal-delay: 340ms;">
+              {{ section.settings.footnote | escape }}
+            </p>
+          {%- endif -%}
+        </div>
+
+        {%- if section.settings.image != blank -%}
+          <div class="promo__media{% if section.settings.float_image %} float{% endif %}" data-reveal="blur">
+            <div class="media media--landscape" style="border-radius: var(--radius);">
+              {% render 'image',
+                image: section.settings.image,
+                sizes: '(min-width: 750px) 44vw, 92vw',
+                max_width: 1200
+              %}
+            </div>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.promo.name",
+  "tag": "section",
+  "class": "promo-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "Limited release",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "The winter linen edit",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "default": "<p>Stonewashed European flax in three quiet shades. Woven in small batches, softer with every wash.</p>",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "default": "Shop the edit",
+      "label": "t:sections.all.link_label"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "t:sections.all.link"
+    },
+    {
+      "type": "text",
+      "id": "footnote",
+      "label": "Footnote"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:sections.all.image"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "options": [
+        { "value": "right", "label": "Right" },
+        { "value": "left", "label": "Left" }
+      ],
+      "default": "right",
+      "label": "Image position"
+    },
+    {
+      "type": "checkbox",
+      "id": "float_image",
+      "default": true,
+      "label": "Float the image gently"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "color",
+      "id": "gradient_from",
+      "default": "#F7F7F5",
+      "label": "t:sections.promo.gradient_from"
+    },
+    {
+      "type": "color",
+      "id": "gradient_to",
+      "default": "#E8E6E1",
+      "label": "t:sections.promo.gradient_to"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "default": "#222222",
+      "label": "Text"
+    },
+    {
+      "type": "checkbox",
+      "id": "full_width",
+      "default": false,
+      "label": "t:sections.all.full_width"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.promo.name"
+    }
+  ]
+}
+{% endschema %}

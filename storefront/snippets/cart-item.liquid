@@ -1,0 +1,103 @@
+{%- comment -%}
+  A single cart line. Accepts: item (line_item), compact (bool)
+{%- endcomment -%}
+
+<div class="cart-item" data-cart-item data-line-key="{{ item.key }}">
+  <a class="cart-item__image" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+    {%- if item.image -%}
+      <img
+        src="{{ item.image | image_url: width: 200 }}"
+        srcset="{{ item.image | image_url: width: 200 }} 200w, {{ item.image | image_url: width: 320 }} 320w"
+        sizes="84px"
+        width="200"
+        height="250"
+        alt=""
+        loading="lazy"
+        decoding="async"
+      >
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </a>
+
+  <div class="cart-item__details">
+    <a class="cart-item__title" href="{{ item.url }}">{{ item.product.title | escape }}</a>
+
+    {%- unless item.product.has_only_default_variant -%}
+      <span class="cart-item__variant">{{ item.variant.title }}</span>
+    {%- endunless -%}
+
+    {%- if item.selling_plan_allocation -%}
+      <span class="cart-item__variant">{{ item.selling_plan_allocation.selling_plan.name }}</span>
+    {%- endif -%}
+
+    {%- for property in item.properties -%}
+      {%- unless property.last == blank or property.first[0] == '_' -%}
+        <span class="cart-item__variant">{{ property.first }}: {{ property.last }}</span>
+      {%- endunless -%}
+    {%- endfor -%}
+
+    {%- if item.line_level_discount_allocations.size > 0 -%}
+      {%- for allocation in item.line_level_discount_allocations -%}
+        <span class="cart-item__discount">
+          {{ allocation.discount_application.title }} (&minus;{{ allocation.amount | money }})
+        </span>
+      {%- endfor -%}
+    {%- endif -%}
+
+    <div class="cart-item__footer">
+      <quantity-input class="quantity">
+        <button
+          type="button"
+          class="quantity__button"
+          data-quantity-button="decrease"
+          aria-label="{{ 'products.product.decrease' | t }}"
+        >
+          {% render 'icon', name: 'minus', size: 14 %}
+        </button>
+
+        <label class="visually-hidden" for="CartQty-{{ item.index | plus: 1 }}">
+          {{ 'products.product.quantity' | t }}
+        </label>
+        <input
+          id="CartQty-{{ item.index | plus: 1 }}"
+          class="quantity__input"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="1"
+          value="{{ item.quantity }}"
+          data-cart-quantity
+          data-line="{{ item.index | plus: 1 }}"
+        >
+
+        <button
+          type="button"
+          class="quantity__button"
+          data-quantity-button="increase"
+          aria-label="{{ 'products.product.increase' | t }}"
+        >
+          {% render 'icon', name: 'plus', size: 14 %}
+        </button>
+      </quantity-input>
+
+      <div class="price">
+        {%- if item.original_line_price > item.final_line_price -%}
+          <span class="price__current">{{ item.final_line_price | money }}</span>
+          <s class="price__compare">{{ item.original_line_price | money }}</s>
+        {%- else -%}
+          <span class="price__current">{{ item.final_line_price | money }}</span>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="cart-item__remove"
+      data-cart-remove
+      data-line="{{ item.index | plus: 1 }}"
+    >
+      {{ 'cart.general.remove' | t }}
+    </button>
+  </div>
+</div>

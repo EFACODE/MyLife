@@ -1,0 +1,25 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-collection",
+      "settings": {
+        "products_per_page": 24,
+        "columns_desktop": 4,
+        "columns_mobile": 2,
+        "show_filters": true,
+        "show_sort": true
+      }
+    },
+    "newsletter": {
+      "type": "newsletter",
+      "settings": {
+        "eyebrow": "Newsletter",
+        "heading": "Slow news, twice a month",
+        "color_scheme": "surface",
+        "padding_top": 96,
+        "padding_bottom": 96
+      }
+    }
+  },
+  "order": ["main", "newsletter"]
+}

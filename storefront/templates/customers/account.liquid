@@ -1,0 +1,51 @@
+<section class="section section--tight">
+  <div class="page-width">
+    <div class="collection-hero" data-reveal>
+      <h1 class="h1">{{ 'customer.account.title' | t }}</h1>
+      <p class="text-body">{{ customer.email }}</p>
+    </div>
+
+    <div class="cart-page">
+      <div>
+        <h2 class="h4" style="margin-bottom: 20px;">{{ 'customer.account.orders' | t }}</h2>
+
+        {%- paginate customer.orders by 12 -%}
+          {%- if customer.orders.size > 0 -%}
+            <div class="stack" style="--stack-gap: 10px;">
+              {%- for order in customer.orders -%}
+                <a class="review-card" href="{{ order.customer_url }}" style="gap: 10px;">
+                  <div class="cart-totals__row">
+                    <span>{{ order.name }}</span>
+                    <span>{{ order.total_net_amount | money }}</span>
+                  </div>
+                  <div class="cart-totals__row text-muted" style="font-size: 0.8125rem;">
+                    <span>{{ order.created_at | date: '%d %B %Y' }}</span>
+                    <span>{{ order.fulfillment_status_label }}</span>
+                  </div>
+                </a>
+              {%- endfor -%}
+            </div>
+
+            {% render 'pagination', paginate: paginate %}
+          {%- else -%}
+            <p class="text-body">No orders yet.</p>
+          {%- endif -%}
+        {%- endpaginate -%}
+      </div>
+
+      <aside class="cart-page__summary" data-reveal>
+        <h2 class="h4" style="margin-bottom: 16px;">{{ 'customer.account.details' | t }}</h2>
+        <div class="text-body">{{ customer.default_address | format_address }}</div>
+
+        <div class="stack" style="--stack-gap: 8px; margin-top: 20px;">
+          <a class="button button--secondary button--full" href="{{ routes.account_addresses_url }}">
+            Manage addresses
+          </a>
+          <a class="button button--secondary button--full" href="{{ routes.account_logout_url }}">
+            {{ 'customer.account.log_out' | t }}
+          </a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>

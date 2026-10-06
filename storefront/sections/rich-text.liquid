@@ -1,0 +1,131 @@
+{%- liquid
+  assign scheme_class = ''
+  if section.settings.color_scheme == 'surface'
+    assign scheme_class = 'section--surface'
+  elsif section.settings.color_scheme == 'contrast'
+    assign scheme_class = 'section--contrast'
+  endif
+-%}
+
+<section
+  class="section {{ scheme_class }}"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="page-width page-width--narrow">
+    <div
+      class="stack"
+      style="--stack-gap: 20px; {% if section.settings.center %}align-items: center; text-align: center;{% endif %}"
+      data-reveal
+    >
+      {%- if section.settings.eyebrow != blank -%}
+        <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h2 class="h2 measure-narrow">
+          <span data-text-reveal>{{ section.settings.heading | escape }}</span>
+        </h2>
+      {%- endif -%}
+
+      {%- if section.settings.text != blank -%}
+        <div class="rte text-lead">{{ section.settings.text }}</div>
+      {%- endif -%}
+
+      {%- if section.settings.cta_label != blank -%}
+        <a class="button button--secondary" href="{{ section.settings.cta_link | default: routes.root_url }}">
+          {{ section.settings.cta_label | escape }}
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.rich_text.name",
+  "tag": "section",
+  "class": "rich-text-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Made to be lived with",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "default": "<p>We work with small European workshops and choose materials that age well — solid oak, stoneware, wool and linen. Fewer pieces, made properly.</p>",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "t:sections.all.link_label"
+    },
+    {
+      "type": "url",
+      "id": "cta_link",
+      "label": "t:sections.all.link"
+    },
+    {
+      "type": "checkbox",
+      "id": "center",
+      "default": true,
+      "label": "Centre the content"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        { "value": "light", "label": "t:sections.all.scheme_light" },
+        { "value": "surface", "label": "t:sections.all.scheme_surface" },
+        { "value": "contrast", "label": "t:sections.all.scheme_contrast" }
+      ],
+      "default": "light",
+      "label": "t:sections.all.color_scheme"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.rich_text.name"
+    }
+  ]
+}
+{% endschema %}

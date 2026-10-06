@@ -1,0 +1,59 @@
+{% render 'breadcrumbs' %}
+
+<section class="section section--tight">
+  <div class="page-width">
+    <div class="collection-hero" data-reveal>
+      <h1 class="h1">{{ page_title | escape }}</h1>
+      {%- if section.settings.text != blank -%}
+        <p class="text-lead">{{ section.settings.text | escape }}</p>
+      {%- endif -%}
+    </div>
+
+    <div class="category-grid">
+      {%- for list_collection in collections -%}
+        {%- assign delay = forloop.index0 | modulo: 6 | times: 60 -%}
+        <a
+          class="category-card"
+          href="{{ list_collection.url }}"
+          data-reveal
+          style="--reveal-delay: {{ delay }}ms;"
+        >
+          <div class="category-card__media">
+            {%- if list_collection.featured_image -%}
+              {% render 'image',
+                image: list_collection.featured_image,
+                sizes: '(min-width: 1200px) 24vw, (min-width: 750px) 32vw, 48vw',
+                max_width: 800
+              %}
+            {%- else -%}
+              {{ 'collection-1' | placeholder_svg_tag: 'placeholder-svg' }}
+            {%- endif -%}
+            <span class="category-card__scrim" aria-hidden="true"></span>
+          </div>
+
+          <div class="category-card__content">
+            <span class="category-card__title">{{ list_collection.title | escape }}</span>
+            <span class="category-card__reveal">
+              {{ 'products.facets.results' | t: count: list_collection.all_products_count }}
+            </span>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Collections list",
+  "tag": "div",
+  "class": "main-list-collections-section",
+  "settings": [
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "t:sections.all.body"
+    }
+  ]
+}
+{% endschema %}

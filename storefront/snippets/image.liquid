@@ -1,0 +1,66 @@
+{%- comment -%}
+  Responsive image with an explicit srcset, intrinsic dimensions to reserve
+  layout space, and lazy loading by default.
+
+  Accepts:
+    image           - image / media object (required)
+    sizes           - the CSS sizes attribute (default: 100vw)
+    widths          - comma separated candidate widths
+    class           - class on the <img>
+    loading         - 'lazy' (default) or 'eager'
+    fetchpriority   - 'high' for the LCP image
+    max_width       - largest width to request (default 1800)
+    alt             - overrides the image alt text
+    zoom            - when true, adds a high-resolution data-zoom-src
+{%- endcomment -%}
+
+{%- liquid
+  assign sizes = sizes | default: '100vw'
+  assign widths = widths | default: '360,540,720,900,1080,1296,1512,1800'
+  assign loading = loading | default: 'lazy'
+  assign max_width = max_width | default: 1800
+  assign img_class = class | default: ''
+
+  # Media objects expose their bitmap through preview_image; plain image
+  # objects are already the bitmap. Normalising here means callers can pass
+  # either without knowing the difference.
+  if image.preview_image
+    assign source = image.preview_image
+  else
+    assign source = image
+  endif
+
+  if alt
+    assign image_alt = alt
+  else
+    assign image_alt = image.alt | default: source.alt | default: ''
+  endif
+
+  assign width = source.width | at_most: max_width
+  assign height = width | divided_by: source.aspect_ratio | round
+-%}
+
+{%- if image != blank -%}
+  <img
+    src="{{ source | image_url: width: 720 }}"
+    srcset="
+      {%- assign width_list = widths | split: ',' -%}
+      {%- for w in width_list -%}
+        {%- assign candidate = w | plus: 0 -%}
+        {%- if candidate <= source.width and candidate <= max_width -%}
+          {{ source | image_url: width: candidate }} {{ candidate }}w,
+        {%- endif -%}
+      {%- endfor -%}
+      {{ source | image_url: width: width }} {{ width }}w
+    "
+    sizes="{{ sizes }}"
+    width="{{ width }}"
+    height="{{ height }}"
+    alt="{{ image_alt | escape }}"
+    loading="{{ loading }}"
+    decoding="{% if loading == 'eager' %}sync{% else %}async{% endif %}"
+    {% if fetchpriority %}fetchpriority="{{ fetchpriority }}"{% endif %}
+    {% if zoom %}data-zoom-src="{{ source | image_url: width: 2400 }}"{% endif %}
+    class="{{ img_class }}"
+  >
+{%- endif -%}

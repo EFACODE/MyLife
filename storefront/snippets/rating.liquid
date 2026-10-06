@@ -1,0 +1,33 @@
+{%- comment -%}
+  Star rating read from the standard `reviews` metafields, which every major
+  Shopify review app writes to. Renders nothing when there are no reviews,
+  so the layout never shows an empty five-star row.
+
+  Accepts: product, show_count (default true)
+{%- endcomment -%}
+
+{%- liquid
+  assign rating = product.metafields.reviews.rating.value
+  assign rating_count = product.metafields.reviews.rating_count.value | plus: 0
+-%}
+
+{%- if rating and rating_count > 0 -%}
+  {%- liquid
+    assign scale = rating.scale_max | default: 5
+    assign percent = rating.rating | times: 100.0 | divided_by: scale
+  -%}
+
+  <div class="rating" role="img" aria-label="{{ 'general.accessibility.star_rating' | t: rating: rating.rating, scale: scale }}">
+    <span class="rating__stars" aria-hidden="true">
+      {%- comment -%} Grey stars underneath, filled stars clipped on top. {%- endcomment -%}
+      {%- for i in (1..scale) -%}★{%- endfor -%}
+      <span class="rating__stars-fill" style="width: {{ percent }}%;">
+        {%- for i in (1..scale) -%}★{%- endfor -%}
+      </span>
+    </span>
+
+    {%- unless show_count == false -%}
+      <span class="rating__count">({{ rating_count }})</span>
+    {%- endunless -%}
+  </div>
+{%- endif -%}

@@ -1,0 +1,62 @@
+{%- comment -%}
+  Wishlist row fragment, requested as /products/handle?view=card.
+{%- endcomment -%}
+
+{% layout none %}
+
+<div class="wishlist-item" data-wishlist-card>
+  <a class="wishlist-item__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_media -%}
+      <img
+        src="{{ product.featured_media | image_url: width: 200 }}"
+        width="200"
+        height="250"
+        alt=""
+        loading="lazy"
+        decoding="async"
+      >
+    {%- endif -%}
+  </a>
+
+  <div class="stack" style="--stack-gap: 4px; min-width: 0;">
+    <a class="cart-item__title" href="{{ product.url }}">{{ product.title | escape }}</a>
+    {% render 'price', product: product, show_from: true %}
+
+    {%- if product.available == false -%}
+      <span class="cart-item__variant">{{ 'products.product.sold_out' | t }}</span>
+    {%- endif -%}
+  </div>
+
+  <div class="stack" style="--stack-gap: 6px; align-items: flex-end;">
+    {%- if product.available and product.has_only_default_variant -%}
+      <product-form
+        data-product-title="{{ product.title | escape }}"
+        data-product-image="{% if product.featured_media %}{{ product.featured_media | image_url: width: 120 }}{% endif %}"
+      >
+        {%- form 'product', product, novalidate: 'novalidate' -%}
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit" class="button button--secondary button--small">
+            <span class="button__label">{{ 'products.product.quick_add' | t }}</span>
+            <span class="button__spinner"><span class="spinner"></span></span>
+          </button>
+        {%- endform -%}
+      </product-form>
+    {%- elsif product.available -%}
+      <a class="button button--secondary button--small" href="{{ product.url }}">
+        {{ 'products.product.choose_options' | t }}
+      </a>
+    {%- endif -%}
+
+    <wishlist-toggle data-handle="{{ product.handle }}">
+      <button
+        type="button"
+        class="cart-item__remove"
+        aria-pressed="true"
+        aria-label="{{ 'products.wishlist.remove' | t }}"
+      >
+        {{ 'cart.general.remove' | t }}
+      </button>
+    </wishlist-toggle>
+  </div>
+</div>

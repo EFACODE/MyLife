@@ -1,0 +1,106 @@
+{%- comment -%}
+  Predictive search results fragment, requested from the search overlay.
+{%- endcomment -%}
+
+<div data-predictive-results>
+  {%- if predictive_search.performed -%}
+    {%- assign has_results = false -%}
+
+    {%- if predictive_search.resources.products.size > 0 -%}
+      {%- assign has_results = true -%}
+      <div class="search-overlay__group">
+        <h2 class="search-overlay__group-title">{{ 'general.search.products' | t }}</h2>
+        <div class="stack" style="--stack-gap: 2px;">
+          {%- for item in predictive_search.resources.products -%}
+            <a class="search-result" href="{{ item.url }}">
+              <span class="search-result__image">
+                {%- if item.featured_media -%}
+                  <img
+                    src="{{ item.featured_media | image_url: width: 160 }}"
+                    width="56"
+                    height="68"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  >
+                {%- endif -%}
+              </span>
+              <span style="flex: 1 1 auto; min-width: 0;">
+                <span class="search-result__title">{{ item.title | escape }}</span>
+                {%- if item.vendor != blank -%}
+                  <span class="search-result__meta" style="display: block;">{{ item.vendor }}</span>
+                {%- endif -%}
+              </span>
+              <span class="price">
+                <span class="price__current">{{ item.price | money }}</span>
+              </span>
+            </a>
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if predictive_search.resources.collections.size > 0 -%}
+      {%- assign has_results = true -%}
+      <div class="search-overlay__group">
+        <h2 class="search-overlay__group-title">{{ 'general.search.collections' | t }}</h2>
+        <div class="stack" style="--stack-gap: 2px;">
+          {%- for item in predictive_search.resources.collections -%}
+            <a class="search-result" href="{{ item.url }}">
+              <span class="search-result__title">{{ item.title | escape }}</span>
+            </a>
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if predictive_search.resources.pages.size > 0 -%}
+      {%- assign has_results = true -%}
+      <div class="search-overlay__group">
+        <h2 class="search-overlay__group-title">{{ 'general.search.pages' | t }}</h2>
+        <div class="stack" style="--stack-gap: 2px;">
+          {%- for item in predictive_search.resources.pages -%}
+            <a class="search-result" href="{{ item.url }}">
+              <span class="search-result__title">{{ item.title | escape }}</span>
+            </a>
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if predictive_search.resources.articles.size > 0 -%}
+      {%- assign has_results = true -%}
+      <div class="search-overlay__group">
+        <h2 class="search-overlay__group-title">{{ 'general.search.articles' | t }}</h2>
+        <div class="stack" style="--stack-gap: 2px;">
+          {%- for item in predictive_search.resources.articles -%}
+            <a class="search-result" href="{{ item.url }}">
+              <span class="search-result__title">{{ item.title | escape }}</span>
+            </a>
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- if has_results -%}
+      <div class="search-overlay__group">
+        <a
+          class="link link--reveal"
+          href="{{ routes.search_url }}?q={{ predictive_search.terms | url_encode }}"
+        >
+          {{ 'general.search.view_all' | t }}
+          {% render 'icon', name: 'arrow-right', size: 15 %}
+        </a>
+      </div>
+    {%- else -%}
+      <p class="text-body">{{ 'general.search.no_results' | t: terms: predictive_search.terms }}</p>
+    {%- endif -%}
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Predictive search",
+  "settings": []
+}
+{% endschema %}

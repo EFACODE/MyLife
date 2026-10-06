@@ -1,0 +1,71 @@
+{
+  "current": {
+    "type_body_font": "assistant_n4",
+    "type_heading_font": "assistant_n4",
+    "type_base_size": 16,
+    "type_heading_scale": 100,
+    "type_heading_tracking": -20,
+
+    "color_background": "#FFFFFF",
+    "color_surface": "#F7F7F5",
+    "color_surface_alt": "#E8E6E1",
+    "color_border": "#C8C3BA",
+    "color_text": "#222222",
+
+    "radius_base": 12,
+    "radius_small": 10,
+    "radius_large": 14,
+    "page_width": 1560,
+
+    "animations_enabled": true,
+    "animation_duration": 400,
+    "animate_parallax": true,
+    "animate_cursor": true,
+    "animate_page_transition": true,
+
+    "card_image_ratio": "portrait",
+    "card_hover_swap": true,
+    "card_quick_add": true,
+    "card_quick_view": true,
+    "card_wishlist": true,
+    "card_rating": true,
+
+    "cart_drawer_enabled": true,
+    "cart_free_shipping_bar": true,
+    "cart_free_shipping_threshold": "150",
+    "cart_discount_field": true,
+    "cart_upsell": true,
+    "cart_note_placeholder": "Gift note or delivery instructions",
+
+    "social_instagram": "",
+    "social_pinterest": "",
+    "social_facebook": "",
+    "social_tiktok": "",
+    "social_youtube": "",
+
+    "seo_twitter_handle": "",
+    "seo_structured_data": true
+  },
+  "presets": {
+    "Atelier — light": {
+      "color_background": "#FFFFFF",
+      "color_surface": "#F7F7F5",
+      "color_surface_alt": "#E8E6E1",
+      "color_border": "#C8C3BA",
+      "color_text": "#222222",
+      "radius_base": 12,
+      "radius_small": 10,
+      "radius_large": 14
+    },
+    "Atelier — warm": {
+      "color_background": "#FDFCFA",
+      "color_surface": "#F4F1EC",
+      "color_surface_alt": "#E6E1D8",
+      "color_border": "#C4BCAF",
+      "color_text": "#232019",
+      "radius_base": 14,
+      "radius_small": 10,
+      "radius_large": 14
+    }
+  }
+}

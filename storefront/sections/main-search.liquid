@@ -1,0 +1,102 @@
+{% render 'breadcrumbs' %}
+
+<section class="section section--tight">
+  <div class="page-width">
+    <div class="collection-hero" data-reveal>
+      <h1 class="h1">
+        {%- if search.performed -%}
+          {{ 'general.search.results_for' | t: terms: search.terms }}
+        {%- else -%}
+          {{ 'general.search.heading' | t }}
+        {%- endif -%}
+      </h1>
+
+      {%- if search.performed -%}
+        <p class="text-body">{{ 'general.search.results_count' | t: count: search.results_count }}</p>
+      {%- endif -%}
+
+      <form action="{{ routes.search_url }}" method="get" role="search" style="max-width: 480px; width: 100%;">
+        <div class="newsletter__row">
+          <label class="visually-hidden" for="SearchPageInput">{{ 'general.search.heading' | t }}</label>
+          <input
+            id="SearchPageInput"
+            class="newsletter__input"
+            type="search"
+            name="q"
+            value="{{ search.terms | escape }}"
+            placeholder="{{ 'general.search.placeholder' | t }}"
+          >
+          <button type="submit" class="button button--primary button--small">
+            {{ 'general.search.submit' | t }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {%- if search.performed -%}
+      {%- if search.results_count == 0 -%}
+        <div class="empty-state">
+          <p class="h3">{{ 'general.search.no_results' | t: terms: search.terms }}</p>
+        </div>
+      {%- else -%}
+        {%- paginate search.results by section.settings.results_per_page -%}
+          <div
+            class="product-grid"
+            style="
+              --columns-desktop: {{ section.settings.columns_desktop }};
+              --columns-mobile: 2;
+            "
+          >
+            {%- for item in search.results -%}
+              {%- if item.object_type == 'product' -%}
+                {% render 'product-card', product: item, index: forloop.index0 %}
+              {%- else -%}
+                <a class="review-card" href="{{ item.url }}" data-reveal>
+                  <span class="eyebrow">
+                    {%- if item.object_type == 'article' -%}
+                      {{ 'general.search.articles' | t }}
+                    {%- else -%}
+                      {{ 'general.search.pages' | t }}
+                    {%- endif -%}
+                  </span>
+                  <h2 class="h4">{{ item.title | escape }}</h2>
+                  <p class="text-body">{{ item.content | strip_html | truncatewords: 22 }}</p>
+                </a>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+
+          {% render 'pagination', paginate: paginate %}
+        {%- endpaginate -%}
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Search results",
+  "tag": "div",
+  "class": "main-search-section",
+  "settings": [
+    {
+      "type": "range",
+      "id": "results_per_page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "label": "Results per page",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "label": "t:sections.all.columns_desktop",
+      "default": 4
+    }
+  ]
+}
+{% endschema %}

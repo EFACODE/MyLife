@@ -1,0 +1,214 @@
+<!doctype html>
+<html
+  lang="{{ request.locale.iso_code }}"
+  dir="{% if request.locale.iso_code == 'ar' or request.locale.iso_code == 'he' %}rtl{% else %}ltr{% endif %}"
+>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="{{ settings.color_background }}">
+    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
+
+    {%- if settings.type_body_font.system? == false -%}
+      <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
+    {%- endif -%}
+
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+      <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
+    {%- endif -%}
+
+    <title>
+      {{- page_title -}}
+      {%- if current_tags %} &mdash; {{ 'general.meta.tags' | t: tags: current_tags | join: ', ' }}{% endif -%}
+      {%- if current_page != 1 %} &mdash; {{ 'general.meta.page' | t: page: current_page }}{% endif -%}
+      {%- unless page_title contains shop.name %} &mdash; {{ shop.name }}{% endunless -%}
+    </title>
+
+    {% render 'meta-tags' %}
+
+    {{ content_for_header }}
+
+    {%- liquid
+      assign body_font = settings.type_body_font
+      assign body_font_bold = body_font | font_modify: 'weight', 'bold'
+      assign body_font_medium = body_font | font_modify: 'weight', '500'
+      assign heading_font = settings.type_heading_font
+      assign heading_font_medium = heading_font | font_modify: 'weight', '500'
+    -%}
+
+    {% style %}
+      {{ body_font | font_face: font_display: 'swap' }}
+      {{ body_font_bold | font_face: font_display: 'swap' }}
+      {{ body_font_medium | font_face: font_display: 'swap' }}
+      {{ heading_font | font_face: font_display: 'swap' }}
+      {{ heading_font_medium | font_face: font_display: 'swap' }}
+
+      :root {
+        /* Palette — neutral, calm, editorial. */
+        --color-bg: {{ settings.color_background }};
+        --color-bg-rgb: {{ settings.color_background | color_to_rgb | remove: 'rgb(' | remove: ')' }};
+        --color-surface: {{ settings.color_surface }};
+        --color-surface-alt: {{ settings.color_surface_alt }};
+        --color-line: {{ settings.color_border }};
+        --color-text: {{ settings.color_text }};
+        --color-text-rgb: {{ settings.color_text | color_to_rgb | remove: 'rgb(' | remove: ')' }};
+        --color-muted: {{ settings.color_border | color_darken: 8 }};
+        --color-text-soft: {{ settings.color_text | color_mix: settings.color_background, 62 }};
+        --color-on-contrast: {{ settings.color_background }};
+
+        /* Typography — device-native premium grotesques first, hosted fallback last. */
+        --font-body: 'Inter', 'Neue Haas Grotesk Display', 'Neue Haas Grotesk Text', 'Suisse Intl',
+          {{ body_font.family }}, {{ body_font.fallback_families }};
+        --font-heading: 'Inter', 'Neue Haas Grotesk Display', 'Suisse Intl',
+          {{ heading_font.family }}, {{ heading_font.fallback_families }};
+        --font-body-weight: {{ body_font.weight }};
+        --font-body-weight-medium: 500;
+        --font-body-weight-bold: {{ body_font_bold.weight }};
+        --font-heading-weight: {{ heading_font.weight }};
+        --font-body-style: {{ body_font.style }};
+
+        --type-base: {{ settings.type_base_size }}px;
+        --type-scale: {{ settings.type_heading_scale | divided_by: 100.0 }};
+        --heading-tracking: {{ settings.type_heading_tracking | divided_by: 1000.0 }}em;
+
+        /* Shape */
+        --radius-sm: {{ settings.radius_small }}px;
+        --radius: {{ settings.radius_base }}px;
+        --radius-lg: {{ settings.radius_large }}px;
+        --radius-pill: 999px;
+        --page-width: {{ settings.page_width }}px;
+
+        /* Soft shadows only — never hard or coloured. */
+        --shadow-xs: 0 1px 2px rgba(var(--color-text-rgb), 0.04);
+        --shadow-sm: 0 2px 10px rgba(var(--color-text-rgb), 0.045);
+        --shadow-md: 0 10px 30px -12px rgba(var(--color-text-rgb), 0.10);
+        --shadow-lg: 0 24px 60px -24px rgba(var(--color-text-rgb), 0.14);
+
+        /* Subtle glassmorphism */
+        --glass-bg: rgba(var(--color-bg-rgb), 0.72);
+        --glass-border: rgba(var(--color-text-rgb), 0.06);
+        --glass-blur: saturate(140%) blur(14px);
+
+        /* Motion — 250–500ms, always eased, never flashy. */
+        --duration: {{ settings.animation_duration }}ms;
+        --duration-fast: {{ settings.animation_duration | times: 0.6 | round }}ms;
+        --duration-slow: {{ settings.animation_duration | times: 1.25 | round }}ms;
+        --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+        /* Layout rhythm */
+        --gutter: 20px;
+        --section-gap: clamp(56px, 7vw, 128px);
+        --header-height: 72px;
+      }
+
+      @media screen and (min-width: 750px) {
+        :root {
+          --gutter: 40px;
+          --header-height: 84px;
+        }
+      }
+    {% endstyle %}
+
+    <link rel="stylesheet" href="{{ 'base.css' | asset_url }}">
+
+    {%- comment -%}
+      Reveal animations start from opacity 0, so they are only armed once we
+      know scripting is available. Without this, a blocked or failed theme.js
+      would leave the page blank.
+    {%- endcomment -%}
+    <script>
+      document.documentElement.classList.add('js');
+    </script>
+
+    <script>
+      window.theme = {
+        routes: {
+          root: {{ routes.root_url | json }},
+          cart: {{ routes.cart_url | json }},
+          cartAdd: {{ routes.cart_add_url | json }},
+          cartChange: {{ routes.cart_change_url | json }},
+          cartUpdate: {{ routes.cart_update_url | json }},
+          predictiveSearch: {{ routes.predictive_search_url | json }},
+          search: {{ routes.search_url | json }},
+          productRecommendations: {{ routes.product_recommendations_url | json }}
+        },
+        settings: {
+          cartDrawer: {{ settings.cart_drawer_enabled | json }},
+          animations: {{ settings.animations_enabled | json }},
+          parallax: {{ settings.animate_parallax | json }},
+          cursor: {{ settings.animate_cursor | json }},
+          pageTransition: {{ settings.animate_page_transition | json }},
+          freeShippingThreshold: {{ settings.cart_free_shipping_threshold | times: 1 | default: 0 }},
+          moneyFormat: {{ shop.money_format | json }},
+          currency: {{ cart.currency.iso_code | json }}
+        },
+        strings: {
+          addToCart: {{ 'products.product.add_to_cart' | t | json }},
+          adding: {{ 'products.product.adding' | t | json }},
+          added: {{ 'products.product.added' | t | json }},
+          soldOut: {{ 'products.product.sold_out' | t | json }},
+          unavailable: {{ 'products.product.unavailable' | t | json }},
+          wishlistAdd: {{ 'products.wishlist.add' | t | json }},
+          wishlistRemove: {{ 'products.wishlist.remove' | t | json }},
+          shippingProgress: {{ 'cart.shipping_bar.progress' | t: amount: '[[amount]]' | json }},
+          shippingQualified: {{ 'cart.shipping_bar.qualified' | t | json }},
+          discountError: {{ 'cart.discount.error' | t | json }},
+          cartLabel: {{ 'general.accessibility.cart' | t | json }},
+          copied: {{ 'general.share.copied' | t | json }}
+        }
+      };
+    </script>
+
+    <script src="{{ 'theme.js' | asset_url }}" defer></script>
+  </head>
+
+  <body
+    class="template-{{ template.name | handle }}{% if template.suffix %} template-suffix-{{ template.suffix | handle }}{% endif %}{% if settings.animations_enabled %} animations-enabled{% endif %}{% if settings.animate_page_transition %} page-transition{% endif %}"
+    data-page-type="{{ template.name | handle }}"
+    {% if template.name == 'product' %}data-product-handle="{{ product.handle }}"{% endif %}
+  >
+    <a class="skip-link button button--primary" href="#MainContent">
+      {{ 'general.accessibility.skip_to_content' | t }}
+    </a>
+
+    {%- if settings.animate_cursor -%}
+      <div class="cursor-follower" aria-hidden="true" data-cursor>
+        <span class="cursor-follower__dot"></span>
+        <span class="cursor-follower__ring"></span>
+      </div>
+    {%- endif -%}
+
+    {% sections 'header-group' %}
+
+    <main id="MainContent" class="main-content" role="main" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
+
+    {% sections 'footer-group' %}
+
+    {% render 'search-overlay' %}
+    {% section 'cart-drawer' %}
+    {% render 'wishlist-drawer' %}
+    {% render 'quick-view-modal' %}
+    {% render 'zoom-lightbox' %}
+
+    <div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="true"></div>
+
+    <div class="page-veil" data-page-veil aria-hidden="true"></div>
+
+    {%- if settings.seo_structured_data -%}
+      {% render 'structured-data' %}
+    {%- endif -%}
+
+    <script type="application/json" id="WishlistStrings">
+      {
+        "empty": {{ 'products.wishlist.empty' | t | json }}
+      }
+    </script>
+  </body>
+</html>

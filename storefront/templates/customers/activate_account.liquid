@@ -1,0 +1,28 @@
+<section class="section section--tight">
+  <div class="page-width" style="max-width: 460px;">
+    <div class="stack" style="--stack-gap: 22px;" data-reveal>
+      <h1 class="h2">Activate your account</h1>
+
+      {%- form 'activate_customer_password' -%}
+        <div class="stack" style="--stack-gap: 12px;">
+          {%- if form.errors -%}
+            <p class="form__message form__message--error">{{ form.errors.messages.form }}</p>
+          {%- endif -%}
+
+          <label class="field field--floating">
+            <input class="field__input" type="password" name="customer[password]" placeholder=" " autocomplete="new-password" required>
+            <span class="field__label">Password</span>
+          </label>
+
+          <label class="field field--floating">
+            <input class="field__input" type="password" name="customer[password_confirmation]" placeholder=" " autocomplete="new-password" required>
+            <span class="field__label">Confirm password</span>
+          </label>
+
+          <button type="submit" class="button button--primary button--full">Activate account</button>
+          <button type="submit" name="decline" class="button button--secondary button--full">Decline invitation</button>
+        </div>
+      {%- endform -%}
+    </div>
+  </div>
+</section>

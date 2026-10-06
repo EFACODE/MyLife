@@ -1,0 +1,70 @@
+{%- comment -%}
+  Breadcrumbs. On a product reached from a collection, the collection is kept
+  in the trail so the visitor can step back to where they were browsing.
+{%- endcomment -%}
+
+{%- unless template.name == 'index' or template.name == 'cart' -%}
+  <nav class="breadcrumbs page-width" aria-label="{{ 'general.breadcrumbs.label' | t }}">
+    <ol class="breadcrumbs__list">
+      <li class="breadcrumbs__item">
+        <a href="{{ routes.root_url }}">{{ 'general.breadcrumbs.home' | t }}</a>
+      </li>
+
+      {%- case template.name -%}
+        {%- when 'product' -%}
+          {%- if collection.url -%}
+            <li class="breadcrumbs__item">
+              <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+              <a href="{{ collection.url }}">{{ collection.title }}</a>
+            </li>
+          {%- endif -%}
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <span aria-current="page">{{ product.title }}</span>
+          </li>
+
+        {%- when 'collection' -%}
+          {%- if collection.handle -%}
+            <li class="breadcrumbs__item">
+              <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+              <span aria-current="page">{{ collection.title }}</span>
+            </li>
+          {%- endif -%}
+
+        {%- when 'blog' -%}
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <span aria-current="page">{{ blog.title }}</span>
+          </li>
+
+        {%- when 'article' -%}
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <a href="{{ blog.url }}">{{ blog.title }}</a>
+          </li>
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <span aria-current="page">{{ article.title }}</span>
+          </li>
+
+        {%- when 'page' -%}
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <span aria-current="page">{{ page.title }}</span>
+          </li>
+
+        {%- when 'search' -%}
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <span aria-current="page">{{ 'general.search.heading' | t }}</span>
+          </li>
+
+        {%- else -%}
+          <li class="breadcrumbs__item">
+            <span class="breadcrumbs__separator" aria-hidden="true">/</span>
+            <span aria-current="page">{{ page_title }}</span>
+          </li>
+      {%- endcase -%}
+    </ol>
+  </nav>
+{%- endunless -%}

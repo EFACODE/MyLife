@@ -1,0 +1,53 @@
+<section class="section section--tight">
+  <div class="page-width">
+    <div class="collection-hero" data-reveal>
+      <h1 class="h1">{{ order.name }}</h1>
+      <p class="text-body">{{ order.created_at | date: '%d %B %Y' }}</p>
+      <a class="link link--reveal" href="{{ routes.account_url }}">{{ 'customer.account.title' | t }}</a>
+    </div>
+
+    <div class="cart-page">
+      <div>
+        {%- for line_item in order.line_items -%}
+          <div class="cart-item">
+            <div class="cart-item__image">
+              {%- if line_item.image -%}
+                <img src="{{ line_item.image | image_url: width: 200 }}" width="200" height="250" alt="" loading="lazy" decoding="async">
+              {%- endif -%}
+            </div>
+            <div class="cart-item__details">
+              <span class="cart-item__title">{{ line_item.title }}</span>
+              <span class="cart-item__variant">{{ 'cart.label.quantity' | t }}: {{ line_item.quantity }}</span>
+              <div class="cart-item__footer">
+                <span class="price"><span class="price__current">{{ line_item.final_line_price | money }}</span></span>
+              </div>
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+
+      <aside class="cart-page__summary">
+        <div class="cart-totals">
+          <div class="cart-totals__row">
+            <span>{{ 'cart.general.subtotal' | t }}</span>
+            <span>{{ order.line_items_subtotal_price | money }}</span>
+          </div>
+          {%- for shipping_method in order.shipping_methods -%}
+            <div class="cart-totals__row">
+              <span>{{ shipping_method.title }}</span>
+              <span>{{ shipping_method.price | money }}</span>
+            </div>
+          {%- endfor -%}
+          <div class="cart-totals__row cart-totals__row--total">
+            <span>{{ 'cart.general.total' | t }}</span>
+            <span>{{ order.total_price | money }}</span>
+          </div>
+        </div>
+
+        <div class="text-body" style="margin-top: 20px;">
+          {{ order.shipping_address | format_address }}
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>

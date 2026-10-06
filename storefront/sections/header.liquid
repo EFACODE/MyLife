@@ -1,0 +1,374 @@
+{%- liquid
+  assign transparent = false
+  if section.settings.transparent_on_home and template.name == 'index'
+    assign transparent = true
+  endif
+-%}
+
+<sticky-header
+  class="header-wrapper{% if section.settings.sticky %} header-wrapper--sticky{% endif %}{% if transparent %} header-wrapper--overlay{% endif %}"
+  data-hide-on-scroll="{{ section.settings.hide_on_scroll }}"
+>
+  <header class="header{% if transparent %} header--transparent{% endif %}">
+    <div class="page-width">
+      <div class="header__inner">
+        {%- comment -%} Left: mobile menu toggle on small screens, nav on desktop. {%- endcomment -%}
+        <div class="header__actions" style="justify-content: flex-start;">
+          <button
+            type="button"
+            class="header__icon header__menu-toggle"
+            data-overlay-open="MobileNav"
+            aria-label="{{ 'general.accessibility.menu' | t }}"
+          >
+            {% render 'icon', name: 'menu', size: 20 %}
+          </button>
+        </div>
+
+        <div style="display: flex; justify-content: center; align-items: center; min-width: 0;">
+          {%- if section.settings.logo != blank -%}
+            <a
+              class="header__logo"
+              href="{{ routes.root_url }}"
+              style="--logo-width: {{ section.settings.logo_width }}px;"
+            >
+              {%- assign logo_height = section.settings.logo_width | divided_by: section.settings.logo.aspect_ratio | round -%}
+              <img
+                src="{{ section.settings.logo | image_url: width: 400 }}"
+                srcset="
+                  {{ section.settings.logo | image_url: width: section.settings.logo_width }} 1x,
+                  {{ section.settings.logo | image_url: width: section.settings.logo_width | times: 2 }} 2x
+                "
+                width="{{ section.settings.logo_width }}"
+                height="{{ logo_height }}"
+                alt="{{ shop.name | escape }}"
+                loading="eager"
+                fetchpriority="high"
+              >
+            </a>
+          {%- else -%}
+            <a class="header__logo" href="{{ routes.root_url }}">{{ shop.name }}</a>
+          {%- endif -%}
+        </div>
+
+        <div class="header__actions">
+          {%- if section.settings.show_search -%}
+            <button
+              type="button"
+              class="header__icon"
+              data-overlay-open="SearchOverlay"
+              aria-label="{{ 'general.accessibility.search' | t }}"
+            >
+              {% render 'icon', name: 'search', size: 20 %}
+            </button>
+          {%- endif -%}
+
+          {%- if section.settings.show_wishlist -%}
+            <button
+              type="button"
+              class="header__icon"
+              data-overlay-open="WishlistDrawer"
+              aria-label="{{ 'general.accessibility.wishlist' | t }}"
+            >
+              {% render 'icon', name: 'heart', size: 20 %}
+              <wishlist-count class="header__icon-badge"></wishlist-count>
+            </button>
+          {%- endif -%}
+
+          {%- if section.settings.show_account and shop.customer_accounts_enabled -%}
+            <a
+              class="header__icon"
+              href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}"
+              aria-label="{{ 'general.accessibility.account' | t }}"
+            >
+              {% render 'icon', name: 'user', size: 20 %}
+            </a>
+          {%- endif -%}
+
+          {%- if settings.cart_drawer_enabled -%}
+            <button
+              type="button"
+              class="header__icon"
+              data-cart-link
+              data-overlay-open="CartDrawer"
+              aria-label="{{ 'general.accessibility.cart' | t }}{% if cart.item_count > 0 %} ({{ cart.item_count }}){% endif %}"
+            >
+              {% render 'icon', name: 'cart', size: 20 %}
+              <cart-count class="header__icon-badge{% if cart.item_count > 0 %} is-visible{% endif %}" data-count="{{ cart.item_count }}">
+                {{- cart.item_count | default: '' -}}
+              </cart-count>
+            </button>
+          {%- else -%}
+            <a
+              class="header__icon"
+              data-cart-link
+              href="{{ routes.cart_url }}"
+              aria-label="{{ 'general.accessibility.cart' | t }}{% if cart.item_count > 0 %} ({{ cart.item_count }}){% endif %}"
+            >
+              {% render 'icon', name: 'cart', size: 20 %}
+              <cart-count class="header__icon-badge{% if cart.item_count > 0 %} is-visible{% endif %}" data-count="{{ cart.item_count }}">
+                {{- cart.item_count | default: '' -}}
+              </cart-count>
+            </a>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+
+    {%- comment -%} Desktop navigation sits below the brand row so the logo stays centred. {%- endcomment -%}
+    <nav class="header__nav" aria-label="{{ 'sections.header.menu' | t }}">
+      <mega-menu>
+        <ul class="header__menu" role="list">
+          {%- for link in section.settings.menu.links -%}
+            <li class="header__menu-item{% if link.links.size > 0 %} header__menu-item--has-menu{% endif %}">
+              <a
+                class="header__menu-link"
+                href="{{ link.url }}"
+                {% if link.current %}aria-current="page"{% endif %}
+              >
+                {{ link.title }}
+                {%- if link.links.size > 0 -%}
+                  {% render 'icon', name: 'caret' %}
+                {%- endif -%}
+              </a>
+
+              {%- if link.links.size > 0 -%}
+                <div class="mega-menu">
+                  <div class="page-width">
+                    <div class="mega-menu__inner">
+                      {%- for child in link.links -%}
+                        <div>
+                          <p class="mega-menu__heading">
+                            <a href="{{ child.url }}">{{ child.title }}</a>
+                          </p>
+
+                          {%- if child.links.size > 0 -%}
+                            <ul class="mega-menu__list" role="list">
+                              {%- for grandchild in child.links -%}
+                                <li>
+                                  <a class="mega-menu__link" href="{{ grandchild.url }}">{{ grandchild.title }}</a>
+                                </li>
+                              {%- endfor -%}
+                            </ul>
+                          {%- endif -%}
+                        </div>
+                      {%- endfor -%}
+
+                      {%- comment -%}
+                        A promoted card per top-level menu item, matched by block heading.
+                      {%- endcomment -%}
+                      {%- for block in section.blocks -%}
+                        {%- if block.type == 'promo' and block.settings.menu_item == link.title -%}
+                          <div class="mega-menu__feature" {{ block.shopify_attributes }}>
+                            <a class="mega-menu__feature-card" href="{{ block.settings.link | default: link.url }}">
+                              <div class="media media--landscape">
+                                {%- if block.settings.image != blank -%}
+                                  {% render 'image',
+                                    image: block.settings.image,
+                                    sizes: '(min-width: 990px) 30vw, 90vw',
+                                    max_width: 900
+                                  %}
+                                {%- else -%}
+                                  {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder-svg' }}
+                                {%- endif -%}
+                              </div>
+                              {%- if block.settings.caption != blank -%}
+                                <span class="mega-menu__feature-caption">{{ block.settings.caption }}</span>
+                              {%- endif -%}
+                            </a>
+                          </div>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </div>
+                  </div>
+                </div>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </mega-menu>
+    </nav>
+  </header>
+</sticky-header>
+
+{%- comment -%} Mobile navigation drawer. {%- endcomment -%}
+<overlay-element id="MobileNav" aria-hidden="true">
+  <div class="overlay-backdrop" data-overlay-backdrop></div>
+
+  <div
+    class="drawer drawer--left"
+    data-overlay-panel
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ 'sections.header.menu' | t }}"
+    tabindex="-1"
+  >
+    <header class="drawer__header">
+      <h2 class="drawer__title">{{ 'sections.header.menu' | t }}</h2>
+      <button
+        type="button"
+        class="drawer__close"
+        data-overlay-close
+        aria-label="{{ 'general.accessibility.close' | t }}"
+      >
+        {% render 'icon', name: 'close', size: 20 %}
+      </button>
+    </header>
+
+    <div class="drawer__body">
+      <ul class="mobile-nav__list" role="list">
+        {%- for link in section.settings.menu.links -%}
+          <li class="mobile-nav__item">
+            {%- if link.links.size > 0 -%}
+              <details class="mobile-nav__details">
+                <summary class="mobile-nav__summary">
+                  {{ link.title }}
+                  {% render 'icon', name: 'caret' %}
+                </summary>
+                <ul class="mobile-nav__sublist" role="list">
+                  <li>
+                    <a class="mobile-nav__sublink" href="{{ link.url }}">
+                      {{ link.title }} &mdash; {{ 'products.product.view_details' | t | downcase }}
+                    </a>
+                  </li>
+                  {%- for child in link.links -%}
+                    <li>
+                      <a class="mobile-nav__sublink" href="{{ child.url }}">{{ child.title }}</a>
+                    </li>
+                    {%- for grandchild in child.links -%}
+                      <li style="padding-left: 14px;">
+                        <a class="mobile-nav__sublink" href="{{ grandchild.url }}">{{ grandchild.title }}</a>
+                      </li>
+                    {%- endfor -%}
+                  {%- endfor -%}
+                </ul>
+              </details>
+            {%- else -%}
+              <a class="mobile-nav__link" href="{{ link.url }}">{{ link.title }}</a>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+
+    <div class="drawer__footer">
+      <div class="stack" style="--stack-gap: 12px;">
+        {%- if shop.customer_accounts_enabled -%}
+          <a
+            class="button button--secondary button--full"
+            href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}"
+          >
+            {% if customer %}{{ 'customer.account.title' | t }}{% else %}{{ 'customer.login.sign_in' | t }}{% endif %}
+          </a>
+        {%- endif -%}
+        {% render 'social-icons' %}
+      </div>
+    </div>
+  </div>
+</overlay-element>
+
+{% schema %}
+{
+  "name": "t:sections.header.name",
+  "tag": "div",
+  "class": "header-section",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "t:sections.header.logo"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 60,
+      "max": 240,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.header.logo_width",
+      "default": 132
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "default": "main-menu",
+      "label": "t:sections.header.menu",
+      "info": "t:sections.header.mega_menu_info"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.header.sticky"
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky",
+      "default": true,
+      "label": "t:sections.header.sticky"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_on_scroll",
+      "default": true,
+      "label": "Hide when scrolling down"
+    },
+    {
+      "type": "checkbox",
+      "id": "transparent_on_home",
+      "default": true,
+      "label": "t:sections.header.transparent_on_home"
+    },
+    {
+      "type": "header",
+      "content": "Icons"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "default": true,
+      "label": "t:sections.header.show_search"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_wishlist",
+      "default": true,
+      "label": "t:sections.header.show_wishlist"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_account",
+      "default": true,
+      "label": "t:sections.header.show_account"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "promo",
+      "name": "t:sections.header.mega_menu",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "text",
+          "id": "menu_item",
+          "label": "Menu item title",
+          "info": "Must match a top-level menu item exactly, e.g. Living Room."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:sections.all.image"
+        },
+        {
+          "type": "text",
+          "id": "caption",
+          "label": "t:sections.all.eyebrow",
+          "default": "New arrivals"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.all.link"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

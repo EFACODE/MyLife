@@ -1,0 +1,163 @@
+{%- liquid
+  assign scheme_class = ''
+  if section.settings.color_scheme == 'surface'
+    assign scheme_class = 'section--surface'
+  elsif section.settings.color_scheme == 'contrast'
+    assign scheme_class = 'section--contrast'
+  endif
+-%}
+
+<section
+  class="section {{ scheme_class }}"
+  style="
+    --section-padding-top: {{ section.settings.padding_top }}px;
+    --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+>
+  <div class="page-width page-width--narrow">
+    <div class="newsletter" data-reveal>
+      {%- if section.settings.eyebrow != blank -%}
+        <span class="eyebrow">{{ section.settings.eyebrow | escape }}</span>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        <h2 class="h2">{{ section.settings.heading | escape }}</h2>
+      {%- endif -%}
+
+      {%- if section.settings.text != blank -%}
+        <p class="text-lead" style="text-align: center;">{{ section.settings.text | escape }}</p>
+      {%- endif -%}
+
+      {%- comment -%}
+        The data attributes live on a wrapper because Liquid's form tag cannot
+        take hyphenated argument names. Submit events bubble, so JS still sees it.
+      {%- endcomment -%}
+      <div
+        class="newsletter__form"
+        data-newsletter-form
+        data-error-message="{{ 'general.newsletter.error' | t | escape }}"
+      >
+      {%- form 'customer' -%}
+        <input type="hidden" name="contact[tags]" value="newsletter">
+
+        {%- if form.posted_successfully? -%}
+          <p class="form__message" role="status">
+            {% render 'icon', name: 'check', size: 16 %}
+            {{ 'general.newsletter.success' | t }}
+          </p>
+        {%- else -%}
+          <div class="newsletter__row">
+            <label class="visually-hidden" for="NewsletterEmail-{{ section.id }}">
+              {{ 'general.newsletter.label' | t }}
+            </label>
+            <input
+              id="NewsletterEmail-{{ section.id }}"
+              class="newsletter__input"
+              type="email"
+              name="contact[email]"
+              value="{{ form.email }}"
+              placeholder="{{ 'general.newsletter.placeholder' | t }}"
+              autocomplete="email"
+              autocorrect="off"
+              autocapitalize="off"
+              required
+            >
+            <button type="submit" class="button button--primary">
+              {{ 'general.newsletter.submit' | t }}
+            </button>
+          </div>
+
+          <p class="form__message" data-newsletter-message role="status">
+            {%- if form.errors -%}
+              {{ form.errors.translated_fields.email | capitalize }}
+              {{ form.errors.messages.email }}
+            {%- endif -%}
+          </p>
+        {%- endif -%}
+      {%- endform -%}
+      </div>
+
+      {%- if section.settings.disclaimer != blank -%}
+        <p class="newsletter__disclaimer">{{ section.settings.disclaimer | escape }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.newsletter.name",
+  "tag": "section",
+  "class": "newsletter-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "default": "Newsletter",
+      "label": "t:sections.all.eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Slow news, twice a month",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "default": "New arrivals, studio visits and quiet ideas for the home. No noise.",
+      "label": "t:sections.all.body"
+    },
+    {
+      "type": "text",
+      "id": "disclaimer",
+      "default": "By subscribing you agree to our privacy policy. Unsubscribe at any time.",
+      "label": "t:sections.newsletter.disclaimer"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.colors"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        { "value": "light", "label": "t:sections.all.scheme_light" },
+        { "value": "surface", "label": "t:sections.all.scheme_surface" },
+        { "value": "contrast", "label": "t:sections.all.scheme_contrast" }
+      ],
+      "default": "light",
+      "label": "t:sections.all.color_scheme"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 96
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 96
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.newsletter.name"
+    }
+  ]
+}
+{% endschema %}

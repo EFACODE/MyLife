@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-list-collections",
+      "settings": {
+        "text": "Every collection, grouped by room and material."
+      }
+    }
+  },
+  "order": ["main"]
+}

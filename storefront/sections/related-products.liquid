@@ -1,0 +1,107 @@
+{%- comment -%}
+  Product recommendations.
+
+  On the product page `recommendations.performed` is false, so the custom
+  element below fetches this same section from the recommendations route and
+  swaps itself out. That keeps the markup in Liquid and costs one small
+  request that never blocks first paint.
+{%- endcomment -%}
+
+{%- liquid
+  assign limit = section.settings.products_to_show
+  assign recommendations_url = routes.product_recommendations_url
+    | append: '?section_id='
+    | append: section.id
+    | append: '&product_id='
+    | append: product.id
+    | append: '&limit='
+    | append: limit
+-%}
+
+<product-recommendations
+  class="related-products"
+  data-url="{{ recommendations_url }}"
+  data-section-id="{{ section.id }}"
+>
+  {%- if recommendations.performed and recommendations.products_count > 0 -%}
+    <section
+      class="section"
+      style="
+        --section-padding-top: {{ section.settings.padding_top }}px;
+        --section-padding-bottom: {{ section.settings.padding_bottom }}px;
+      "
+    >
+      <div class="page-width">
+        <div class="section__header">
+          <div class="section__header-text" data-reveal>
+            <h2 class="h3">{{ section.settings.heading | default: 'You may also like' }}</h2>
+          </div>
+        </div>
+
+        <div class="scroller" style="--columns-desktop: {{ section.settings.columns_desktop }};">
+          {%- for recommended in recommendations.products limit: limit -%}
+            {% render 'product-card',
+              product: recommended,
+              index: forloop.index0,
+              sizes: '(min-width: 1200px) 24vw, (min-width: 750px) 32vw, 74vw'
+            %}
+          {%- endfor -%}
+        </div>
+      </div>
+    </section>
+  {%- endif -%}
+</product-recommendations>
+
+{% schema %}
+{
+  "name": "t:sections.related.name",
+  "tag": "div",
+  "class": "related-products-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "You may also like",
+      "label": "t:sections.all.heading"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "label": "t:sections.best_sellers.products_to_show",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "label": "t:sections.all.columns_desktop",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_top",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding_bottom",
+      "default": 64
+    }
+  ]
+}
+{% endschema %}

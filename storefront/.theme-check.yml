@@ -1,0 +1,37 @@
+extends: :default
+
+# The theme is intentionally two assets, no bundler, no external dependencies.
+ImgLazyLoading:
+  enabled: true
+
+AssetSizeCSS:
+  enabled: true
+  threshold_in_bytes: 120000
+
+AssetSizeJavaScript:
+  enabled: true
+  threshold_in_bytes: 60000
+
+TemplateLength:
+  enabled: true
+  max_length: 700
+
+UndefinedObject:
+  enabled: true
+
+MissingTemplate:
+  enabled: true
+
+# Inline styles are used deliberately to pass per-section settings through to
+# CSS custom properties, which keeps the stylesheet static and cacheable.
+RemoteAsset:
+  enabled: true
+
+ValidHTMLTranslation:
+  enabled: true
+
+ValidSchema:
+  enabled: true
+
+SchemaJsonFormat:
+  enabled: false

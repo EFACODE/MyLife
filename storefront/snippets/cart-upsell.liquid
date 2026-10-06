@@ -1,0 +1,82 @@
+{%- comment -%}
+  Upsell recommendations based on the first item in the cart. Uses Shopify's
+  recommendations endpoint at render time, so no client request is needed.
+{%- endcomment -%}
+
+{%- if cart.item_count > 0 -%}
+  {%- assign anchor = cart.items.first.product -%}
+  {%- assign recommendations = recommendations | default: null -%}
+
+  {% comment %} `recommendations` is populated when this renders inside the recommendations section. {% endcomment %}
+  {%- assign products = recommendations.products | default: anchor.collections.first.products -%}
+
+  {%- if products.size > 0 -%}
+    {%- assign shown = 0 -%}
+    {%- capture upsell_items -%}
+      {%- for item in products limit: 6 -%}
+        {%- liquid
+          if shown >= 2
+            break
+          endif
+
+          assign in_cart = false
+          for line in cart.items
+            if line.product_id == item.id
+              assign in_cart = true
+            endif
+          endfor
+        -%}
+
+        {%- if in_cart == false and item.available -%}
+          {%- assign shown = shown | plus: 1 -%}
+          <div class="upsell-item">
+            <a class="upsell-item__image" href="{{ item.url }}" tabindex="-1" aria-hidden="true">
+              {%- if item.featured_media -%}
+                <img
+                  src="{{ item.featured_media | image_url: width: 160 }}"
+                  width="160"
+                  height="160"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                >
+              {%- endif -%}
+            </a>
+
+            <div>
+              <a class="upsell-item__title" href="{{ item.url }}">{{ item.title | escape }}</a>
+              <div class="upsell-item__price">{{ item.price | money }}</div>
+            </div>
+
+            {%- if item.has_only_default_variant -%}
+              <product-form
+                data-product-title="{{ item.title | escape }}"
+                data-product-image="{% if item.featured_media %}{{ item.featured_media | image_url: width: 120 }}{% endif %}"
+              >
+                {%- form 'product', item, class: 'contents' -%}
+                  <input type="hidden" name="id" value="{{ item.selected_or_first_available_variant.id }}">
+                  <input type="hidden" name="quantity" value="1">
+                  <button type="submit" class="button button--secondary button--small">
+                    <span class="button__label">{% render 'icon', name: 'plus', size: 14 %}</span>
+                    <span class="button__spinner"><span class="spinner"></span></span>
+                  </button>
+                {%- endform -%}
+              </product-form>
+            {%- else -%}
+              <a class="button button--secondary button--small" href="{{ item.url }}">
+                {{ 'products.product.view_details' | t }}
+              </a>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+
+    {%- if shown > 0 -%}
+      <div class="cart-upsell">
+        <p class="footer__heading">{{ 'cart.upsell.heading' | t }}</p>
+        {{ upsell_items }}
+      </div>
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}

@@ -1,0 +1,184 @@
+{
+  "settings": {
+    "typography": "Typography",
+    "body_font": "Body font",
+    "heading_font": "Heading font",
+    "font_stack_info": "Inter, Neue Haas Grotesk and Suisse Intl are preferred when available on the visitor's device; the font selected here is the hosted fallback.",
+    "base_size": "Base size",
+    "heading_scale": "Heading scale",
+    "heading_tracking": "Heading letter spacing",
+    "heading_tracking_info": "Negative tracking reads as more editorial at large sizes.",
+    "colors": "Colors",
+    "color_background": "Background",
+    "color_surface": "Surface",
+    "color_surface_alt": "Surface (alternate)",
+    "color_border": "Lines and muted text",
+    "color_text": "Text",
+    "shape": "Shape and layout",
+    "radius_base": "Corner radius",
+    "radius_small": "Corner radius (small)",
+    "radius_large": "Corner radius (large)",
+    "page_width": "Maximum page width",
+    "motion": "Motion",
+    "animations_enabled": "Enable animations",
+    "animations_info": "All motion is disabled automatically for visitors who prefer reduced motion.",
+    "animation_duration": "Transition duration",
+    "animate_parallax": "Parallax hero",
+    "animate_cursor": "Cursor hover effect",
+    "animate_cursor_info": "Desktop pointers only.",
+    "animate_page_transition": "Page transitions",
+    "product_cards": "Product cards",
+    "card_image_ratio": "Image ratio",
+    "ratio_square": "Square (1:1)",
+    "ratio_portrait": "Portrait (4:5)",
+    "ratio_landscape": "Landscape (4:3)",
+    "card_hover_swap": "Swap to second image on hover",
+    "card_quick_add": "Show quick add",
+    "card_quick_view": "Show quick view",
+    "card_wishlist": "Show wishlist",
+    "card_rating": "Show rating",
+    "card_rating_info": "Requires a review app that writes to the product metafields.",
+    "cart": "Cart",
+    "cart_drawer_enabled": "Open cart in a drawer",
+    "cart_free_shipping_bar": "Free shipping progress bar",
+    "cart_free_shipping_threshold": "Free shipping threshold",
+    "cart_free_shipping_threshold_info": "In your store currency, without a currency symbol.",
+    "cart_discount_field": "Discount code field",
+    "cart_upsell": "Upsell recommendations",
+    "cart_note_placeholder": "Order note placeholder",
+    "social": "Social accounts",
+    "seo": "SEO and sharing",
+    "favicon": "Favicon",
+    "favicon_info": "Square image, 96×96px minimum.",
+    "share_image": "Default social sharing image",
+    "seo_twitter_handle": "X (Twitter) handle",
+    "seo_structured_data": "Output structured data (JSON-LD)"
+  },
+  "sections": {
+    "all": {
+      "padding": "Section padding",
+      "padding_top": "Top padding",
+      "padding_bottom": "Bottom padding",
+      "heading": "Heading",
+      "subheading": "Subheading",
+      "eyebrow": "Eyebrow",
+      "body": "Body text",
+      "image": "Image",
+      "link": "Link",
+      "link_label": "Link label",
+      "columns_desktop": "Columns on desktop",
+      "columns_mobile": "Columns on mobile",
+      "colors": "Colors",
+      "color_scheme": "Color scheme",
+      "scheme_light": "Light",
+      "scheme_surface": "Surface",
+      "scheme_contrast": "Contrast",
+      "animation": "Animation",
+      "reveal": "Reveal on scroll",
+      "full_width": "Full width"
+    },
+    "announcement": {
+      "name": "Announcement bar",
+      "message": "Message",
+      "rotate": "Rotate messages",
+      "rotate_speed": "Seconds per message",
+      "dismissible": "Allow dismiss"
+    },
+    "header": {
+      "name": "Header",
+      "logo": "Logo",
+      "logo_width": "Logo width",
+      "menu": "Menu",
+      "sticky": "Sticky header",
+      "transparent_on_home": "Transparent over the hero",
+      "mega_menu": "Mega menu",
+      "mega_menu_info": "Top-level menu items with a dropdown render as a mega menu.",
+      "show_search": "Show search",
+      "show_account": "Show account",
+      "show_wishlist": "Show wishlist"
+    },
+    "hero": {
+      "name": "Hero",
+      "height": "Height",
+      "height_full": "Full screen",
+      "height_large": "Large",
+      "height_medium": "Medium",
+      "overlay": "Image overlay opacity",
+      "parallax": "Parallax",
+      "alignment": "Content alignment",
+      "mobile_image": "Mobile image"
+    },
+    "categories": {
+      "name": "Featured categories",
+      "collection": "Collection",
+      "category": "Category"
+    },
+    "best_sellers": {
+      "name": "Best sellers",
+      "products_to_show": "Products to show"
+    },
+    "promo": {
+      "name": "Promotional banner",
+      "gradient_from": "Gradient start",
+      "gradient_to": "Gradient end"
+    },
+    "collection_grid": {
+      "name": "Collection grid",
+      "layout": "Layout",
+      "layout_masonry": "Masonry",
+      "layout_grid": "Uniform grid"
+    },
+    "reviews": {
+      "name": "Customer reviews",
+      "review": "Review",
+      "quote": "Quote",
+      "author": "Author",
+      "rating": "Rating",
+      "location": "Location"
+    },
+    "newsletter": {
+      "name": "Newsletter",
+      "disclaimer": "Disclaimer"
+    },
+    "footer": {
+      "name": "Footer",
+      "menu_column": "Menu column",
+      "show_newsletter": "Show newsletter",
+      "show_social": "Show social icons",
+      "show_payment_icons": "Show payment icons",
+      "contact_heading": "Contact heading",
+      "contact_body": "Contact details"
+    },
+    "product": {
+      "name": "Product information",
+      "gallery_layout": "Gallery layout",
+      "gallery_stacked": "Stacked",
+      "gallery_carousel": "Carousel",
+      "enable_zoom": "Enable image zoom",
+      "sticky_buy": "Sticky buy section",
+      "show_trust_badges": "Show trust badges",
+      "show_delivery": "Show delivery information",
+      "accordion": "Accordion row",
+      "accordion_content": "Content",
+      "accordion_page": "Content from page",
+      "badge": "Trust badge",
+      "badge_icon": "Icon"
+    },
+    "collection": {
+      "name": "Collection",
+      "show_filters": "Show filters",
+      "show_sort": "Show sorting",
+      "products_per_page": "Products per page",
+      "filters_info": "Filters are configured in Search & Discovery."
+    },
+    "recently_viewed": {
+      "name": "Recently viewed"
+    },
+    "related": {
+      "name": "Related products"
+    },
+    "rich_text": {
+      "name": "Rich text"
+    }
+  }
+}

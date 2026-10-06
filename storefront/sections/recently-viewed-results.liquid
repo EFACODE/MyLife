@@ -1,0 +1,24 @@
+{%- comment -%}
+  Fragment section. Requested as
+  /search?q=handle:a OR handle:b&type=product&section_id=recently-viewed-results
+  and returns only the cards, which the recently-viewed element grafts in.
+{%- endcomment -%}
+
+<div data-recently-viewed-grid>
+  {%- for item in search.results -%}
+    {%- if item.object_type == 'product' -%}
+      {% render 'product-card',
+        product: item,
+        index: forloop.index0,
+        sizes: '(min-width: 1200px) 24vw, (min-width: 750px) 32vw, 74vw'
+      %}
+    {%- endif -%}
+  {%- endfor -%}
+</div>
+
+{% schema %}
+{
+  "name": "Recently viewed results",
+  "settings": []
+}
+{% endschema %}

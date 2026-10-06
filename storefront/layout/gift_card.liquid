@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    {%- assign gift_card_value = gift_card.balance | money -%}
+    <title>{{ 'gift_cards.issued.title' | t: value: gift_card_value }} &mdash; {{ shop.name }}</title>
+
+    {{ content_for_header }}
+
+    {%- liquid
+      assign body_font = settings.type_body_font
+      assign heading_font = settings.type_heading_font
+    -%}
+
+    {% style %}
+      {{ body_font | font_face: font_display: 'swap' }}
+      {{ heading_font | font_face: font_display: 'swap' }}
+
+      :root {
+        --color-bg: {{ settings.color_background }};
+        --color-bg-rgb: {{ settings.color_background | color_to_rgb | remove: 'rgb(' | remove: ')' }};
+        --color-surface: {{ settings.color_surface }};
+        --color-surface-alt: {{ settings.color_surface_alt }};
+        --color-line: {{ settings.color_border }};
+        --color-text: {{ settings.color_text }};
+        --color-text-rgb: {{ settings.color_text | color_to_rgb | remove: 'rgb(' | remove: ')' }};
+        --color-muted: {{ settings.color_border | color_darken: 8 }};
+        --color-text-soft: {{ settings.color_text | color_mix: settings.color_background, 62 }};
+        --color-on-contrast: {{ settings.color_background }};
+        --font-body: 'Inter', 'Neue Haas Grotesk Display', 'Suisse Intl', {{ body_font.family }}, {{ body_font.fallback_families }};
+        --font-heading: var(--font-body);
+        --font-body-weight: {{ body_font.weight }};
+        --font-body-weight-medium: 500;
+        --font-heading-weight: {{ heading_font.weight }};
+        --font-body-style: {{ body_font.style }};
+        --type-base: {{ settings.type_base_size }}px;
+        --type-scale: 1;
+        --heading-tracking: {{ settings.type_heading_tracking | divided_by: 1000.0 }}em;
+        --radius-sm: {{ settings.radius_small }}px;
+        --radius: {{ settings.radius_base }}px;
+        --radius-lg: {{ settings.radius_large }}px;
+        --radius-pill: 999px;
+        --page-width: {{ settings.page_width }}px;
+        --shadow-xs: 0 1px 2px rgba(var(--color-text-rgb), 0.04);
+        --shadow-sm: 0 2px 10px rgba(var(--color-text-rgb), 0.045);
+        --shadow-md: 0 10px 30px -12px rgba(var(--color-text-rgb), 0.10);
+        --shadow-lg: 0 24px 60px -24px rgba(var(--color-text-rgb), 0.14);
+        --glass-bg: rgba(var(--color-bg-rgb), 0.72);
+        --glass-border: rgba(var(--color-text-rgb), 0.06);
+        --glass-blur: saturate(140%) blur(14px);
+        --duration: 400ms;
+        --duration-fast: 240ms;
+        --duration-slow: 500ms;
+        --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+        --gutter: 20px;
+        --section-gap: 64px;
+        --header-height: 0px;
+      }
+    {% endstyle %}
+
+    <link rel="stylesheet" href="{{ 'base.css' | asset_url }}">
+  </head>
+
+  <body class="template-gift-card">
+    {{ content_for_layout }}
+  </body>
+</html>
