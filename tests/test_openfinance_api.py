@@ -136,6 +136,33 @@ def test_sync_creates_transactions_after_credential_and_consent(client: TestClie
     assert net_worth["currencies"] == [{"currency": "BRL", "total_minor": 150000}]
 
 
+def test_sync_with_since_backfills_from_that_date(client: TestClient) -> None:
+    """``since`` is an opt-in one-off backfill, overriding the default
+    30-day window for this sync only (see spec FR-2/FR-3)."""
+    auth = _auth(client)
+    _grant_openfinance(client, auth)
+    client.post(
+        "/finance/connectors/openfinance/credentials", json={"api_key": "sk-test"}, headers=auth
+    )
+
+    response = client.post("/finance/connectors/openfinance/sync?since=2026-09-01", headers=auth)
+
+    assert response.status_code == 201
+    assert response.json()["events_created"] == 2  # 1 balance + 1 transaction
+
+
+def test_sync_with_future_since_is_422(client: TestClient) -> None:
+    auth = _auth(client)
+    _grant_openfinance(client, auth)
+    client.post(
+        "/finance/connectors/openfinance/credentials", json={"api_key": "sk-test"}, headers=auth
+    )
+
+    response = client.post("/finance/connectors/openfinance/sync?since=2099-01-01", headers=auth)
+
+    assert response.status_code == 422
+
+
 def test_delete_credentials_then_sync_is_409(client: TestClient) -> None:
     auth = _auth(client)
     _grant_openfinance(client, auth)

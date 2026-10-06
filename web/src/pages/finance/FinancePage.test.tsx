@@ -244,6 +244,23 @@ describe("FinancePage", () => {
     await waitFor(() => expect(client.disconnectOpenFinance).toHaveBeenCalled());
   });
 
+  it("faz backfill a partir de uma data escolhida na aba Configurações", async () => {
+    client.openFinanceStatus.mockResolvedValue({
+      connected: true,
+      updated_at: "2026-09-24T00:00:00Z",
+    });
+    render(<FinancePage />);
+    goToTab("Configurações");
+
+    await screen.findByText(/Conectado desde/);
+    fireEvent.change(screen.getByLabelText("Buscar desde (backfill)"), {
+      target: { value: "2026-09-01" },
+    });
+    fireEvent.click(screen.getByText("Sincronizar a partir dessa data"));
+
+    await waitFor(() => expect(client.syncOpenFinance).toHaveBeenCalledWith("2026-09-01"));
+  });
+
   it("mascara a chave de API da Pierre Finance por padrão e permite revelar", async () => {
     render(<FinancePage />);
     goToTab("Configurações");

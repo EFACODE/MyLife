@@ -6,7 +6,7 @@ accounts, records expenses, imports transactions and lists them back. See
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -525,6 +525,10 @@ def sync_openfinance(
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
     client: Annotated[PierreFinanceClient, Depends(get_pierre_client)],
+    since: Annotated[
+        date | None,
+        Query(description="Backfill from this date instead of the default 30-day window."),
+    ] = None,
 ) -> OpenFinanceSyncResult:
     """Pull accounts/transactions/balances from Pierre Finance for the user.
 
@@ -532,10 +536,19 @@ def sync_openfinance(
     ``403``; no Pierre API key stored → ``409``; a Pierre API error → ``502``.
     Accounts are auto-created/linked from Pierre's own account list — no
     ``account_id`` to pick, unlike the bank CSV import above.
+
+    ``since`` is an optional one-off backfill: it replaces the regular
+    trailing 30-day window with ``[since, today]`` for this sync only (e.g.
+    to pull a month that predates when the connector was first set up); a
+    future sync without ``since`` goes back to the default window.
     """
+    if since is not None and since > utcnow().date():
+        raise HTTPException(status_code=422, detail="'since' cannot be in the future")
     correlation_id = get_correlation_id() or new_correlation_id()
     vault = CredentialVault(session, get_settings().credential_encryption_key)
-    connector = PierreFinanceConnector(FinanceService(session, bus), vault, client, now=utcnow())
+    connector = PierreFinanceConnector(
+        FinanceService(session, bus), vault, client, now=utcnow(), since=since
+    )
     try:
         result = ConnectorRunner(session, bus).sync(
             connector,
