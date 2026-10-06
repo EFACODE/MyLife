@@ -18,16 +18,16 @@ EMAIL = "ada@example.com"
 PASSWORD = "s3cretpw"
 
 ACCOUNT = {
-    "accountId": "acc-1",
-    "accountName": "Conta Corrente",
-    "accountBalance": 1500.00,
-    "accountCurrencyCode": "BRL",
-    "accountMarketingName": "Nubank Conta",
+    "id": "acc-1",
+    "name": "Conta Corrente",
+    "balance": "1500.00",
+    "currencyCode": "BRL",
+    "marketingName": "Nubank Conta",
 }
 TRANSACTIONS = [
     {
         "id": "tx-1",
-        "accountId": "acc-1",
+        "account_id": "acc-1",
         "amount": -45.99,
         "description": "Coffee",
         "category": "food",

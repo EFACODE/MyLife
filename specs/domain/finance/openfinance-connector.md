@@ -217,26 +217,36 @@ POST /finance/connectors/openfinance/sync   (auth + consent "openfinance")
     (no new fields needed — the event *type* itself is the provenance
     signal), keeping this a thin, low-risk addition to `finance/models.py`.
 - **Risks (the important one first):**
-  - **Pierre's `Transaction` JSON schema is not published.** Pierre's own
-    OpenAPI spec declares `"Transaction": {}` — an empty schema — and no
-    prose on this integration's source documentation lists its fields either.
-    Field names used by `_map_transaction` (`accountId`, `amount`,
-    `description`, `category`, and a best-effort date key tried in order —
-    `date`, `postDate`, `transactionDate`) are **inferred** from cross-
-    references elsewhere in Pierre's docs (query params `minAmount`/
-    `maxAmount`/`categories`/`accountType`, and `get-installments`' sibling
-    `description`/`category` fields) — not confirmed against a real
-    response. **This must be verified against one live sync with a real
-    Pierre API key before this connector is used by any real user**; until
-    then treat it as a beta/best-effort mapping. Mitigation already built in:
-    raw payloads are stored verbatim (see §7) regardless of mapping accuracy,
-    so a future field-name fix loses no data, only requires re-normalizing.
-    Field-name misses fail loudly (`ValueError`, batch rolled back) rather
-    than silently importing wrong data.
+  - **Pierre's `Transaction`/`Account` JSON schema was not published, and the
+    original inferred mapping turned out wrong.** Pierre's own OpenAPI spec
+    declares `"Transaction": {}` — an empty schema — and no prose on this
+    integration's source documentation lists its fields either. The mapping
+    was **verified on 2026-10-06 against a real `get-accounts`/
+    `get-transactions` call with a live Pierre API key**, and the account
+    fields originally guessed (`accountId`, `accountCurrencyCode`,
+    `accountBalance`, `accountMarketingName`/`accountName`) were **all
+    wrong** — real field names are `id`, `currencyCode`, `balance` (a numeric
+    string, not a float), and `marketingName`/`name`. Before this fix,
+    `_account_external_id` raised `ValueError` on the very first real
+    account, so **no real sync ever succeeded**. The transaction→account
+    link was also wrong (`accountId` vs. the real `account_id`,
+    snake_case), which would have silently dropped every transaction even
+    after the account fields were fixed. The transaction field names used for
+    `amount`, `description`, `category`, `id` and `date` (first of
+    `date`/`postDate`/`transactionDate` tried) were confirmed correct as-is
+    against 209 real transactions; `postDate`/`transactionDate`/
+    `merchantName`/`memo`/`transactionId` remain untested fallbacks, kept only
+    as defensive extras. Mitigation already built in: raw payloads are stored
+    verbatim (see §7) regardless of mapping accuracy, so a future field-name
+    fix loses no data, only requires re-normalizing. Field-name misses fail
+    loudly (`ValueError`, batch rolled back) rather than silently importing
+    wrong data.
   - *Amount sign convention.* Assumed signed (debits negative, credits
     positive), matching this codebase's `FinancePayload.amount_minor`
-    convention and common aggregator behavior (Pluggy/Belvo); unconfirmed for
-    Pierre specifically — same verification note as above.
+    convention and common aggregator behavior (Pluggy/Belvo); the 2026-10-06
+    verification confirmed `amount` is a signed float, consistent with this
+    assumption, but the exact sign-per-transaction-type mapping was not
+    exhaustively checked against every `type`/`operation_type` combination.
   - *Multi-currency.* The minor-unit conversion (FR-5) assumes 2 decimal
     places (correct for BRL, the only currency Pierre's docs show in
     examples); a future non-2-decimal currency would need a currency→exponent
