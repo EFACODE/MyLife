@@ -10,13 +10,13 @@ has already aggregated, authenticated with a per-user API key held in the
 ``CredentialVault`` (T4.9's identity spec).
 
 See ``specs/domain/finance/openfinance-connector.md`` for the full design,
-including the (flagged, best-effort) mapping of Pierre's ``Transaction`` JSON
-shape: Pierre's own published OpenAPI spec leaves that schema empty (``{}``),
-so the field names tried below are inferred from cross-references elsewhere
-in its docs, not confirmed against a live response. Raw payloads are stored
-verbatim regardless (see the spec's §7/§9), so a wrong guess here loses no
-data — it only fails the affected row loudly (``ValueError``) instead of
-importing something wrong.
+including the ``Transaction``/``Account`` field mapping: Pierre's own
+published OpenAPI spec leaves the ``Transaction`` schema empty (``{}``), so
+the names below were confirmed by calling ``get-accounts``/``get-transactions``
+with a real API key and comparing field names (see spec §9), not by reading
+documentation. Raw payloads are stored verbatim regardless (see the spec's
+§7/§9), so a wrong guess here loses no data — it only fails the affected row
+loudly (``ValueError``) instead of importing something wrong.
 """
 
 import uuid
@@ -42,8 +42,10 @@ from mylife.identity.credential_vault import CredentialVault
 OPENFINANCE_SOURCE = "openfinance"
 PIERRE_PROVIDER = "pierre_finance"
 
-# Best-effort field names for Pierre's undocumented ``Transaction`` shape (see
-# module docstring). Tried in order; the first present value wins.
+# Field names for Pierre's undocumented ``Transaction`` shape, confirmed
+# against a real response (see module docstring). The first value is the
+# confirmed real field name; later ones are defensive fallbacks only. Tried
+# in order, first present value wins.
 _DATE_FIELDS = ("date", "postDate", "transactionDate")
 _DESCRIPTION_FIELDS = ("description", "merchantName", "memo")
 _ID_FIELDS = ("id", "transactionId")
@@ -105,21 +107,21 @@ def _parse_transaction_date(value: str) -> datetime:
 
 
 def _account_external_id(account: dict[str, Any]) -> str:
-    value = account.get("accountId")
+    value = account.get("id")
     if not value:
-        raise ValueError("Pierre account missing 'accountId'")
+        raise ValueError("Pierre account missing 'id'")
     return str(value)
 
 
 def _account_currency(account: dict[str, Any]) -> str:
-    value = account.get("accountCurrencyCode")
+    value = account.get("currencyCode")
     if not value:
-        raise ValueError("Pierre account missing 'accountCurrencyCode'")
+        raise ValueError("Pierre account missing 'currencyCode'")
     return str(value).strip().upper()
 
 
 def _account_name(account: dict[str, Any]) -> str:
-    name = account.get("accountMarketingName") or account.get("accountName")
+    name = account.get("marketingName") or account.get("name")
     return str(name) if name else "Open Finance account"
 
 
@@ -228,7 +230,7 @@ class PierreFinanceConnector:
                         "kind": "balance",
                         "mylife_account_id": str(linked.account_id),
                         "currency": currency,
-                        "balance": account.get("accountBalance"),
+                        "balance": account.get("balance"),
                     },
                     fetched_at=self._now,
                 )
@@ -241,7 +243,7 @@ class PierreFinanceConnector:
         )
         transaction_payloads: list[RawPayload] = []
         for row in transactions:
-            raw_account_id = row.get("accountId")
+            raw_account_id = row.get("account_id")
             mylife_account_id = account_ids.get(str(raw_account_id)) if raw_account_id else None
             if mylife_account_id is None:
                 # A transaction for an account not in get-accounts (e.g.

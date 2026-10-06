@@ -29,19 +29,19 @@ NOW = datetime(2026, 9, 23, 12, 0, tzinfo=UTC)
 KEY = Fernet.generate_key().decode()
 
 ACCOUNT = {
-    "accountId": "acc-1",
-    "providerCode": "NUBANK",
-    "accountName": "Conta Corrente",
-    "accountType": "BANK",
-    "accountSubtype": "CHECKING_ACCOUNT",
-    "accountBalance": 1500.00,
-    "accountCurrencyCode": "BRL",
-    "accountMarketingName": "Nubank Conta",
+    "id": "acc-1",
+    "itemId": "item-1",
+    "name": "Conta Corrente",
+    "type": "BANK",
+    "subtype": "CHECKING_ACCOUNT",
+    "balance": "1500.00",
+    "currencyCode": "BRL",
+    "marketingName": "Nubank Conta",
 }
 TRANSACTIONS = [
     {
         "id": "tx-1",
-        "accountId": "acc-1",
+        "account_id": "acc-1",
         "amount": -45.99,
         "description": "Coffee",
         "category": "food",
@@ -49,7 +49,7 @@ TRANSACTIONS = [
     },
     {
         "id": "tx-2",
-        "accountId": "acc-1",
+        "account_id": "acc-1",
         "amount": 2500.00,
         "description": "Salary",
         "category": "income",
@@ -167,7 +167,7 @@ def test_sync_records_fresh_balance_on_change(factory: sessionmaker[Session]) ->
             ),
             _context(user),
         )
-        updated_account = {**ACCOUNT, "accountBalance": 1600.00}
+        updated_account = {**ACCOUNT, "balance": "1600.00"}
         result = runner.sync(
             PierreFinanceConnector(
                 finance, CredentialVault(session, KEY), _client([updated_account], []), now=NOW
@@ -199,7 +199,7 @@ def test_transaction_missing_recognized_fields_fails_the_batch(
     factory: sessionmaker[Session],
 ) -> None:
     user = uuid.uuid4()
-    bad_transaction = {"accountId": "acc-1", "foo": "bar"}
+    bad_transaction = {"account_id": "acc-1", "foo": "bar"}
     with factory() as session:
         CredentialVault(session, KEY).store(user, PIERRE_PROVIDER, "sk-test", now=NOW)
         connector = PierreFinanceConnector(
