@@ -211,18 +211,21 @@ describe("FinancePage", () => {
     render(<FinancePage />);
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
 
-    fireEvent.change(
-      screen.getByLabelText("Filtrar período do gráfico de gastos por categoria"),
-      { target: { value: "2026-08" } },
-    );
-
     const section = await billsSection("Gastos por categoria");
+    expect(within(section).getByText("Setembro de 2026")).toBeInTheDocument();
+
+    fireEvent.click(within(section).getByRole("button", { name: "Mês anterior" }));
+    expect(within(section).getByText("Agosto de 2026")).toBeInTheDocument();
     expect(within(section).queryByText("Alimentos e bebidas")).not.toBeInTheDocument();
     expect(
       within(section).getByText(
         "Nenhuma transação ainda — as categorias aparecerão aqui assim que você registrar alguma.",
       ),
     ).toBeInTheDocument();
+
+    fireEvent.click(within(section).getByRole("button", { name: "Próximo mês" }));
+    expect(within(section).getByText("Setembro de 2026")).toBeInTheDocument();
+    expect(within(section).getByText("Alimentos e bebidas")).toBeInTheDocument();
   });
 
   it("mostra o saldo das contas na aba Configurações, ocultando contas zeradas", async () => {
