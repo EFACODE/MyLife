@@ -1273,17 +1273,18 @@ function CategorySpendBreakdown({ transactions }: { transactions: Transaction[] 
 
 // --- Contas a pagar ------------------------------------------------------
 //
-// Três telas dedicadas, cada uma com sua própria aba: (1) cadastro de uma
-// nova conta, (2) a lista de contas cadastradas (definições) e (3) faturas e
-// pagamento (ocorrências, com ação de pagar em um clique) — em vez de tudo
+// Três telas dedicadas, cada uma com sua própria aba: (1) faturas e
+// pagamento (ocorrências, com ação de pagar em um clique — a tela inicial),
+// (2) a lista de contas cadastradas (definições) e (3) cadastro de uma nova
+// conta — em vez de tudo
 // empilhado numa única tela. Um resumo com KPIs fica sempre visível no
 // topo, qualquer que seja a tela ativa. As preferências de alerta de
 // vencimento vivem na aba Configurações.
 
 const BILLS_SCREENS: SubTabItem[] = [
-  { id: "register", label: "Cadastrar", icon: PlusCircle },
-  { id: "list", label: "Contas cadastradas", icon: ListChecks },
   { id: "upcoming", label: "Faturas e pagamento", icon: Receipt },
+  { id: "list", label: "Contas cadastradas", icon: ListChecks },
+  { id: "register", label: "Cadastrar", icon: PlusCircle },
 ];
 
 function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
