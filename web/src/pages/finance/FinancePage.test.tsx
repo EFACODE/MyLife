@@ -663,9 +663,22 @@ describe("FinancePage", () => {
     );
   });
 
+  it("abre Contas a pagar em Faturas e pagamento, com Cadastrar por último", async () => {
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    expect(await screen.findByRole("heading", { name: "Faturas e pagamento" })).toBeInTheDocument();
+    const subTabs = screen.getAllByRole("tablist")[1];
+    expect(within(subTabs).getAllByRole("tab").map((t) => t.textContent)).toEqual([
+      "Faturas e pagamento",
+      "Contas cadastradas",
+      "Cadastrar",
+    ]);
+  });
+
   it("cadastra uma conta mensal", async () => {
     render(<FinancePage />);
     goToTab("Contas a pagar");
+    goToBillsScreen("Cadastrar");
     const section = await billsSection("Cadastrar conta a pagar");
 
     fireEvent.change(within(section).getByLabelText("Conta"), { target: { value: "a1" } });
