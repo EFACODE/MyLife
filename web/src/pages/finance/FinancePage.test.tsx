@@ -201,11 +201,10 @@ describe("FinancePage", () => {
     vi.useRealTimers();
   });
 
-  it("mostra a aba Visão geral por padrão, com saldo das contas e gastos por categoria", async () => {
+  it("mostra a aba Visão geral por padrão, com os gastos por categoria", async () => {
     render(<FinancePage />);
-    expect(await screen.findByText("Conta Corrente")).toBeInTheDocument();
-    expect(await screen.findByText("-253,89 BRL")).toBeInTheDocument();
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Gastos por categoria" })).toBeInTheDocument();
   });
 
   it("filtra o gráfico de gastos por categoria pelo período selecionado", async () => {
@@ -226,7 +225,7 @@ describe("FinancePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("oculta contas com saldo zerado na aba Visão geral", async () => {
+  it("mostra o saldo das contas na aba Configurações, ocultando contas zeradas", async () => {
     client.listAccounts.mockResolvedValue([
       { account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" },
       { account_id: "a2", name: "Conta Zerada", currency: "BRL", created_at: "x" },
@@ -240,9 +239,31 @@ describe("FinancePage", () => {
     });
 
     render(<FinancePage />);
+    expect(screen.queryByRole("heading", { name: "Saldo das contas" })).not.toBeInTheDocument();
+    goToTab("Configurações");
     const section = await billsSection("Saldo das contas");
-    expect(within(section).getByText("Conta Corrente")).toBeInTheDocument();
+    expect(await within(section).findByText("Conta Corrente")).toBeInTheDocument();
+    expect(within(section).getByText("-253,89 BRL")).toBeInTheDocument();
     expect(within(section).queryByText("Conta Zerada")).not.toBeInTheDocument();
+  });
+
+  it("recarrega o saldo das contas depois de abrir uma conta", async () => {
+    const accounts = [{ account_id: "a1", name: "Conta Corrente", currency: "BRL", created_at: "x" }];
+    client.listAccounts.mockImplementation(async () => [...accounts]);
+    client.netWorth.mockClear();
+    render(<FinancePage />);
+    goToTab("Configurações");
+    await billsSection("Saldo das contas");
+    await waitFor(() => expect(client.listAccounts).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const callsBefore = client.netWorth.mock.calls.length;
+    expect(callsBefore).toBeGreaterThan(0);
+
+    const section = await billsSection("Contas");
+    fireEvent.change(within(section).getByLabelText("Nome"), { target: { value: "Poupança" } });
+    fireEvent.click(within(section).getByText("Abrir conta"));
+    await waitFor(() => expect(client.createAccount).toHaveBeenCalled());
+    await waitFor(() => expect(client.netWorth.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
   it("cria uma conta na aba Configurações", async () => {

@@ -106,11 +106,7 @@ export function FinancePage() {
       </p>
       <Tabs items={TABS} active={tab} onChange={setTab} />
       {tab === "overview" && (
-        <OverviewTab
-          client={client}
-          accounts={accounts.data ?? []}
-          transactions={transactions.data ?? []}
-        />
+        <OverviewTab transactions={transactions.data ?? []} />
       )}
       {tab === "transactions" && (
         <TransactionsTab
@@ -136,15 +132,7 @@ export function FinancePage() {
 
 // --- Visão geral ---------------------------------------------------------
 
-function OverviewTab({
-  client,
-  accounts,
-  transactions,
-}: {
-  client: FinanceApi;
-  accounts: Account[];
-  transactions: Transaction[];
-}) {
+function OverviewTab({ transactions }: { transactions: Transaction[] }) {
   const [period, setPeriod] = useState(currentYearMonth());
 
   const transactionsInPeriod = useMemo(() => {
@@ -158,7 +146,6 @@ function OverviewTab({
 
   return (
     <>
-      <AccountBalances client={client} accounts={accounts} />
       <Section
         title="Gastos por categoria"
         icon={PiggyBank}
@@ -179,8 +166,17 @@ function OverviewTab({
   );
 }
 
-function AccountBalances({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
-  const netWorth = useAsync(() => client.netWorth(), [client]);
+function AccountBalances({
+  client,
+  accounts: accountsData,
+}: {
+  client: FinanceApi;
+  accounts: Account[] | null;
+}) {
+  // Re-fetch balances whenever the account list reloads (account created,
+  // renamed or an Open Finance sync), since both live on Configurações.
+  const netWorth = useAsync(() => client.netWorth(), [client, accountsData]);
+  const accounts = useMemo(() => accountsData ?? [], [accountsData]);
   const balanceByAccount = useMemo(() => {
     const map = new Map<string, Balance>();
     for (const balance of netWorth.data?.accounts ?? []) {
@@ -244,6 +240,7 @@ function SettingsTab({
     <>
       <UserProfile client={client} />
       <Accounts client={client} accounts={accounts} />
+      <AccountBalances client={client} accounts={accounts.data} />
       <CategorySettings client={client} />
       <AlertPreferences client={client} />
       <OpenFinanceConnect client={client} onSynced={onOpenFinanceSynced} />
