@@ -36,3 +36,41 @@ export function moneyByCurrency(entries: { amount_minor: number; currency: strin
 export function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR");
 }
+
+const MONTH_NAMES_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+/** A calendar month; `month` is 1-based (1 = janeiro). */
+export interface YearMonth {
+  year: number;
+  month: number;
+}
+
+/** The current local month. */
+export function currentYearMonth(): YearMonth {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+}
+
+/** Human label for a month, e.g. "Outubro de 2026". */
+export function monthYearLabel({ year, month }: YearMonth): string {
+  return `${MONTH_NAMES_PT[month - 1]} de ${year}`;
+}
+
+/** Move `delta` months forward (positive) or back (negative), wrapping the year. */
+export function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth {
+  const index = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(index / 12), month: (index % 12) + 1 };
+}

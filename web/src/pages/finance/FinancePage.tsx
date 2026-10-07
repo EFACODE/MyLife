@@ -37,13 +37,22 @@ import { CategoryBadge } from "../../components/ui/CategoryBadge";
 import { Button } from "../../components/ui/Button";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { Field, TextInput } from "../../components/ui/Field";
+import { MonthNavigator } from "../../components/ui/MonthNavigator";
 import { Section } from "../../components/ui/Section";
 import { Select } from "../../components/ui/Select";
 import { StatCard } from "../../components/ui/StatCard";
 import { SubTabs, type SubTabItem } from "../../components/ui/SubTabs";
 import { Tabs, type TabItem } from "../../components/ui/Tabs";
 import { categorySolidClass } from "../../lib/categoryColor";
-import { money, moneyByCurrency, moneySuffixed, parseMoneyInput, shortDate } from "../../lib/format";
+import {
+  currentYearMonth as thisMonth,
+  money,
+  moneyByCurrency,
+  moneySuffixed,
+  parseMoneyInput,
+  shortDate,
+  type YearMonth,
+} from "../../lib/format";
 import { useAsync, type AsyncResult } from "../../lib/useAsync";
 
 type FinanceApi = Pick<
@@ -133,16 +142,18 @@ export function FinancePage() {
 // --- Visão geral ---------------------------------------------------------
 
 function OverviewTab({ transactions }: { transactions: Transaction[] }) {
-  const [period, setPeriod] = useState(currentYearMonth());
+  const [period, setPeriod] = useState<YearMonth>(thisMonth);
 
-  const transactionsInPeriod = useMemo(() => {
-    const anchor = parseYearMonth(period);
-    if (!anchor) return transactions;
-    return transactions.filter((t) => {
-      const occurredAt = new Date(t.occurred_at);
-      return occurredAt.getFullYear() === anchor.year && occurredAt.getMonth() + 1 === anchor.month;
-    });
-  }, [transactions, period]);
+  const transactionsInPeriod = useMemo(
+    () =>
+      transactions.filter((t) => {
+        const occurredAt = new Date(t.occurred_at);
+        return (
+          occurredAt.getFullYear() === period.year && occurredAt.getMonth() + 1 === period.month
+        );
+      }),
+    [transactions, period],
+  );
 
   return (
     <>
@@ -150,14 +161,11 @@ function OverviewTab({ transactions }: { transactions: Transaction[] }) {
         title="Gastos por categoria"
         icon={PiggyBank}
         actions={
-          <Field label="Período">
-            <TextInput
-              type="month"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              aria-label="Filtrar período do gráfico de gastos por categoria"
-            />
-          </Field>
+          <MonthNavigator
+            value={period}
+            onChange={setPeriod}
+            label="Período do gráfico de gastos por categoria"
+          />
         }
       >
         <CategorySpendBreakdown transactions={transactionsInPeriod} />

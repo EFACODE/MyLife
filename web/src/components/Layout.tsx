@@ -43,7 +43,7 @@ export function Layout() {
   }, [menuOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50 md:flex">
+    <div className="min-h-screen bg-white md:flex">
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-gray-200 bg-white/95 px-2 backdrop-blur pt-[env(safe-area-inset-top)] md:hidden">
         <button
