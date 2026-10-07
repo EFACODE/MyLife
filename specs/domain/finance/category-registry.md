@@ -30,7 +30,8 @@ happened.
     `DELETE /finance/categories/{category_id}`.
   - Data-subject export/erasure updated to include `categories`.
   - Web console: a "Cadastrar categoria" + "Categorias cadastradas" area in
-    the Categorias tab, alongside the existing derived spend breakdown.
+    the Finanças → Configurações tab (moved there from a dedicated Categorias
+    tab); the derived spend breakdown lives in Visão geral.
 - **Out of scope (later, `T4.10`):** automatically *classifying* a
   transaction into a category (rule-based, evidence-linked
   `TransactionCategorized`) and wiring the free-text `category` fields on

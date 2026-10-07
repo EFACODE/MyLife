@@ -581,14 +581,13 @@ describe("FinancePage", () => {
     expect(within(section).getByText("Sem categoria")).toBeInTheDocument();
   });
 
-  it("lista, cadastra e exclui uma categoria na aba Categorias", async () => {
+  it("lista, cadastra e exclui uma categoria na aba Configurações", async () => {
     render(<FinancePage />);
-    goToTab("Categorias");
-    goToBillsScreen("Categorias cadastradas");
+    expect(screen.queryByRole("tab", { name: "Categorias" })).not.toBeInTheDocument();
+    goToTab("Configurações");
     const listSection = await billsSection("Categorias cadastradas");
-    expect(within(listSection).getByText("Moradia")).toBeInTheDocument();
+    expect(await within(listSection).findByText("Moradia")).toBeInTheDocument();
 
-    goToBillsScreen("Cadastrar categoria");
     const registerSection = await billsSection("Cadastrar categoria");
     fireEvent.change(within(registerSection).getByLabelText("Nome"), {
       target: { value: "Mercado" },
@@ -596,9 +595,7 @@ describe("FinancePage", () => {
     fireEvent.click(within(registerSection).getByText("Cadastrar"));
     await waitFor(() => expect(client.createCategory).toHaveBeenCalledWith("Mercado"));
 
-    goToBillsScreen("Categorias cadastradas");
-    const listSectionAgain = await billsSection("Categorias cadastradas");
-    fireEvent.click(within(listSectionAgain).getByText("Excluir"));
+    fireEvent.click(within(listSection).getByText("Excluir"));
     await waitFor(() => expect(client.deleteCategory).toHaveBeenCalledWith("c1"));
   });
 

@@ -89,7 +89,6 @@ const TABS: TabItem[] = [
   { id: "overview", label: "Visão geral" },
   { id: "transactions", label: "Transações" },
   { id: "bills", label: "Contas a pagar" },
-  { id: "categories", label: "Categorias" },
   { id: "settings", label: "Configurações" },
 ];
 
@@ -121,7 +120,6 @@ export function FinancePage() {
         />
       )}
       {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
-      {tab === "categories" && <CategoriesTab client={client} />}
       {tab === "settings" && (
         <SettingsTab
           client={client}
@@ -246,6 +244,7 @@ function SettingsTab({
     <>
       <UserProfile client={client} />
       <Accounts client={client} accounts={accounts} />
+      <CategorySettings client={client} />
       <AlertPreferences client={client} />
       <OpenFinanceConnect client={client} onSynced={onOpenFinanceSynced} />
     </>
@@ -1111,30 +1110,20 @@ function TransactionsTable({
 // --- Categorias --------------------------------------------------------
 //
 // Cadastro de categorias — um pequeno registro reutilizável, como o de
-// contas. O resumo de gastos por categoria vive na aba Visão geral.
+// contas, que vive na aba Configurações. O resumo de gastos por categoria
+// fica na aba Visão geral.
 
-const CATEGORIES_SCREENS: SubTabItem[] = [
-  { id: "register", label: "Cadastrar categoria", icon: PlusCircle },
-  { id: "list", label: "Categorias cadastradas", icon: ListChecks },
-];
-
-function CategoriesTab({ client }: { client: FinanceApi }) {
+function CategorySettings({ client }: { client: FinanceApi }) {
   const categories = useAsync(() => client.listCategories(), [client]);
-  const [screen, setScreen] = useState(CATEGORIES_SCREENS[0].id);
 
   return (
     <>
-      <SubTabs items={CATEGORIES_SCREENS} active={screen} onChange={setScreen} />
-      {screen === "register" && (
-        <RegisterCategory client={client} onRegistered={() => void categories.run()} />
-      )}
-      {screen === "list" && (
-        <RegisteredCategoriesList
-          client={client}
-          categories={categories}
-          onDeleted={() => void categories.run()}
-        />
-      )}
+      <RegisterCategory client={client} onRegistered={() => void categories.run()} />
+      <RegisteredCategoriesList
+        client={client}
+        categories={categories}
+        onDeleted={() => void categories.run()}
+      />
     </>
   );
 }
