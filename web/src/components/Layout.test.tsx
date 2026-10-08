@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -44,6 +44,17 @@ describe("Layout", () => {
     expect(screen.getByRole("link", { name: "Painel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sair" })).toBeInTheDocument();
     expect(await screen.findByText("dashboard content")).toBeInTheDocument();
+  });
+
+  it("lists Painel last and no longer has a separate Registrar entry", () => {
+    renderLayout();
+    const nav = screen.getByRole("navigation", { name: "Principal" });
+    const labels = within(nav)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(labels[labels.length - 2]).toBe("Privacidade");
+    expect(labels[labels.length - 1]).toBe("Painel");
+    expect(labels).not.toContain("Registrar");
   });
 
   it("shows the current page title in the mobile top bar", async () => {

@@ -22,7 +22,7 @@ export function Briefing({ client, userId }: { client: BriefingApi; userId: stri
   }
 
   return (
-    <section>
+    <section className="mb-6">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Resumo diário</h2>
         <button

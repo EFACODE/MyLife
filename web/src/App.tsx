@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthProvider } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
@@ -15,7 +15,6 @@ import { KnowledgePage } from "./pages/knowledge/KnowledgePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrivacyPage } from "./pages/privacy/PrivacyPage";
 import { SignupPage } from "./pages/SignupPage";
-import { CapturePage } from "./pages/timeline/CapturePage";
 
 export function App() {
   return (
@@ -32,7 +31,8 @@ export function App() {
             }
           >
             <Route path="/" element={<HomePage />} />
-            <Route path="/capture" element={<CapturePage />} />
+            {/* Event capture now lives on the Painel; keep old links working. */}
+            <Route path="/capture" element={<Navigate to="/" replace />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/health" element={<HealthPage />} />
             <Route path="/goals" element={<GoalsPage />} />

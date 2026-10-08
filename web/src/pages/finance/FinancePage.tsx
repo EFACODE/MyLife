@@ -26,6 +26,7 @@ import type {
   AlertPhone,
   Balance,
   Bill,
+  BillOccurrence,
   BillRecurrence,
   Category,
   ExpenseType,
@@ -1299,10 +1300,32 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
   const bills = useAsync(() => client.listBills(), [client]);
   const categories = useAsync(() => client.listCategories(), [client]);
   const [screen, setScreen] = useState(BILLS_SCREENS[0].id);
+  const defaults = useMemo(defaultBillsWindow, []);
+  const [filter, setFilter] = useState<BillsFilter>({ ...defaults, paid: "", overdue: "" });
+  const [preset, setPreset] = useState<BillsPreset | null>(null);
+  // Bumped after a payment so the summary cards recount.
+  const [summaryVersion, setSummaryVersion] = useState(0);
+
+  function applyPreset(next: BillsPreset) {
+    // Clicking the active card again clears its filter.
+    const target = preset === next ? null : next;
+    setPreset(target);
+    setFilter({
+      ...defaults,
+      ...(target ? BILLS_PRESETS[target] : { paid: "", overdue: "" }),
+    });
+    setScreen("upcoming");
+  }
 
   return (
     <>
-      <BillsSummary client={client} />
+      <BillsSummary
+        client={client}
+        range={defaults}
+        version={summaryVersion}
+        activePreset={preset}
+        onSelect={applyPreset}
+      />
       <SubTabs items={BILLS_SCREENS} active={screen} onChange={setScreen} />
       {screen === "register" && (
         <RegisterBill
@@ -1320,20 +1343,41 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
           onCancelled={() => void bills.run()}
         />
       )}
-      {screen === "upcoming" && <UpcomingBills client={client} />}
+      {screen === "upcoming" && (
+        <UpcomingBills
+          client={client}
+          filter={filter}
+          onFilterChange={(next) => {
+            setFilter(next);
+            setPreset(null);
+          }}
+          onPaid={() => setSummaryVersion((v) => v + 1)}
+        />
+      )}
     </>
   );
 }
 
-function BillsSummary({ client }: { client: FinanceApi }) {
-  const defaults = useMemo(defaultBillsWindow, []);
+function BillsSummary({
+  client,
+  range,
+  version,
+  activePreset,
+  onSelect,
+}: {
+  client: FinanceApi;
+  range: { from: string; to: string };
+  version: number;
+  activePreset: BillsPreset | null;
+  onSelect: (preset: BillsPreset) => void;
+}) {
   const report = useAsync(
     () =>
       client.billsReport(
-        new Date(defaults.from).toISOString(),
-        new Date(defaults.to).toISOString(),
+        new Date(range.from).toISOString(),
+        new Date(range.to).toISOString(),
       ),
-    [client, defaults.from, defaults.to],
+    [client, range.from, range.to, version],
   );
 
   const summary = useMemo(() => {
@@ -1347,7 +1391,9 @@ function BillsSummary({ client }: { client: FinanceApi }) {
       overdueCount: overdue.length,
       overdueTotal: moneyByCurrency(overdue),
       paidCount: paid.length,
-      paidTotal: moneyByCurrency(paid),
+      paidTotal: moneyByCurrency(
+        paid.map((o) => ({ amount_minor: effectiveAmount(o), currency: o.currency })),
+      ),
     };
   }, [report.data]);
 
@@ -1359,6 +1405,8 @@ function BillsSummary({ client }: { client: FinanceApi }) {
         hint={summary.dueSoonTotal}
         tone="warning"
         icon={Clock}
+        onClick={() => onSelect("dueSoon")}
+        active={activePreset === "dueSoon"}
       />
       <StatCard
         label="Vencidas"
@@ -1366,6 +1414,8 @@ function BillsSummary({ client }: { client: FinanceApi }) {
         hint={summary.overdueTotal}
         tone="critical"
         icon={AlertTriangle}
+        onClick={() => onSelect("overdue")}
+        active={activePreset === "overdue"}
       />
       <StatCard
         label="Pagas neste período"
@@ -1373,6 +1423,8 @@ function BillsSummary({ client }: { client: FinanceApi }) {
         hint={summary.paidTotal}
         tone="good"
         icon={CheckCircle2}
+        onClick={() => onSelect("paid")}
+        active={activePreset === "paid"}
       />
     </div>
   );
@@ -1823,12 +1875,46 @@ function defaultBillsWindow(): { from: string; to: string } {
   return { from: toDatetimeLocal(from), to: toDatetimeLocal(to) };
 }
 
-function UpcomingBills({ client }: { client: FinanceApi }) {
-  const defaults = useMemo(defaultBillsWindow, []);
-  const [from, setFrom] = useState(defaults.from);
-  const [to, setTo] = useState(defaults.to);
-  const [paid, setPaid] = useState<"" | "true" | "false">("");
-  const [overdue, setOverdue] = useState<"" | "true" | "false">("");
+type TriState = "" | "true" | "false";
+
+/** The Faturas e pagamento filters, shared with the summary cards above. */
+interface BillsFilter {
+  from: string;
+  to: string;
+  paid: TriState;
+  overdue: TriState;
+}
+
+type BillsPreset = "dueSoon" | "overdue" | "paid";
+
+/** Filter values each summary card applies (over the summary's own window). */
+const BILLS_PRESETS: Record<BillsPreset, Pick<BillsFilter, "paid" | "overdue">> = {
+  dueSoon: { paid: "false", overdue: "false" },
+  overdue: { paid: "false", overdue: "true" },
+  paid: { paid: "true", overdue: "" },
+};
+
+/** The amount that counts for an occurrence: what was paid, else what is due. */
+function effectiveAmount(occurrence: BillOccurrence): number {
+  return occurrence.paid_amount_minor ?? occurrence.amount_minor;
+}
+
+function localToday(): string {
+  return toDatetimeLocal(new Date()).slice(0, 10);
+}
+
+function UpcomingBills({
+  client,
+  filter,
+  onFilterChange,
+  onPaid,
+}: {
+  client: FinanceApi;
+  filter: BillsFilter;
+  onFilterChange: (filter: BillsFilter) => void;
+  onPaid: () => void;
+}) {
+  const { from, to, paid, overdue } = filter;
   const report = useAsync(
     () =>
       client.billsReport(new Date(from).toISOString(), new Date(to).toISOString(), {
@@ -1839,6 +1925,7 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
   );
   const [alertStatus, setAlertStatus] = useState<string | null>(null);
   const [payingKey, setPayingKey] = useState<string | null>(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
   async function runAlerts() {
     setAlertStatus(null);
@@ -1856,6 +1943,7 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
     try {
       await client.payBill(billId, dueAt);
       await report.run();
+      onPaid();
     } finally {
       setPayingKey(null);
     }
@@ -1877,21 +1965,31 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
           <TextInput
             type="datetime-local"
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => onFilterChange({ ...filter, from: e.target.value })}
           />
         </Field>
         <Field label="Até">
-          <TextInput type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
+          <TextInput
+            type="datetime-local"
+            value={to}
+            onChange={(e) => onFilterChange({ ...filter, to: e.target.value })}
+          />
         </Field>
         <Field label="Status">
-          <Select value={paid} onChange={(e) => setPaid(e.target.value as typeof paid)}>
+          <Select
+            value={paid}
+            onChange={(e) => onFilterChange({ ...filter, paid: e.target.value as TriState })}
+          >
             <option value="">Todas</option>
             <option value="true">Pagas</option>
             <option value="false">Não pagas</option>
           </Select>
         </Field>
         <Field label="Vencimento">
-          <Select value={overdue} onChange={(e) => setOverdue(e.target.value as typeof overdue)}>
+          <Select
+            value={overdue}
+            onChange={(e) => onFilterChange({ ...filter, overdue: e.target.value as TriState })}
+          >
             <option value="">Todas</option>
             <option value="true">Vencidas</option>
             <option value="false">Não vencidas</option>
@@ -1914,39 +2012,72 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
             : occurrence.overdue
               ? "text-red-600"
               : "text-amber-600";
+          const editing = editingKey === key;
           return (
             <li
               key={key}
               className={
-                "flex flex-col gap-2 rounded-lg border border-gray-200 border-l-4 px-4 py-3 transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between " +
+                "rounded-lg border border-gray-200 border-l-4 px-4 py-3 transition-colors hover:bg-gray-50 " +
                 accent
               }
             >
-              <span className="flex flex-wrap items-center gap-2">
-                <StatusIcon className={"h-4 w-4 shrink-0 " + statusTextClass} />
-                <span className="font-medium text-gray-900">{occurrence.payee}</span>
-                <span className="text-gray-500">
-                  <span className="hidden sm:inline">· </span>
-                  {money(occurrence.amount_minor, occurrence.currency)} · vence em{" "}
-                  {shortDate(occurrence.due_at)}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="flex flex-wrap items-center gap-2">
+                  <StatusIcon className={"h-4 w-4 shrink-0 " + statusTextClass} />
+                  <span className="font-medium text-gray-900">{occurrence.payee}</span>
+                  <span className="text-gray-500">
+                    <span className="hidden sm:inline">· </span>
+                    {money(effectiveAmount(occurrence), occurrence.currency)} · vence em{" "}
+                    {shortDate(occurrence.due_at)}
+                    {occurrence.paid && occurrence.paid_at && (
+                      <> · paga em {shortDate(occurrence.paid_at)}</>
+                    )}
+                  </span>
+                  {occurrence.category && <CategoryBadge category={occurrence.category} />}
+                  {occurrence.payment_description && (
+                    <span className="w-full text-xs text-gray-500">
+                      {occurrence.payment_description}
+                    </span>
+                  )}
                 </span>
-                {occurrence.category && <CategoryBadge category={occurrence.category} />}
-              </span>
-              <span className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
-                <span className={"text-xs font-medium " + statusTextClass}>
-                  {occurrence.paid ? "Paga" : occurrence.overdue ? "Vencida" : "A vencer"}
+                <span className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+                  <span className={"text-xs font-medium " + statusTextClass}>
+                    {occurrence.paid ? "Paga" : occurrence.overdue ? "Vencida" : "A vencer"}
+                  </span>
+                  {!occurrence.paid && !editing && (
+                    <span className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingKey(key)}
+                        className="flex items-center gap-1 rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 sm:px-3 sm:py-1.5 sm:text-xs"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar e pagar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void markPaid(occurrence.bill_id, occurrence.due_at, key)}
+                        disabled={payingKey === key}
+                        className="rounded-lg border border-green-200 px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50 disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-xs"
+                      >
+                        {payingKey === key ? "Marcando…" : "Marcar como paga"}
+                      </button>
+                    </span>
+                  )}
                 </span>
-                {!occurrence.paid && (
-                  <button
-                    type="button"
-                    onClick={() => void markPaid(occurrence.bill_id, occurrence.due_at, key)}
-                    disabled={payingKey === key}
-                    className="rounded-lg border border-green-200 px-4 py-2 text-sm font-medium sm:px-3 sm:py-1.5 sm:text-xs text-green-700 transition-colors hover:bg-green-50 disabled:opacity-50"
-                  >
-                    {payingKey === key ? "Marcando…" : "Marcar como paga"}
-                  </button>
-                )}
-              </span>
+              </div>
+              {editing && (
+                <PayOccurrenceForm
+                  client={client}
+                  occurrence={occurrence}
+                  onCancel={() => setEditingKey(null)}
+                  onPaid={async () => {
+                    setEditingKey(null);
+                    await report.run();
+                    onPaid();
+                  }}
+                />
+              )}
             </li>
           );
         })}
@@ -1955,6 +2086,104 @@ function UpcomingBills({ client }: { client: FinanceApi }) {
         )}
       </ul>
     </Section>
+  );
+}
+
+/**
+ * Inline form to adjust what is actually being paid for one occurrence —
+ * amount, payment date and a description — before marking it as paid. The
+ * bill's own definition is left untouched (edit it in "Contas cadastradas").
+ */
+function PayOccurrenceForm({
+  client,
+  occurrence,
+  onCancel,
+  onPaid,
+}: {
+  client: FinanceApi;
+  occurrence: BillOccurrence;
+  onCancel: () => void;
+  onPaid: () => Promise<void> | void;
+}) {
+  const [amount, setAmount] = useState((occurrence.amount_minor / 100).toFixed(2));
+  const [paidOn, setPaidOn] = useState(localToday);
+  const [description, setDescription] = useState(occurrence.payee);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const amountMinor = parseMoneyInput(amount);
+    if (amountMinor <= 0) {
+      setError("Informe um valor maior que zero.");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      await client.payBill(occurrence.bill_id, occurrence.due_at, {
+        amountMinor,
+        // Noon local time keeps the chosen calendar day in any timezone.
+        paidAt: new Date(`${paidOn}T12:00`).toISOString(),
+        description: description.trim(),
+      });
+      await onPaid();
+    } catch {
+      setError("Não foi possível marcar como paga.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      aria-label={`Editar e pagar ${occurrence.payee}`}
+      className="mt-3 grid grid-cols-1 gap-3 border-t border-gray-200 pt-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4"
+    >
+      <Field label={`Valor (${occurrence.currency})`}>
+        <TextInput
+          type="number"
+          step="0.01"
+          min="0.01"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          required
+        />
+      </Field>
+      <Field label="Data do pagamento">
+        <TextInput type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} required />
+      </Field>
+      <Field label="Descrição">
+        <TextInput
+          value={description}
+          maxLength={200}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </Field>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={saving}
+          className="flex-1 whitespace-nowrap bg-green-600 hover:bg-green-700"
+        >
+          {saving ? "Marcando…" : "Confirmar pagamento"}
+        </Button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded px-3 py-2 text-sm text-gray-600 hover:underline"
+        >
+          Cancelar
+        </button>
+      </div>
+      {error && (
+        <div className="sm:col-span-2 lg:col-span-4">
+          <ErrorText>{error}</ErrorText>
+        </div>
+      )}
+    </form>
   );
 }
 

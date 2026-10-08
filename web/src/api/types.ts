@@ -453,6 +453,14 @@ export interface BillPayment {
   amount_minor: number;
   paid_at: string;
   transaction_id: string | null;
+  description: string | null;
+}
+
+/** What was actually paid, when it differs from the bill's definition. */
+export interface PayBillDetails {
+  amountMinor?: number;
+  paidAt?: string;
+  description?: string;
 }
 
 export interface BillOccurrence {
@@ -467,6 +475,9 @@ export interface BillOccurrence {
   paid: boolean;
   paid_at: string | null;
   overdue: boolean;
+  /** Amount actually paid (latest payment); null while unpaid. */
+  paid_amount_minor?: number | null;
+  payment_description?: string | null;
 }
 
 // --- Notifications (T4.8) ---

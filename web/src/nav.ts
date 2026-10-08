@@ -5,7 +5,6 @@ import {
   HeartPulse,
   LayoutDashboard,
   LineChart,
-  PenLine,
   ShieldCheck,
   Target,
   UserCheck,
@@ -24,8 +23,6 @@ export interface NavItem {
  * here as their pages land.
  */
 export const NAV: NavItem[] = [
-  { path: "/", label: "Painel", icon: LayoutDashboard },
-  { path: "/capture", label: "Registrar", icon: PenLine },
   { path: "/finance", label: "Finanças", icon: Wallet },
   { path: "/health", label: "Saúde", icon: HeartPulse },
   { path: "/goals", label: "Metas", icon: Target },
@@ -35,6 +32,7 @@ export const NAV: NavItem[] = [
   { path: "/consent", label: "Consentimentos", icon: UserCheck },
   { path: "/audit", label: "Auditoria", icon: FileClock },
   { path: "/privacy", label: "Privacidade", icon: ShieldCheck },
+  { path: "/", label: "Painel", icon: LayoutDashboard },
 ];
 
 /** The nav entry that owns `pathname` (exact match for "/", prefix otherwise). */

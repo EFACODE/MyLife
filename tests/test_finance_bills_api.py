@@ -266,6 +266,49 @@ def test_pay_bill_and_report(client: TestClient) -> None:
     assert occurrences[0]["paid"] is True
 
 
+def test_pay_bill_with_edited_details_shows_in_report(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    bill = _bill(client, auth, account_id)
+
+    pay = client.post(
+        f"/finance/bills/{bill['bill_id']}/pay",
+        json={
+            "due_at": "2026-09-05T00:00:00Z",
+            "amount_minor": 260000,
+            "paid_at": "2026-09-04T10:00:00Z",
+            "description": "Aluguel + condomínio",
+        },
+        headers=auth,
+    )
+    assert pay.status_code == 201
+    assert pay.json()["amount_minor"] == 260000
+    assert pay.json()["description"] == "Aluguel + condomínio"
+
+    report = client.get(
+        "/finance/bills/report",
+        params={"due_from": "2026-09-01T00:00:00Z", "due_to": "2026-09-30T00:00:00Z"},
+        headers=auth,
+    )
+    [occurrence] = report.json()
+    assert occurrence["paid_amount_minor"] == 260000
+    assert occurrence["payment_description"] == "Aluguel + condomínio"
+    assert occurrence["paid_at"].startswith("2026-09-04T10:00:00")
+
+
+def test_pay_bill_rejects_non_positive_amount(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    bill = _bill(client, auth, account_id)
+
+    pay = client.post(
+        f"/finance/bills/{bill['bill_id']}/pay",
+        json={"due_at": "2026-09-05T00:00:00Z", "amount_minor": 0},
+        headers=auth,
+    )
+    assert pay.status_code == 422
+
+
 def test_bills_scoped_to_user(client: TestClient) -> None:
     owner_auth = _auth(client, "owner@example.com")
     account_id = _account(client, owner_auth)

@@ -121,6 +121,9 @@ class BillPaidPayload(BaseModel):
     amount_minor: int
     paid_at: datetime
     transaction_id: uuid.UUID | None = None
+    # Free-text note on what was actually paid (e.g. "Conta de luz — agosto").
+    # Optional and defaulted, so events recorded before it existed still parse.
+    description: str | None = None
 
 
 class BillCancelledPayload(BaseModel):
