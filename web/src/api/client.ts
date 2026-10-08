@@ -41,6 +41,7 @@ import type {
   RelationshipRecord,
   SearchHit,
   NetWorth,
+  PayBillDetails,
   PositionInput,
   RegisterBillInput,
   SetNotificationPreferenceInput,
@@ -344,10 +345,15 @@ export class ApiClient {
     return this.request<void>(`/finance/bills/${billId}`, { method: "DELETE" });
   }
 
-  payBill(billId: string, dueAt: string, amountMinor?: number): Promise<BillPayment> {
+  payBill(billId: string, dueAt: string, details: PayBillDetails = {}): Promise<BillPayment> {
     return this.request<BillPayment>(`/finance/bills/${billId}/pay`, {
       method: "POST",
-      body: { due_at: dueAt, amount_minor: amountMinor },
+      body: {
+        due_at: dueAt,
+        amount_minor: details.amountMinor,
+        paid_at: details.paidAt,
+        description: details.description,
+      },
     });
   }
 

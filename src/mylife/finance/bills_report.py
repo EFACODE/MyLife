@@ -18,8 +18,9 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from mylife.core.events.envelope import ensure_utc
 from mylife.core.events.store import _stored_utc
-from mylife.finance.bills import BILL_PAID, BillRow
+from mylife.finance.bills import BILL_PAID, BillPaidPayload, BillRow
 from mylife.timeline.query import TimelineQueryFilter, TimelineQueryService
 
 _UNBOUNDED = 1_000_000
@@ -41,6 +42,21 @@ class BillOccurrence(BaseModel):
     paid: bool
     paid_at: datetime | None
     overdue: bool
+    # What was actually paid (from the latest ``BillPaid``), which can differ
+    # from the bill's ``amount_minor``; ``None`` while unpaid.
+    paid_amount_minor: int | None = None
+    payment_description: str | None = None
+
+
+class _Payment(BaseModel):
+    """The latest ``BillPaid`` recorded for one ``(bill_id, period)``."""
+
+    model_config = ConfigDict(frozen=True)
+
+    recorded_at: datetime
+    paid_at: datetime
+    amount_minor: int
+    description: str | None
 
 
 def _month_range(start: datetime, end: datetime) -> Iterator[tuple[int, int]]:
@@ -112,17 +128,28 @@ class BillsReportService:
             stmt = stmt.where(BillRow.account_id == account_id)
         return list(self._session.scalars(stmt.order_by(BillRow.created_at)))
 
-    def _payments(self, user_id: uuid.UUID) -> dict[tuple[str, str], datetime]:
-        """The latest ``paid_at`` per ``(bill_id, period)`` the user has recorded."""
+    def _payments(self, user_id: uuid.UUID) -> dict[tuple[str, str], _Payment]:
+        """The latest payment per ``(bill_id, period)`` the user has recorded.
+
+        A later ``BillPaid`` for the same period supersedes an earlier one
+        (a correction is a new fact, never a mutation).
+        """
         page = TimelineQueryService(self._session).query(
             TimelineQueryFilter(user_id=user_id, event_types=(BILL_PAID,), limit=_UNBOUNDED)
         )
-        payments: dict[tuple[str, str], datetime] = {}
+        payments: dict[tuple[str, str], _Payment] = {}
         for item in page.items:
-            key = (str(item.payload["bill_id"]), str(item.payload["period"]))
-            paid_at = item.occurred_at
-            if key not in payments or paid_at > payments[key]:
-                payments[key] = paid_at
+            fact = BillPaidPayload.model_validate(item.payload)
+            key = (str(fact.bill_id), fact.period)
+            recorded_at = item.occurred_at
+            if key in payments and recorded_at <= payments[key].recorded_at:
+                continue
+            payments[key] = _Payment(
+                recorded_at=recorded_at,
+                paid_at=ensure_utc(fact.paid_at),
+                amount_minor=fact.amount_minor,
+                description=fact.description,
+            )
         return payments
 
     def list_occurrences(
@@ -142,8 +169,8 @@ class BillsReportService:
         for row in self._bills(user_id, account_id):
             for due_at in _periods_for_bill(row, due_from, due_to):
                 period = due_at.date().isoformat()
-                paid_at = payments.get((str(row.bill_id), period))
-                is_paid = paid_at is not None
+                payment = payments.get((str(row.bill_id), period))
+                is_paid = payment is not None
                 occurrences.append(
                     BillOccurrence(
                         bill_id=row.bill_id,
@@ -155,8 +182,10 @@ class BillsReportService:
                         period=period,
                         due_at=due_at,
                         paid=is_paid,
-                        paid_at=paid_at,
+                        paid_at=payment.paid_at if payment else None,
                         overdue=(not is_paid) and due_at < as_of,
+                        paid_amount_minor=payment.amount_minor if payment else None,
+                        payment_description=payment.description if payment else None,
                     )
                 )
         if paid is not None:

@@ -68,6 +68,7 @@ class BillPayment(BaseModel):
     amount_minor: int
     paid_at: datetime
     transaction_id: uuid.UUID | None
+    description: str | None = None
 
 
 def _to_bill(row: BillRow) -> Bill:
@@ -297,15 +298,22 @@ class BillsService:
         amount_minor: int | None = None,
         paid_at: datetime | None = None,
         transaction_id: uuid.UUID | None = None,
+        description: str | None = None,
         now: datetime,
         correlation_id: str,
     ) -> BillPayment:
-        """Mark a bill's due occurrence (identified by ``due_at``) as paid."""
+        """Mark a bill's due occurrence (identified by ``due_at``) as paid.
+
+        ``amount_minor``/``paid_at``/``description`` record what was actually
+        paid when it differs from the bill's definition (a variable utility
+        bill, a payment made on another day); the bill itself is unchanged.
+        """
         row = self._require_bill(user_id, bill_id)
         assert row is not None  # _require_bill raises otherwise
         period = due_at.date().isoformat()
         resolved_paid_at = paid_at or now
         resolved_amount = amount_minor if amount_minor is not None else row.amount_minor
+        resolved_description = (description or "").strip() or None
         event = BillPaid(
             user_id=user_id,
             occurred_at=now,
@@ -318,6 +326,7 @@ class BillsService:
                 amount_minor=resolved_amount,
                 paid_at=resolved_paid_at,
                 transaction_id=transaction_id,
+                description=resolved_description,
             ),
         )
         stored = EventStore(self._session).append(event)
@@ -331,6 +340,7 @@ class BillsService:
             amount_minor=resolved_amount,
             paid_at=resolved_paid_at,
             transaction_id=transaction_id,
+            description=resolved_description,
         )
 
     def _require_account(self, user_id: uuid.UUID, account_id: uuid.UUID) -> AccountRow:

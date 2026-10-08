@@ -55,6 +55,14 @@ top of it.
   - **AC4:** `POST /finance/bills/{id}/pay` records a payment against a due
     occurrence (`due_at`), emitting `BillPaid`; defaults `amount_minor` to the
     bill's amount and `paid_at` to now; a foreign/unknown bill → `404`.
+  - **AC4b (amended, Painel/Contas a pagar UX):** the caller may record what was
+    *actually* paid — a different `amount_minor` (> 0), the payment date
+    `paid_at`, and an optional free-text `description` (≤ 200 chars, trimmed;
+    blank → none). The bill's definition is unchanged. The report surfaces the
+    latest payment per period as `paid_amount_minor`, `paid_at` (the payment's
+    own date) and `payment_description`; a later `BillPaid` for the same period
+    supersedes an earlier one. `description` is an optional, defaulted payload
+    field, so older `BillPaid` events still parse (no schema bump).
   - **AC5:** `GET /finance/bills/report?due_from=...&due_to=...` returns the
     due occurrences in that window, each flagged `paid` and `overdue`
     (`due_at` in the past and not paid), filterable by `account_id`, `paid`
@@ -86,15 +94,18 @@ POST /finance/bills   { "account_id", "payee": "Aluguel", "amount_minor": 250000
                          "recurrence": "monthly", "due_day": 5 }        -> 201 Bill
 GET  /finance/bills?account_id=...                                     -> [Bill]
 DELETE /finance/bills/{id}                                             -> 204
-POST /finance/bills/{id}/pay  { "due_at": "2026-09-05T00:00:00Z" }      -> 201 BillPayment
+POST /finance/bills/{id}/pay  { "due_at": "2026-09-05T00:00:00Z",
+                               "amount_minor"?, "paid_at"?, "description"? } -> 201 BillPayment
 GET  /finance/bills/report?due_from=...&due_to=...&paid=false&overdue=true
                                                                          -> [BillOccurrence]
 
 Bill          = { bill_id, account_id, payee, amount_minor, currency, category,
                   recurrence, due_day, due_at, active, created_at }
-BillPayment   = { event_id, bill_id, period, due_at, amount_minor, paid_at, transaction_id }
+BillPayment   = { event_id, bill_id, period, due_at, amount_minor, paid_at, transaction_id,
+                  description }
 BillOccurrence = { bill_id, account_id, payee, category, currency, amount_minor,
-                    period, due_at, paid, paid_at, overdue }
+                    period, due_at, paid, paid_at, overdue,
+                    paid_amount_minor, payment_description }
 ```
 
 - **Events produced:** `BillRegistered`, `BillPaid`, `BillCancelled` (Finance context).

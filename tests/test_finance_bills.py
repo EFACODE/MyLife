@@ -545,3 +545,103 @@ def test_report_scoped_to_user(
     )
 
     assert report == []
+
+
+def test_pay_bill_records_edited_amount_date_and_description(
+    bills: BillsService, session: Session, account_id: uuid.UUID
+) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "COPEL",
+        30000,
+        "BRL",
+        recurrence="monthly",
+        due_day=9,
+        now=NOW,
+        correlation_id="c",
+    )
+    paid_on = datetime(2026, 9, 8, 15, 0, tzinfo=UTC)
+
+    payment = bills.pay_bill(
+        USER,
+        bill.bill_id,
+        datetime(2026, 9, 9, tzinfo=UTC),
+        amount_minor=31250,
+        paid_at=paid_on,
+        description="  Luz — agosto  ",
+        now=NOW,
+        correlation_id="c",
+    )
+
+    assert payment.amount_minor == 31250
+    assert payment.paid_at == paid_on
+    assert payment.description == "Luz — agosto"
+
+    [occurrence] = BillsReportService(session).list_occurrences(
+        USER,
+        due_from=datetime(2026, 9, 1, tzinfo=UTC),
+        due_to=datetime(2026, 9, 30, tzinfo=UTC),
+        as_of=NOW,
+    )
+    assert occurrence.paid is True
+    assert occurrence.amount_minor == 30000  # the bill's definition is unchanged
+    assert occurrence.paid_amount_minor == 31250
+    assert occurrence.paid_at == paid_on
+    assert occurrence.payment_description == "Luz — agosto"
+
+
+def test_report_uses_latest_payment_for_a_period(
+    bills: BillsService, session: Session, account_id: uuid.UUID
+) -> None:
+    bill = bills.register_bill(
+        USER,
+        account_id,
+        "COPEL",
+        30000,
+        "BRL",
+        recurrence="monthly",
+        due_day=9,
+        now=NOW,
+        correlation_id="c",
+    )
+    due_at = datetime(2026, 9, 9, tzinfo=UTC)
+    bills.pay_bill(USER, bill.bill_id, due_at, amount_minor=1000, now=NOW, correlation_id="c")
+    later = datetime(2026, 9, 22, tzinfo=UTC)
+    bills.pay_bill(USER, bill.bill_id, due_at, amount_minor=31250, now=later, correlation_id="c")
+
+    [occurrence] = BillsReportService(session).list_occurrences(
+        USER,
+        due_from=datetime(2026, 9, 1, tzinfo=UTC),
+        due_to=datetime(2026, 9, 30, tzinfo=UTC),
+        as_of=later,
+    )
+    assert occurrence.paid_amount_minor == 31250
+    assert occurrence.paid_at == later
+    assert occurrence.payment_description is None
+
+
+def test_unpaid_occurrence_has_no_payment_details(
+    bills: BillsService, session: Session, account_id: uuid.UUID
+) -> None:
+    bills.register_bill(
+        USER,
+        account_id,
+        "COPEL",
+        30000,
+        "BRL",
+        recurrence="monthly",
+        due_day=9,
+        now=NOW,
+        correlation_id="c",
+    )
+    [occurrence] = BillsReportService(session).list_occurrences(
+        USER,
+        due_from=datetime(2026, 9, 1, tzinfo=UTC),
+        due_to=datetime(2026, 9, 30, tzinfo=UTC),
+        as_of=NOW,
+    )
+    assert occurrence.paid is False
+    assert occurrence.paid_at is None
+    assert occurrence.paid_amount_minor is None
+    assert occurrence.payment_description is None

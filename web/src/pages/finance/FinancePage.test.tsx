@@ -722,6 +722,117 @@ describe("FinancePage", () => {
     );
   });
 
+  it("filtra as faturas ao clicar nos cartões de resumo", async () => {
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    const card = await screen.findByRole("button", { name: /Vencidas/ });
+    expect(card).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(card);
+    expect(card).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() =>
+      expect(client.billsReport).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), {
+        paid: false,
+        overdue: true,
+      }),
+    );
+    const section = await billsSection("Faturas e pagamento");
+    expect(within(section).getByLabelText("Status")).toHaveValue("false");
+    expect(within(section).getByLabelText("Vencimento")).toHaveValue("true");
+
+    fireEvent.click(screen.getByRole("button", { name: /Pagas neste período/ }));
+    await waitFor(() =>
+      expect(client.billsReport).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), {
+        paid: true,
+        overdue: undefined,
+      }),
+    );
+    expect(card).toHaveAttribute("aria-pressed", "false");
+
+    // Clicking the active card again clears the filter.
+    fireEvent.click(screen.getByRole("button", { name: /Pagas neste período/ }));
+    await waitFor(() =>
+      expect(client.billsReport).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), {
+        paid: undefined,
+        overdue: undefined,
+      }),
+    );
+  });
+
+  it("edita valor, data e descrição antes de marcar a fatura como paga", async () => {
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    const section = await billsSection("Faturas e pagamento");
+
+    fireEvent.click(await within(section).findByText("Editar e pagar"));
+    const form = within(section).getByRole("form", { name: "Editar e pagar Aluguel" });
+    expect(within(form).getByLabelText("Valor (BRL)")).toHaveValue(2500);
+    expect(within(form).getByLabelText("Descrição")).toHaveValue("Aluguel");
+
+    fireEvent.change(within(form).getByLabelText("Valor (BRL)"), { target: { value: "2612.50" } });
+    fireEvent.change(within(form).getByLabelText("Data do pagamento"), {
+      target: { value: "2026-09-04" },
+    });
+    fireEvent.change(within(form).getByLabelText("Descrição"), {
+      target: { value: "Aluguel + condomínio" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Confirmar pagamento" }));
+
+    await waitFor(() =>
+      expect(client.payBill).toHaveBeenCalledWith("b1", "2026-09-05T00:00:00Z", {
+        amountMinor: 261250,
+        paidAt: new Date("2026-09-04T12:00").toISOString(),
+        description: "Aluguel + condomínio",
+      }),
+    );
+    await waitFor(() =>
+      expect(within(section).queryByRole("form", { name: "Editar e pagar Aluguel" })).toBeNull(),
+    );
+  });
+
+  it("não envia o pagamento com valor zerado", async () => {
+    client.payBill.mockClear();
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    const section = await billsSection("Faturas e pagamento");
+
+    fireEvent.click(await within(section).findByText("Editar e pagar"));
+    const form = within(section).getByRole("form", { name: "Editar e pagar Aluguel" });
+    fireEvent.change(within(form).getByLabelText("Valor (BRL)"), { target: { value: "0" } });
+    fireEvent.submit(form);
+
+    expect(await within(form).findByText("Informe um valor maior que zero.")).toBeInTheDocument();
+    expect(client.payBill).not.toHaveBeenCalled();
+  });
+
+  it("mostra o valor pago, a data e a descrição de uma fatura paga", async () => {
+    client.billsReport.mockResolvedValue([
+      {
+        bill_id: "b1",
+        account_id: "a1",
+        payee: "COPEL",
+        category: null,
+        currency: "BRL",
+        amount_minor: 30000,
+        period: "2026-09-09",
+        due_at: "2026-09-09T00:00:00Z",
+        paid: true,
+        paid_at: "2026-09-08T15:00:00Z",
+        overdue: false,
+        paid_amount_minor: 31250,
+        payment_description: "Luz — agosto",
+      },
+    ]);
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    const section = await billsSection("Faturas e pagamento");
+
+    expect(await within(section).findByText("Luz — agosto")).toBeInTheDocument();
+    expect(within(section).getByText(/BRL 312,50/)).toBeInTheDocument();
+    expect(within(section).getByText(/paga em/)).toBeInTheDocument();
+    expect(within(section).queryByText("Editar e pagar")).not.toBeInTheDocument();
+  });
+
   it("salva as preferências de notificação na aba Configurações", async () => {
     render(<FinancePage />);
     goToTab("Configurações");

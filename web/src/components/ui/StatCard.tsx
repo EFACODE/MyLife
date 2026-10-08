@@ -22,15 +22,19 @@ export function StatCard({
   tone = "default",
   hint,
   icon: Icon,
+  onClick,
+  active = false,
 }: {
   label: string;
   value: string;
   tone?: StatTone;
   hint?: string;
   icon?: ComponentType<{ className?: string }>;
+  /** Makes the card a toggle button (e.g. to filter a list by this metric). */
+  onClick?: () => void;
+  active?: boolean;
 }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4 transition-shadow hover:shadow-md">
+  const content = (
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-xs text-gray-500 sm:text-sm">{label}</div>
@@ -43,6 +47,21 @@ export function StatCard({
           </span>
         )}
       </div>
-    </div>
   );
+  const frame =
+    "rounded-xl border bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4 " +
+    (active ? "border-blue-500 ring-2 ring-blue-200" : "border-gray-200");
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={frame + " w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"}
+      >
+        {content}
+      </button>
+    );
+  }
+  return <div className={frame}>{content}</div>;
 }

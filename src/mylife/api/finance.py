@@ -194,9 +194,10 @@ class PayBillRequest(BaseModel):
     """Request to mark a bill's due occurrence as paid."""
 
     due_at: datetime
-    amount_minor: int | None = None
+    amount_minor: int | None = Field(default=None, gt=0)
     paid_at: datetime | None = None
     transaction_id: uuid.UUID | None = None
+    description: str | None = Field(default=None, max_length=200)
 
 
 @router.post("/accounts", response_model=Account, status_code=201)
@@ -733,6 +734,7 @@ def pay_bill(
             amount_minor=request.amount_minor,
             paid_at=ensure_utc(request.paid_at) if request.paid_at is not None else None,
             transaction_id=request.transaction_id,
+            description=request.description,
             now=utcnow(),
             correlation_id=correlation_id,
         )
