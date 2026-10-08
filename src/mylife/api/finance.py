@@ -363,11 +363,20 @@ def list_transactions(
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
     account_id: Annotated[uuid.UUID | None, Query()] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    occurred_from: Annotated[datetime | None, Query()] = None,
+    occurred_to: Annotated[datetime | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 50,
 ) -> list[Transaction]:
-    """List the authenticated user's transactions, newest first."""
+    """List the authenticated user's transactions, newest first.
+
+    Optionally restricted to ``occurred_at`` in ``[occurred_from, occurred_to)``.
+    """
     return FinanceService(session, bus).list_transactions(
-        current_user.user_id, account_id=account_id, limit=limit
+        current_user.user_id,
+        account_id=account_id,
+        occurred_from=ensure_utc(occurred_from) if occurred_from is not None else None,
+        occurred_to=ensure_utc(occurred_to) if occurred_to is not None else None,
+        limit=limit,
     )
 
 

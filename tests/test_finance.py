@@ -164,6 +164,40 @@ def test_list_transactions_newest_first_and_filtered(service: FinanceService) ->
     assert [t.description for t in a_only] == ["new", "old"]  # newest first
 
 
+def test_list_transactions_filtered_by_period_before_limit(service: FinanceService) -> None:
+    user = uuid.uuid4()
+    account = service.create_account(user, "Checking", "BRL", now=NOW)
+    july = datetime(2026, 7, 18, 12, 0, tzinfo=UTC)
+    service.record_expense(
+        user, account.account_id, 100, "BRL", "jul", now=july, correlation_id="c"
+    )
+    for day in (1, 2, 3):
+        service.record_expense(
+            user,
+            account.account_id,
+            200,
+            "BRL",
+            f"sep-{day}",
+            now=datetime(2026, 9, day, tzinfo=UTC),
+            correlation_id="c",
+        )
+
+    july_only = service.list_transactions(
+        user,
+        occurred_from=datetime(2026, 7, 1, tzinfo=UTC),
+        occurred_to=datetime(2026, 8, 1, tzinfo=UTC),
+        limit=1,
+    )
+    assert [t.description for t in july_only] == ["jul"]  # not cut off by newer rows
+
+    september = service.list_transactions(
+        user,
+        occurred_from=datetime(2026, 9, 1, tzinfo=UTC),
+        occurred_to=datetime(2026, 9, 3, tzinfo=UTC),  # exclusive upper bound
+    )
+    assert [t.description for t in september] == ["sep-2", "sep-1"]
+
+
 def test_list_transactions_scoped_to_user(service: FinanceService) -> None:
     user = uuid.uuid4()
     other = uuid.uuid4()
