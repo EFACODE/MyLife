@@ -42,6 +42,12 @@ the foundation for the finance connector (`T4.2`) and net-worth/cash-flow
   - **AC3:** `POST /finance/transactions` records a `TransactionImported`.
   - **AC4:** `GET /finance/transactions` lists the user's transactions (both
     kinds), newest first, filterable by `account_id`.
+  - **AC4b (amended, month navigation):** `GET /finance/transactions` also
+    accepts `occurred_from` / `occurred_to` (ISO datetimes; `[from, to)` on
+    `occurred_at`), applied *before* `limit` so a past month is never
+    truncated by newer activity; `limit` may go up to 1000 (default 50). The
+    web console's Finanças tabs (Visão geral, Transações, Contas a pagar)
+    share one selected month and query that month's window.
 - As the **platform**, I keep money exact and scoped.
   - **AC5:** Amounts are integer **minor units** (e.g. cents) with an ISO-4217
     `currency` — never floats. Referencing an account that isn't the user's →
@@ -73,7 +79,8 @@ POST /finance/expenses      { "account_id", "amount_minor": 4599, "currency": "B
                               "category": "food", "description": "Lunch" }    -> 201 Transaction (money out)
 POST /finance/transactions  { "account_id", "amount_minor": -4599, "currency": "BRL",
                               "description": "Card 1234", "external_id": "tx-1" } -> 201 Transaction
-GET  /finance/transactions?account_id=...                                    -> [Transaction]
+GET  /finance/transactions?account_id=...&occurred_from=...&occurred_to=...&limit=...
+                                                                             -> [Transaction]
 
 Account     = { account_id, name, currency, created_at }
 Transaction = { event_id, kind, account_id, amount_minor, currency, category, description, occurred_at }

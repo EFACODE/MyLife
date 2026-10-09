@@ -208,6 +208,12 @@ describe("FinancePage", () => {
   });
 
   it("filtra o gráfico de gastos por categoria pelo período selecionado", async () => {
+    const september = await client.listTransactions();
+    // The API filters by period now; only September has data.
+    client.listTransactions.mockImplementation(
+      async (_account?: string, _limit?: number, period?: { occurredFrom?: string }) =>
+        period?.occurredFrom === new Date(2026, 8, 1).toISOString() ? september : [],
+    );
     render(<FinancePage />);
     expect(await screen.findByText("Alimentos e bebidas")).toBeInTheDocument();
 
@@ -216,7 +222,15 @@ describe("FinancePage", () => {
 
     fireEvent.click(within(section).getByRole("button", { name: "Mês anterior" }));
     expect(within(section).getByText("Agosto de 2026")).toBeInTheDocument();
-    expect(within(section).queryByText("Alimentos e bebidas")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(client.listTransactions).toHaveBeenLastCalledWith(undefined, 1000, {
+        occurredFrom: new Date(2026, 7, 1).toISOString(),
+        occurredTo: new Date(2026, 8, 1).toISOString(),
+      }),
+    );
+    await waitFor(() =>
+      expect(within(section).queryByText("Alimentos e bebidas")).not.toBeInTheDocument(),
+    );
     expect(
       within(section).getByText(
         "Nenhuma transação ainda — as categorias aparecerão aqui assim que você registrar alguma.",
@@ -225,7 +239,51 @@ describe("FinancePage", () => {
 
     fireEvent.click(within(section).getByRole("button", { name: "Próximo mês" }));
     expect(within(section).getByText("Setembro de 2026")).toBeInTheDocument();
-    expect(within(section).getByText("Alimentos e bebidas")).toBeInTheDocument();
+    expect(await within(section).findByText("Alimentos e bebidas")).toBeInTheDocument();
+  });
+
+  it("navega por mês na aba Transações, compartilhando o período com as outras abas", async () => {
+    render(<FinancePage />);
+    goToTab("Transações");
+    const nav = await screen.findByRole("group", { name: "Período das transações" });
+    expect(within(nav).getByText("Setembro de 2026")).toBeInTheDocument();
+
+    fireEvent.click(within(nav).getByRole("button", { name: "Próximo mês" }));
+    expect(within(nav).getByText("Outubro de 2026")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(client.listTransactions).toHaveBeenLastCalledWith(undefined, 1000, {
+        occurredFrom: new Date(2026, 9, 1).toISOString(),
+        occurredTo: new Date(2026, 10, 1).toISOString(),
+      }),
+    );
+
+    // The same month carries over to Contas a pagar and its report window.
+    goToTab("Contas a pagar");
+    const billsNav = await screen.findByRole("group", { name: "Período das contas a pagar" });
+    expect(within(billsNav).getByText("Outubro de 2026")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(client.billsReport).toHaveBeenLastCalledWith(
+        new Date(2026, 9, 1).toISOString(),
+        new Date(new Date(2026, 10, 1).getTime() - 1).toISOString(),
+        expect.anything(),
+      ),
+    );
+  });
+
+  it("mostra as faturas do mês escolhido na aba Contas a pagar", async () => {
+    render(<FinancePage />);
+    goToTab("Contas a pagar");
+    const nav = await screen.findByRole("group", { name: "Período das contas a pagar" });
+    fireEvent.click(within(nav).getByRole("button", { name: "Mês anterior" }));
+    expect(within(nav).getByText("Agosto de 2026")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(client.billsReport).toHaveBeenCalledWith(
+        new Date(2026, 7, 1).toISOString(),
+        new Date(new Date(2026, 8, 1).getTime() - 1).toISOString(),
+      ),
+    );
+    const section = await billsSection("Faturas e pagamento");
+    expect(within(section).queryByLabelText("De")).not.toBeInTheDocument();
   });
 
   it("mostra o saldo das contas na aba Configurações, ocultando contas zeradas", async () => {

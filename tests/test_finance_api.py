@@ -210,6 +210,39 @@ def test_import_transaction_and_list(client: TestClient) -> None:
     assert [t["kind"] for t in txns.json()] == ["import"]
 
 
+def test_list_transactions_by_period(client: TestClient) -> None:
+    auth = _auth(client)
+    account_id = _account(client, auth)
+    client.post(
+        "/finance/transactions",
+        json={
+            "account_id": account_id,
+            "amount_minor": -4599,
+            "currency": "BRL",
+            "description": "Card 1234",
+            "external_id": "tx-1",
+        },
+        headers=auth,
+    )
+
+    around_now = client.get(
+        "/finance/transactions",
+        params={"occurred_from": "2000-01-01T00:00:00Z", "occurred_to": "2999-01-01T00:00:00Z"},
+        headers=auth,
+    )
+    assert [t["description"] for t in around_now.json()] == ["Card 1234"]
+
+    past = client.get(
+        "/finance/transactions",
+        params={"occurred_from": "2000-01-01T00:00:00Z", "occurred_to": "2000-02-01T00:00:00Z"},
+        headers=auth,
+    )
+    assert past.json() == []
+
+    too_many = client.get("/finance/transactions", params={"limit": 1001}, headers=auth)
+    assert too_many.status_code == 422
+
+
 def test_update_transaction(client: TestClient) -> None:
     auth = _auth(client)
     account_id = _account(client, auth)

@@ -249,10 +249,16 @@ export class ApiClient {
     return this.request<Transaction>("/finance/transactions", { method: "POST", body: input });
   }
 
-  listTransactions(accountId?: string, limit?: number): Promise<Transaction[]> {
+  listTransactions(
+    accountId?: string,
+    limit?: number,
+    period: { occurredFrom?: string; occurredTo?: string } = {},
+  ): Promise<Transaction[]> {
     const params = new URLSearchParams();
     if (accountId) params.set("account_id", accountId);
     if (limit !== undefined) params.set("limit", String(limit));
+    if (period.occurredFrom) params.set("occurred_from", period.occurredFrom);
+    if (period.occurredTo) params.set("occurred_to", period.occurredTo);
     const query = params.toString();
     return this.request<Transaction[]>(`/finance/transactions${query ? `?${query}` : ""}`);
   }

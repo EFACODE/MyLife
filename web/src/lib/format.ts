@@ -74,3 +74,11 @@ export function shiftMonth({ year, month }: YearMonth, delta: number): YearMonth
   const index = year * 12 + (month - 1) + delta;
   return { year: Math.floor(index / 12), month: (index % 12) + 1 };
 }
+
+/** Local-time bounds of a month: `from` is its first instant, `to` the next month's (exclusive). */
+export function monthRange(ym: YearMonth): { from: Date; to: Date } {
+  return {
+    from: new Date(ym.year, ym.month - 1, 1),
+    to: new Date(ym.year, ym.month, 1),
+  };
+}

@@ -48,6 +48,7 @@ import { categorySolidClass } from "../../lib/categoryColor";
 import {
   currentYearMonth as thisMonth,
   money,
+  monthRange,
   moneyByCurrency,
   moneySuffixed,
   parseMoneyInput,
@@ -102,11 +103,22 @@ const TABS: TabItem[] = [
   { id: "settings", label: "Configurações" },
 ];
 
+/** Upper bound on one month's transactions (the API caps `limit` at 1000). */
+const MONTH_TRANSACTIONS_LIMIT = 1000;
+
 export function FinancePage() {
   const client = useApiClient();
   const [tab, setTab] = useState(TABS[0].id);
+  // One month drives Visão geral, Transações and Contas a pagar alike.
+  const [period, setPeriod] = useState<YearMonth>(thisMonth);
   const accounts = useAsync(() => client.listAccounts(), [client]);
-  const transactions = useAsync(() => client.listTransactions(undefined, 200), [client]);
+  const transactions = useAsync(() => {
+    const { from, to } = monthRange(period);
+    return client.listTransactions(undefined, MONTH_TRANSACTIONS_LIMIT, {
+      occurredFrom: from.toISOString(),
+      occurredTo: to.toISOString(),
+    });
+  }, [client, period.year, period.month]);
 
   return (
     <div>
@@ -116,16 +128,29 @@ export function FinancePage() {
       </p>
       <Tabs items={TABS} active={tab} onChange={setTab} />
       {tab === "overview" && (
-        <OverviewTab transactions={transactions.data ?? []} />
+        <OverviewTab
+          transactions={transactions.data ?? []}
+          period={period}
+          onPeriodChange={setPeriod}
+        />
       )}
       {tab === "transactions" && (
         <TransactionsTab
           client={client}
           accounts={accounts.data ?? []}
           transactions={transactions}
+          period={period}
+          onPeriodChange={setPeriod}
         />
       )}
-      {tab === "bills" && <BillsTab client={client} accounts={accounts.data ?? []} />}
+      {tab === "bills" && (
+        <BillsTab
+          client={client}
+          accounts={accounts.data ?? []}
+          period={period}
+          onPeriodChange={setPeriod}
+        />
+      )}
       {tab === "settings" && (
         <SettingsTab
           client={client}
@@ -142,20 +167,15 @@ export function FinancePage() {
 
 // --- Visão geral ---------------------------------------------------------
 
-function OverviewTab({ transactions }: { transactions: Transaction[] }) {
-  const [period, setPeriod] = useState<YearMonth>(thisMonth);
-
-  const transactionsInPeriod = useMemo(
-    () =>
-      transactions.filter((t) => {
-        const occurredAt = new Date(t.occurred_at);
-        return (
-          occurredAt.getFullYear() === period.year && occurredAt.getMonth() + 1 === period.month
-        );
-      }),
-    [transactions, period],
-  );
-
+function OverviewTab({
+  transactions,
+  period,
+  onPeriodChange,
+}: {
+  transactions: Transaction[];
+  period: YearMonth;
+  onPeriodChange: (period: YearMonth) => void;
+}) {
   return (
     <>
       <Section
@@ -164,12 +184,12 @@ function OverviewTab({ transactions }: { transactions: Transaction[] }) {
         actions={
           <MonthNavigator
             value={period}
-            onChange={setPeriod}
+            onChange={onPeriodChange}
             label="Período do gráfico de gastos por categoria"
           />
         }
       >
-        <CategorySpendBreakdown transactions={transactionsInPeriod} />
+        <CategorySpendBreakdown transactions={transactions} />
       </Section>
     </>
   );
@@ -650,10 +670,14 @@ function TransactionsTab({
   client,
   accounts,
   transactions,
+  period,
+  onPeriodChange,
 }: {
   client: FinanceApi;
   accounts: Account[];
   transactions: AsyncResult<Transaction[]>;
+  period: YearMonth;
+  onPeriodChange: (period: YearMonth) => void;
 }) {
   const categories = useAsync(() => client.listCategories(), [client]);
   const [accountFilter, setAccountFilter] = useState("");
@@ -693,6 +717,7 @@ function TransactionsTab({
 
   return (
     <div>
+      <PeriodBar value={period} onChange={onPeriodChange} label="Período das transações" />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Total de transações"
@@ -1296,12 +1321,22 @@ const BILLS_SCREENS: SubTabItem[] = [
   { id: "register", label: "Cadastrar", icon: PlusCircle },
 ];
 
-function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[] }) {
+function BillsTab({
+  client,
+  accounts,
+  period,
+  onPeriodChange,
+}: {
+  client: FinanceApi;
+  accounts: Account[];
+  period: YearMonth;
+  onPeriodChange: (period: YearMonth) => void;
+}) {
   const bills = useAsync(() => client.listBills(), [client]);
   const categories = useAsync(() => client.listCategories(), [client]);
   const [screen, setScreen] = useState(BILLS_SCREENS[0].id);
-  const defaults = useMemo(defaultBillsWindow, []);
-  const [filter, setFilter] = useState<BillsFilter>({ ...defaults, paid: "", overdue: "" });
+  const range = useMemo(() => billsWindow(period), [period]);
+  const [filter, setFilter] = useState<BillsFilter>({ paid: "", overdue: "" });
   const [preset, setPreset] = useState<BillsPreset | null>(null);
   // Bumped after a payment so the summary cards recount.
   const [summaryVersion, setSummaryVersion] = useState(0);
@@ -1310,18 +1345,16 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
     // Clicking the active card again clears its filter.
     const target = preset === next ? null : next;
     setPreset(target);
-    setFilter({
-      ...defaults,
-      ...(target ? BILLS_PRESETS[target] : { paid: "", overdue: "" }),
-    });
+    setFilter(target ? BILLS_PRESETS[target] : { paid: "", overdue: "" });
     setScreen("upcoming");
   }
 
   return (
     <>
+      <PeriodBar value={period} onChange={onPeriodChange} label="Período das contas a pagar" />
       <BillsSummary
         client={client}
-        range={defaults}
+        range={range}
         version={summaryVersion}
         activePreset={preset}
         onSelect={applyPreset}
@@ -1346,6 +1379,7 @@ function BillsTab({ client, accounts }: { client: FinanceApi; accounts: Account[
       {screen === "upcoming" && (
         <UpcomingBills
           client={client}
+          range={range}
           filter={filter}
           onFilterChange={(next) => {
             setFilter(next);
@@ -1374,8 +1408,8 @@ function BillsSummary({
   const report = useAsync(
     () =>
       client.billsReport(
-        new Date(range.from).toISOString(),
-        new Date(range.to).toISOString(),
+        range.from,
+        range.to,
       ),
     [client, range.from, range.to, version],
   );
@@ -1867,28 +1901,42 @@ function parseYearMonth(value: string): { year: number; month: number } | null {
   return { year: Number(match[1]), month: Number(match[2]) };
 }
 
-/** Do início do mês atual até o fim do próximo — uma janela útil por padrão. */
-function defaultBillsWindow(): { from: string; to: string } {
-  const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59);
-  return { from: toDatetimeLocal(from), to: toDatetimeLocal(to) };
+/** A tab's month selector row (‹ Outubro de 2026 ›), right-aligned on desktop. */
+function PeriodBar({
+  value,
+  onChange,
+  label,
+}: {
+  value: YearMonth;
+  onChange: (value: YearMonth) => void;
+  label: string;
+}) {
+  return (
+    <div className="mb-4 flex sm:justify-end">
+      <MonthNavigator value={value} onChange={onChange} label={label} />
+    </div>
+  );
+}
+
+/** The selected month as an ISO window for the bills report. */
+function billsWindow(period: YearMonth): { from: string; to: string } {
+  const { from, to } = monthRange(period);
+  // The report's `due_to` is inclusive, so stop just before the next month.
+  return { from: from.toISOString(), to: new Date(to.getTime() - 1).toISOString() };
 }
 
 type TriState = "" | "true" | "false";
 
 /** The Faturas e pagamento filters, shared with the summary cards above. */
 interface BillsFilter {
-  from: string;
-  to: string;
   paid: TriState;
   overdue: TriState;
 }
 
 type BillsPreset = "dueSoon" | "overdue" | "paid";
 
-/** Filter values each summary card applies (over the summary's own window). */
-const BILLS_PRESETS: Record<BillsPreset, Pick<BillsFilter, "paid" | "overdue">> = {
+/** Filter values each summary card applies (over the selected month). */
+const BILLS_PRESETS: Record<BillsPreset, BillsFilter> = {
   dueSoon: { paid: "false", overdue: "false" },
   overdue: { paid: "false", overdue: "true" },
   paid: { paid: "true", overdue: "" },
@@ -1905,19 +1953,22 @@ function localToday(): string {
 
 function UpcomingBills({
   client,
+  range,
   filter,
   onFilterChange,
   onPaid,
 }: {
   client: FinanceApi;
+  range: { from: string; to: string };
   filter: BillsFilter;
   onFilterChange: (filter: BillsFilter) => void;
   onPaid: () => void;
 }) {
-  const { from, to, paid, overdue } = filter;
+  const { paid, overdue } = filter;
+  const { from, to } = range;
   const report = useAsync(
     () =>
-      client.billsReport(new Date(from).toISOString(), new Date(to).toISOString(), {
+      client.billsReport(from, to, {
         paid: paid === "" ? undefined : paid === "true",
         overdue: overdue === "" ? undefined : overdue === "true",
       }),
@@ -1961,20 +2012,6 @@ function UpcomingBills({
       }
     >
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-        <Field label="De">
-          <TextInput
-            type="datetime-local"
-            value={from}
-            onChange={(e) => onFilterChange({ ...filter, from: e.target.value })}
-          />
-        </Field>
-        <Field label="Até">
-          <TextInput
-            type="datetime-local"
-            value={to}
-            onChange={(e) => onFilterChange({ ...filter, to: e.target.value })}
-          />
-        </Field>
         <Field label="Status">
           <Select
             value={paid}

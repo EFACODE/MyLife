@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { monthYearLabel, shiftMonth } from "./format";
+import { monthRange, monthYearLabel, shiftMonth } from "./format";
 
 describe("monthYearLabel", () => {
   it("formats the month in Portuguese with the year", () => {
     expect(monthYearLabel({ year: 2026, month: 10 })).toBe("Outubro de 2026");
     expect(monthYearLabel({ year: 2027, month: 3 })).toBe("Março de 2027");
+  });
+});
+
+describe("monthRange", () => {
+  it("spans the month in local time with an exclusive end", () => {
+    const { from, to } = monthRange({ year: 2026, month: 12 });
+    expect([from.getFullYear(), from.getMonth(), from.getDate(), from.getHours()]).toEqual([
+      2026, 11, 1, 0,
+    ]);
+    expect([to.getFullYear(), to.getMonth(), to.getDate()]).toEqual([2027, 0, 1]);
   });
 });
 

@@ -398,6 +398,8 @@ class FinanceService:
         user_id: uuid.UUID,
         *,
         account_id: uuid.UUID | None = None,
+        occurred_from: datetime | None = None,
+        occurred_to: datetime | None = None,
         limit: int = 50,
     ) -> list[Transaction]:
         """Return the user's finance transactions, newest first.
@@ -405,7 +407,9 @@ class FinanceService:
         Reads the finance event stream (base facts plus any edits/deletes),
         folds corrections onto their base transaction (see
         :func:`fold_transaction_corrections`), and maps the result to
-        :class:`Transaction` views; optionally filters by account.
+        :class:`Transaction` views; optionally filters by account and by
+        ``occurred_at`` in ``[occurred_from, occurred_to)``. Filters apply
+        before ``limit``, so a period query is not truncated by newer activity.
         """
         events = [
             event
@@ -417,6 +421,10 @@ class FinanceService:
         transactions = [_to_transaction(event) for event in folded]
         if account_id is not None:
             transactions = [t for t in transactions if t.account_id == account_id]
+        if occurred_from is not None:
+            transactions = [t for t in transactions if t.occurred_at >= occurred_from]
+        if occurred_to is not None:
+            transactions = [t for t in transactions if t.occurred_at < occurred_to]
         return transactions[:limit]
 
     def update_transaction(
