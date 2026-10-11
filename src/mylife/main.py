@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from mylife import __version__
 from mylife.api import (
+    admin,
     assistant,
     audit,
     auth,
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(metrics.router)
     app.include_router(auth.router)
     app.include_router(identity.router)
+    app.include_router(admin.router)
     app.include_router(consent.router)
     app.include_router(audit.router)
     app.include_router(data_subject.router)

@@ -9,7 +9,7 @@ contracts — never by reaching into another context's internals. See
 
 | Context | Owns | Representative events |
 | ------- | ---- | --------------------- |
-| **Identity** | Users, households, consent, profiles | `UserRegistered`, `ConsentGranted` |
+| **Identity** | Users, roles, user groups (households), consent, profiles | `UserRegistered`, `ConsentGranted`, `GroupJoined` |
 | **Timeline** | Canonical Life Events and provenance | `LifeEventRecorded`, `EventCorrected` |
 | **Health** | Sleep, workouts, metrics, medical records | `SleepRecorded`, `WorkoutCompleted` |
 | **Finance** | Accounts, transactions, positions, net worth | `TransactionImported`, `PositionValued` |
@@ -24,6 +24,10 @@ contracts — never by reaching into another context's internals. See
   Events into the timeline; the timeline owns the envelope and provenance.
 - **Identity is upstream of everything.** It supplies `user_id` and the consent
   decisions that gate connectors and data access (Customer/Supplier).
+- **Identity resolves shared data scope.** A user-group member's Finance
+  requests act on the group owner's ledger; Finance asks Identity
+  (`GroupService.data_owner_for`) instead of reading group tables itself
+  (`specs/domain/identity/user-groups.md`, T2.6).
 - **Health, Finance, Goals, Knowledge are peer domains.** They react to the
   event stream but do not depend on each other's internals; cross-domain views
   (e.g. the briefing) are built by the Assistant from published events.

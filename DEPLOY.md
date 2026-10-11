@@ -81,6 +81,7 @@ Edit `.env.prod`:
 | `MYLIFE_ENVIRONMENT` | `production`. |
 | `MYLIFE_JWT_SECRET` | **Generate a long random secret** (below). Must stay stable across restarts, or every existing session/token is invalidated. |
 | `MYLIFE_CREDENTIAL_ENCRYPTION_KEY` | **Generate a Fernet key** (below). Must stay stable across restarts, like `MYLIFE_JWT_SECRET` — if left unset it defaults to a new random key every restart, which silently and permanently breaks every connector credential a user has stored (e.g. the Open Finance/Pierre Finance API key, `T4.9`): the "connected" status keeps showing even though the key can no longer be decrypted, until the user disconnects and reconnects. |
+| `MYLIFE_ADMIN_EMAILS` | Comma-separated emails of the first administrator(s) (`T2.6`). Those users become `admin` at signup — or on their next login if they already exist — and see **Usuários e grupos** in the menu, where they manage user groups (members share the group owner's Finance data) and promote other admins. Not a secret. |
 
 Generate the JWT secret, the credential encryption key, and a DB password:
 

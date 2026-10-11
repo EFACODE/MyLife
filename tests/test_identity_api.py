@@ -94,30 +94,19 @@ def test_unknown_user_is_404(client: TestClient) -> None:
     assert client.get("/users/11111111-1111-1111-1111-111111111111").status_code == 404
 
 
-def test_household_create_link_and_unknown(client: TestClient) -> None:
-    household = client.post("/households", json={"name": "Home"})
-    assert household.status_code == 201
-    household_id = household.json()["household_id"]
-
-    user = client.post(
+def test_registration_rejects_household_id(client: TestClient) -> None:
+    # Joining a group grants access to its owner's data — admin-only (T2.6 FR-6).
+    response = client.post(
         "/users",
         json={
             "email": "h@example.com",
             "display_name": "H",
             "password": "s3cretpw",
-            "household_id": household_id,
-        },
-    )
-    assert user.status_code == 201
-    assert user.json()["household_id"] == household_id
-
-    unknown = client.post(
-        "/users",
-        json={
-            "email": "u@example.com",
-            "display_name": "U",
-            "password": "s3cretpw",
             "household_id": "22222222-2222-2222-2222-222222222222",
         },
     )
-    assert unknown.status_code == 422
+    assert response.status_code == 422
+
+
+def test_public_household_endpoints_are_gone(client: TestClient) -> None:
+    assert client.post("/households", json={"name": "Home"}).status_code in (404, 405)

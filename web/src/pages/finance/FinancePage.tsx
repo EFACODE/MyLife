@@ -56,6 +56,7 @@ import {
   type YearMonth,
 } from "../../lib/format";
 import { useAsync, type AsyncResult } from "../../lib/useAsync";
+import { SharedFinanceBanner } from "./SharedFinanceBanner";
 
 type FinanceApi = Pick<
   ApiClient,
@@ -126,6 +127,7 @@ export function FinancePage() {
       <p className="mb-6 text-sm text-gray-500">
         Contas, transações, contas a pagar e categorias.
       </p>
+      <SharedFinanceBanner />
       <Tabs items={TABS} active={tab} onChange={setTab} />
       {tab === "overview" && (
         <OverviewTab

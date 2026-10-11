@@ -3,13 +3,39 @@ export interface LoginResponse {
   token_type: string;
 }
 
+export type Role = "member" | "admin";
+
 export interface User {
   user_id: string;
   email: string;
   display_name: string;
   status: string;
+  /** Absent on payloads from before T2.6; treat as "member". */
+  role?: Role;
   household_id: string | null;
   created_at: string;
+}
+
+// --- User groups & admin console (T2.6) ---
+
+export interface GroupMember {
+  user_id: string;
+  display_name: string;
+  email: string;
+}
+
+/** A user group: members share the owner's Finance data. */
+export interface Group {
+  household_id: string;
+  name: string;
+  owner_user_id: string | null;
+  created_at: string;
+  members: GroupMember[];
+}
+
+export interface UpdateGroupInput {
+  name?: string;
+  owner_user_id?: string;
 }
 
 /** Editable profile fields — the account email is immutable. */
