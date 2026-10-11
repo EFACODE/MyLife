@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
+import { AdminPage } from "./pages/admin/AdminPage";
 import { AssistantPage } from "./pages/assistant/AssistantPage";
 import { AuditPage } from "./pages/audit/AuditPage";
 import { ConsentPage } from "./pages/consent/ConsentPage";
@@ -42,6 +43,7 @@ export function App() {
             <Route path="/consent" element={<ConsentPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             {/* Feature routes (T10.3–T10.9) are added here. */}
           </Route>
         </Routes>

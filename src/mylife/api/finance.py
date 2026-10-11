@@ -2,7 +2,9 @@
 
 Authenticated, user-scoped access to accounts and transactions. A user opens
 accounts, records expenses, imports transactions and lists them back. See
-``specs/domain/finance/expense-tracking.md`` (T4.1).
+``specs/domain/finance/expense-tracking.md`` (T4.1). Every route resolves its
+data scope through ``get_finance_owner``: a user-group member works on the
+group owner's ledger (``specs/domain/identity/user-groups.md``, T2.6).
 """
 
 import uuid
@@ -54,12 +56,37 @@ from mylife.finance.openfinance import (
     PierreFinanceClient,
     PierreFinanceConnector,
 )
-from mylife.identity import User
+from mylife.identity import FINANCE_DOMAIN, GroupService, User
 from mylife.identity.consent import ConsentService
 from mylife.identity.credential_vault import CredentialVault
 from mylife.notifications import NotificationOutcome, build_channels_from_settings
 
 router = APIRouter(tags=["finance"])
+
+
+def get_finance_owner(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+    bus: Annotated[EventBus, Depends(get_event_bus)],
+) -> uuid.UUID:
+    """Whose Finance data the caller reads and writes (T2.6).
+
+    The caller's own ``user_id`` — or, for a member of a user group, the group
+    owner's, so every member shares one ledger. See
+    ``specs/domain/identity/user-groups.md``.
+    """
+    return GroupService(session, bus).data_owner_for(current_user.user_id, FINANCE_DOMAIN)
+
+
+FinanceOwner = Annotated[uuid.UUID, Depends(get_finance_owner)]
+
+
+def _require_ledger_owner(current_user: User, owner_id: uuid.UUID) -> None:
+    """Only the ledger's owner may change its third-party credentials (T2.6 AC8)."""
+    if current_user.user_id != owner_id:
+        raise HTTPException(
+            status_code=403, detail="only the group owner can change this connection"
+        )
 
 
 class CreateAccountRequest(BaseModel):
@@ -203,39 +230,37 @@ class PayBillRequest(BaseModel):
 @router.post("/accounts", response_model=Account, status_code=201)
 def create_account(
     request: CreateAccountRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Account:
     """Open an account for the authenticated user."""
     return FinanceService(session, bus).create_account(
-        current_user.user_id, request.name, request.currency, now=utcnow()
+        owner_id, request.name, request.currency, now=utcnow()
     )
 
 
 @router.get("/accounts", response_model=list[Account])
 def list_accounts(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> list[Account]:
     """List the authenticated user's accounts."""
-    return FinanceService(session, bus).list_accounts(current_user.user_id)
+    return FinanceService(session, bus).list_accounts(owner_id)
 
 
 @router.patch("/accounts/{account_id}", response_model=Account)
 def rename_account(
     account_id: uuid.UUID,
     request: RenameAccountRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Account:
     """Rename one of the user's accounts."""
     try:
-        return FinanceService(session, bus).rename_account(
-            current_user.user_id, account_id, request.name
-        )
+        return FinanceService(session, bus).rename_account(owner_id, account_id, request.name)
     except UnknownAccountError as exc:
         raise HTTPException(status_code=404, detail="account not found") from exc
 
@@ -243,7 +268,7 @@ def rename_account(
 @router.delete("/accounts/{account_id}", status_code=204)
 def delete_account(
     account_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> None:
@@ -255,7 +280,7 @@ def delete_account(
     rename it instead (`PATCH` above).
     """
     try:
-        FinanceService(session, bus).delete_account(current_user.user_id, account_id)
+        FinanceService(session, bus).delete_account(owner_id, account_id)
     except UnknownAccountError as exc:
         raise HTTPException(status_code=404, detail="account not found") from exc
     except AccountHasActivityError as exc:
@@ -270,39 +295,37 @@ def delete_account(
 @router.post("/finance/categories", response_model=Category, status_code=201)
 def create_category(
     request: CreateCategoryRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Category:
     """Register a category for the authenticated user."""
     try:
-        return FinanceService(session, bus).create_category(
-            current_user.user_id, request.name, now=utcnow()
-        )
+        return FinanceService(session, bus).create_category(owner_id, request.name, now=utcnow())
     except DuplicateCategoryError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/finance/categories", response_model=list[Category])
 def list_categories(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> list[Category]:
     """List the authenticated user's categories."""
-    return FinanceService(session, bus).list_categories(current_user.user_id)
+    return FinanceService(session, bus).list_categories(owner_id)
 
 
 @router.delete("/finance/categories/{category_id}", status_code=204)
 def delete_category(
     category_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> None:
     """Remove one of the user's categories."""
     try:
-        FinanceService(session, bus).delete_category(current_user.user_id, category_id)
+        FinanceService(session, bus).delete_category(owner_id, category_id)
     except UnknownCategoryError as exc:
         raise HTTPException(status_code=404, detail="category not found") from exc
 
@@ -310,7 +333,7 @@ def delete_category(
 @router.post("/finance/expenses", response_model=Transaction, status_code=201)
 def record_expense(
     request: ExpenseRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Transaction:
@@ -318,7 +341,7 @@ def record_expense(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return FinanceService(session, bus).record_expense(
-            current_user.user_id,
+            owner_id,
             request.account_id,
             request.amount_minor,
             request.currency,
@@ -335,7 +358,7 @@ def record_expense(
 @router.post("/finance/transactions", response_model=Transaction, status_code=201)
 def import_transaction(
     request: TransactionRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Transaction:
@@ -343,7 +366,7 @@ def import_transaction(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return FinanceService(session, bus).import_transaction(
-            current_user.user_id,
+            owner_id,
             request.account_id,
             request.amount_minor,
             request.currency,
@@ -359,7 +382,7 @@ def import_transaction(
 
 @router.get("/finance/transactions", response_model=list[Transaction])
 def list_transactions(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
     account_id: Annotated[uuid.UUID | None, Query()] = None,
@@ -372,7 +395,7 @@ def list_transactions(
     Optionally restricted to ``occurred_at`` in ``[occurred_from, occurred_to)``.
     """
     return FinanceService(session, bus).list_transactions(
-        current_user.user_id,
+        owner_id,
         account_id=account_id,
         occurred_from=ensure_utc(occurred_from) if occurred_from is not None else None,
         occurred_to=ensure_utc(occurred_to) if occurred_to is not None else None,
@@ -384,7 +407,7 @@ def list_transactions(
 def update_transaction(
     transaction_event_id: uuid.UUID,
     request: UpdateTransactionRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Transaction:
@@ -392,7 +415,7 @@ def update_transaction(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return FinanceService(session, bus).update_transaction(
-            current_user.user_id,
+            owner_id,
             transaction_event_id,
             request.amount_minor,
             request.currency,
@@ -409,7 +432,7 @@ def update_transaction(
 @router.delete("/finance/transactions/{transaction_event_id}", status_code=204)
 def delete_transaction(
     transaction_event_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> None:
@@ -417,7 +440,7 @@ def delete_transaction(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         FinanceService(session, bus).delete_transaction(
-            current_user.user_id,
+            owner_id,
             transaction_event_id,
             now=utcnow(),
             correlation_id=correlation_id,
@@ -429,7 +452,7 @@ def delete_transaction(
 @router.post("/finance/positions", response_model=Balance, status_code=201)
 def record_position(
     request: PositionRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Balance:
@@ -437,7 +460,7 @@ def record_position(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return FinanceService(session, bus).record_valuation(
-            current_user.user_id,
+            owner_id,
             request.account_id,
             request.value_minor,
             request.currency,
@@ -451,11 +474,11 @@ def record_position(
 @router.get("/finance/accounts/{account_id}/balance", response_model=Balance)
 def get_balance(
     account_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
 ) -> Balance:
     """Return the current balance of one of the user's accounts."""
-    balance = NetWorthService(session).account_balance(current_user.user_id, account_id)
+    balance = NetWorthService(session).account_balance(owner_id, account_id)
     if balance is None:
         raise HTTPException(status_code=404, detail="account not found")
     return balance
@@ -463,23 +486,23 @@ def get_balance(
 
 @router.get("/finance/net-worth", response_model=NetWorth)
 def get_net_worth(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
 ) -> NetWorth:
     """Return the user's net worth, grouped per currency."""
-    return NetWorthService(session).net_worth(current_user.user_id)
+    return NetWorthService(session).net_worth(owner_id)
 
 
 @router.get("/finance/cash-flow", response_model=CashFlow)
 def get_cash_flow(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     occurred_from: Annotated[datetime, Query()],
     occurred_to: Annotated[datetime, Query()],
 ) -> CashFlow:
     """Return inflow/outflow/net per currency over the (inclusive UTC) window."""
     return NetWorthService(session).cash_flow(
-        current_user.user_id,
+        owner_id,
         occurred_from=ensure_utc(occurred_from),
         occurred_to=ensure_utc(occurred_to),
     )
@@ -488,7 +511,7 @@ def get_cash_flow(
 @router.post("/finance/connectors/bank/import", response_model=BankImportResult, status_code=201)
 def import_bank_csv(
     request: BankImportRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> BankImportResult:
@@ -497,7 +520,7 @@ def import_bank_csv(
     Consent-gated on scope ``"bank"`` (fail-closed): without consent → ``403``;
     a foreign/unknown account → ``404``. Each row becomes a ``TransactionImported``.
     """
-    account = FinanceService(session, bus).get_account(current_user.user_id, request.account_id)
+    account = FinanceService(session, bus).get_account(owner_id, request.account_id)
     if account is None:
         raise HTTPException(status_code=404, detail="account not found")
     correlation_id = get_correlation_id() or new_correlation_id()
@@ -510,7 +533,7 @@ def import_bank_csv(
     try:
         result = ConnectorRunner(session, bus).sync(
             connector,
-            FetchContext(user_id=current_user.user_id, correlation_id=correlation_id),
+            FetchContext(user_id=owner_id, correlation_id=correlation_id),
             consent=ConsentService(session, bus),
         )
     except ConsentRequiredError as exc:
@@ -527,7 +550,7 @@ def import_bank_csv(
     "/finance/connectors/openfinance/credentials", response_model=OpenFinanceCredentialStatus
 )
 def get_openfinance_credential_status(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
 ) -> OpenFinanceCredentialStatus:
     """Whether the authenticated user has a *usable* Pierre Finance API key stored.
@@ -544,8 +567,8 @@ def get_openfinance_credential_status(
     """
     settings = get_settings()
     vault = CredentialVault(session, settings.credential_encryption_key)
-    usable = vault.get(current_user.user_id, PIERRE_PROVIDER) is not None
-    updated_at = vault.updated_at(current_user.user_id, PIERRE_PROVIDER) if usable else None
+    usable = vault.get(owner_id, PIERRE_PROVIDER) is not None
+    updated_at = vault.updated_at(owner_id, PIERRE_PROVIDER) if usable else None
     return OpenFinanceCredentialStatus(connected=usable, updated_at=updated_at)
 
 
@@ -553,36 +576,39 @@ def get_openfinance_credential_status(
 def store_openfinance_credentials(
     request: OpenFinanceCredentialRequest,
     current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
 ) -> None:
-    """Store (or replace) the authenticated user's Pierre Finance API key.
+    """Store (or replace) the ledger owner's Pierre Finance API key.
 
     Auth only, not consent-gated: storing a key is setup, not ingestion — the
     sync endpoint below is what's gated on consent scope ``"openfinance"``.
+    In a user group only the owner may do this (403 otherwise).
     """
+    _require_ledger_owner(current_user, owner_id)
     settings = get_settings()
     CredentialVault(session, settings.credential_encryption_key).store(
-        current_user.user_id, PIERRE_PROVIDER, request.api_key, now=utcnow()
+        owner_id, PIERRE_PROVIDER, request.api_key, now=utcnow()
     )
 
 
 @router.delete("/finance/connectors/openfinance/credentials", status_code=204)
 def delete_openfinance_credentials(
     current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
 ) -> None:
-    """Disconnect the authenticated user's Pierre Finance account."""
+    """Disconnect the ledger owner's Pierre Finance account (owner only in a group)."""
+    _require_ledger_owner(current_user, owner_id)
     settings = get_settings()
-    CredentialVault(session, settings.credential_encryption_key).delete(
-        current_user.user_id, PIERRE_PROVIDER
-    )
+    CredentialVault(session, settings.credential_encryption_key).delete(owner_id, PIERRE_PROVIDER)
 
 
 @router.post(
     "/finance/connectors/openfinance/sync", response_model=OpenFinanceSyncResult, status_code=201
 )
 def sync_openfinance(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
     client: Annotated[PierreFinanceClient, Depends(get_pierre_client)],
@@ -613,7 +639,7 @@ def sync_openfinance(
     try:
         result = ConnectorRunner(session, bus).sync(
             connector,
-            FetchContext(user_id=current_user.user_id, correlation_id=correlation_id),
+            FetchContext(user_id=owner_id, correlation_id=correlation_id),
             consent=ConsentService(session, bus),
         )
     except ConsentRequiredError as exc:
@@ -635,7 +661,7 @@ def sync_openfinance(
 @router.post("/finance/bills", response_model=Bill, status_code=201)
 def register_bill(
     request: RegisterBillRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Bill:
@@ -643,7 +669,7 @@ def register_bill(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return BillsService(session, bus).register_bill(
-            current_user.user_id,
+            owner_id,
             request.account_id,
             request.payee,
             request.amount_minor,
@@ -668,7 +694,7 @@ def register_bill(
 def update_bill(
     bill_id: uuid.UUID,
     request: UpdateBillRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> Bill:
@@ -676,7 +702,7 @@ def update_bill(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return BillsService(session, bus).update_bill(
-            current_user.user_id,
+            owner_id,
             bill_id,
             request.payee,
             request.amount_minor,
@@ -699,19 +725,19 @@ def update_bill(
 
 @router.get("/finance/bills", response_model=list[Bill])
 def list_bills(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
     account_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> list[Bill]:
     """List the authenticated user's bills."""
-    return BillsService(session, bus).list_bills(current_user.user_id, account_id=account_id)
+    return BillsService(session, bus).list_bills(owner_id, account_id=account_id)
 
 
 @router.delete("/finance/bills/{bill_id}", status_code=204)
 def cancel_bill(
     bill_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> None:
@@ -719,7 +745,7 @@ def cancel_bill(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         BillsService(session, bus).cancel_bill(
-            current_user.user_id, bill_id, now=utcnow(), correlation_id=correlation_id
+            owner_id, bill_id, now=utcnow(), correlation_id=correlation_id
         )
     except UnknownBillError as exc:
         raise HTTPException(status_code=404, detail="bill not found") from exc
@@ -729,7 +755,7 @@ def cancel_bill(
 def pay_bill(
     bill_id: uuid.UUID,
     request: PayBillRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> BillPayment:
@@ -737,7 +763,7 @@ def pay_bill(
     correlation_id = get_correlation_id() or new_correlation_id()
     try:
         return BillsService(session, bus).pay_bill(
-            current_user.user_id,
+            owner_id,
             bill_id,
             ensure_utc(request.due_at),
             amount_minor=request.amount_minor,
@@ -753,7 +779,7 @@ def pay_bill(
 
 @router.get("/finance/bills/report", response_model=list[BillOccurrence])
 def get_bills_report(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     due_from: Annotated[datetime, Query()],
     due_to: Annotated[datetime, Query()],
@@ -766,7 +792,7 @@ def get_bills_report(
     Filterable by account, paid/unpaid and overdue/not-overdue.
     """
     return BillsReportService(session).list_occurrences(
-        current_user.user_id,
+        owner_id,
         due_from=ensure_utc(due_from),
         due_to=ensure_utc(due_to),
         as_of=utcnow(),
@@ -778,7 +804,7 @@ def get_bills_report(
 
 @router.post("/finance/bills/alerts/run", response_model=list[NotificationOutcome])
 def run_bill_alerts(
-    current_user: Annotated[User, Depends(get_current_user)],
+    owner_id: FinanceOwner,
     session: Annotated[Session, Depends(get_session)],
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> list[NotificationOutcome]:
@@ -792,5 +818,5 @@ def run_bill_alerts(
     correlation_id = get_correlation_id() or new_correlation_id()
     channels = build_channels_from_settings(get_settings())
     return BillAlertsService(session, bus, channels).run(
-        current_user.user_id, now=utcnow(), correlation_id=correlation_id
+        owner_id, now=utcnow(), correlation_id=correlation_id
     )

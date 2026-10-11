@@ -104,6 +104,7 @@ brief places in Phase 0).
 | **T2.3** | ✅ | Consent model + enforcement | **Yes** | `ConsentGranted`/`ConsentRevoked` events, granular per-integration consent, an enforcement dependency connectors must pass. `specs/domain/identity/consent.md`. |
 | **T2.4** | ✅ | Audit log (append-only) | **Yes** | Record data access, connector actions, consent changes and the evidence behind AI recommendations. `specs/domain/identity/audit-log.md`. |
 | **T2.5** | ✅ | Data-subject rights: export + deletion | **Yes** | LGPD/GDPR export and deletion pathways with source visibility and revocation. `specs/domain/identity/data-subject-rights.md`. |
+| **T2.6** | ✅ | User groups with shared Finance + admin console | **Yes** | `users.role` (`member`/`admin`, bootstrap via `MYLIFE_ADMIN_EMAILS`) and `households.owner_user_id` (migration `0027`); `GroupService` (create/rename/change owner/delete, add/remove members, last-admin guard) emitting `identity.group_joined`/`group_left`/`role_changed` + audit entries; every Finance route resolves its scope via `data_owner_for` so group members share the owner's ledger (Open Finance key changes owner-only); admin-only `/admin/*` API, `GET /groups/me`; public signup no longer accepts `household_id` and the unauthenticated `/households` placeholders are removed. Web: "Usuários e grupos" page (admin-only nav entry) and a shared-ledger banner in Finanças. `specs/domain/identity/user-groups.md`. |
 
 ---
 
@@ -317,7 +318,7 @@ skip-safe. `specs/domain/platform/cicd.md`.
 
 | Phase | Group(s) | Done | Total (detailed) |
 | ----- | -------- | ---- | ---------------- |
-| 0 | `T0`, `T2` | 14 | 14 |
+| 0 | `T0`, `T2` | 15 | 15 |
 | 1 | `T1`, `T3` | 11 | 11 |
 | 2 | `T4`, `T5` | 13 | 16 |
 | 3 | `T6` | 4 | 4 |

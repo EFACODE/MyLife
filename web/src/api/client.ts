@@ -13,6 +13,7 @@ import type {
   Calibration,
   Category,
   Forecast,
+  Group,
   Insight,
   InsightInput,
   Outcome,
@@ -39,6 +40,7 @@ import type {
   OpenFinanceCredentialStatus,
   OpenFinanceSyncResult,
   RelationshipRecord,
+  Role,
   SearchHit,
   NetWorth,
   PayBillDetails,
@@ -47,6 +49,7 @@ import type {
   SetNotificationPreferenceInput,
   SleepInput,
   UpdateBillInput,
+  UpdateGroupInput,
   UpdateTransactionInput,
   UpdateUserInput,
   SleepSession,
@@ -161,6 +164,68 @@ export class ApiClient {
   /** Edit the signed-in user's editable profile fields (email is immutable). */
   updateCurrentUser(input: UpdateUserInput): Promise<User> {
     return this.request<User>("/users/me", { method: "PATCH", body: input });
+  }
+
+  // --- User groups & admin console (T2.6) ---
+
+  /** The signed-in user's group (members share the owner's Finance), or null. */
+  myGroup(): Promise<Group | null> {
+    return this.request<Group | null>("/groups/me");
+  }
+
+  /** Admin: every user with role and group. */
+  adminListUsers(): Promise<User[]> {
+    return this.request<User[]>("/admin/users");
+  }
+
+  /** Admin: promote/demote a user. */
+  adminSetRole(userId: string, role: Role): Promise<User> {
+    return this.request<User>(`/admin/users/${encodeURIComponent(userId)}/role`, {
+      method: "PATCH",
+      body: { role },
+    });
+  }
+
+  /** Admin: every group with its members. */
+  adminListGroups(): Promise<Group[]> {
+    return this.request<Group[]>("/admin/groups");
+  }
+
+  /** Admin: create a group; the owner becomes its first member. */
+  adminCreateGroup(name: string, ownerUserId: string): Promise<Group> {
+    return this.request<Group>("/admin/groups", {
+      method: "POST",
+      body: { name, owner_user_id: ownerUserId },
+    });
+  }
+
+  /** Admin: rename a group and/or hand ownership to a member. */
+  adminUpdateGroup(groupId: string, input: UpdateGroupInput): Promise<Group> {
+    return this.request<Group>(`/admin/groups/${encodeURIComponent(groupId)}`, {
+      method: "PATCH",
+      body: input,
+    });
+  }
+
+  /** Admin: delete a group (members keep their own data). */
+  adminDeleteGroup(groupId: string): Promise<void> {
+    return this.request<void>(`/admin/groups/${encodeURIComponent(groupId)}`, { method: "DELETE" });
+  }
+
+  /** Admin: add a user (not yet in any group) to a group. */
+  adminAddMember(groupId: string, userId: string): Promise<Group> {
+    return this.request<Group>(`/admin/groups/${encodeURIComponent(groupId)}/members`, {
+      method: "POST",
+      body: { user_id: userId },
+    });
+  }
+
+  /** Admin: remove a member (not the owner) from a group. */
+  adminRemoveMember(groupId: string, userId: string): Promise<void> {
+    return this.request<void>(
+      `/admin/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+      { method: "DELETE" },
+    );
   }
 
   /** A page of the user's timeline events, optionally filtered by type. */

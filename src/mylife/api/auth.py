@@ -18,7 +18,7 @@ from mylife.core.context import get_correlation_id
 from mylife.core.events import EventBus
 from mylife.core.events.envelope import utcnow
 from mylife.db.base import get_session
-from mylife.identity import IdentityService, User
+from mylife.identity import ADMIN_ROLE, IdentityService, User
 from mylife.identity.audit import AuditService
 from mylife.identity.security import TokenError, create_access_token, decode_access_token
 
@@ -44,10 +44,16 @@ def login(
     bus: Annotated[EventBus, Depends(get_event_bus)],
 ) -> TokenResponse:
     """Exchange email+password for an access token."""
-    user = IdentityService(session, bus).authenticate(form.username, form.password)
+    now = utcnow()
+    user = IdentityService(session, bus).authenticate(
+        form.username,
+        form.password,
+        admin_emails=get_settings().admin_email_set,
+        now=now,
+        correlation_id=get_correlation_id(),
+    )
     if user is None:
         raise HTTPException(status_code=401, detail="invalid credentials", headers=_UNAUTHENTICATED)
-    now = utcnow()
     AuditService(session).record(
         "auth.login",
         now=now,
@@ -75,6 +81,13 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="unknown user", headers=_UNAUTHENTICATED)
     return user
+
+
+def require_admin(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+    """The authenticated user, provided they hold the ``admin`` role (403 otherwise; T2.6)."""
+    if current_user.role != ADMIN_ROLE:
+        raise HTTPException(status_code=403, detail="admin role required")
+    return current_user
 
 
 @router.get("/auth/me", response_model=User)

@@ -2,9 +2,9 @@ import { LogOut, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
-import { MeProvider } from "../auth/MeContext";
+import { MeProvider, useMe } from "../auth/MeContext";
 import { useAuth } from "../auth/AuthContext";
-import { NAV, navItemFor } from "../nav";
+import { navFor, navItemFor } from "../nav";
 
 /**
  * App shell. On desktop (`md` and up) the navigation is a sticky sidebar; on
@@ -12,7 +12,16 @@ import { NAV, navItemFor } from "../nav";
  * drawer, so the page content gets the full screen width.
  */
 export function Layout() {
+  return (
+    <MeProvider>
+      <Shell />
+    </MeProvider>
+  );
+}
+
+function Shell() {
   const { logout } = useAuth();
+  const { user } = useMe();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -92,7 +101,7 @@ export function Layout() {
           </button>
         </div>
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-2">
-          {NAV.map((item) => {
+          {navFor(user?.role).map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -123,11 +132,9 @@ export function Layout() {
         </button>
       </aside>
 
-      <MeProvider>
-        <main className="min-w-0 flex-1 bg-white px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 md:py-8">
-          <Outlet />
-        </main>
-      </MeProvider>
+      <main className="min-w-0 flex-1 bg-white px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 md:py-8">
+        <Outlet />
+      </main>
     </div>
   );
 }

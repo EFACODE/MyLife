@@ -3,6 +3,7 @@
 > Spec-Driven Development artifact. **Approve before implementation.**
 
 - **Status:** Approved — implemented (`src/mylife/identity/`, migration `0006`, tests in `tests/test_identity.py` + `tests/test_identity_api.py`)
+- **Evolution:** `T2.6` (`user-groups.md`) removed `household_id` from public `POST /users` (now `422`) and replaced the unauthenticated `POST /households`/`GET /households/{id}` with the admin-only `/admin/groups` API, since group membership now grants access to the group owner's Finance data; `User` gained `role`.
 - **Evolution:** `T2.2` made `register_user`/`POST /users` require a `password` (a credential is created atomically with the user); `UserRegistered`'s payload is unchanged.
 - **Backlog task:** `T2.1` — [issue #9](https://github.com/EFACODE/MyLife/issues/9)
 - **Bounded context:** Identity

@@ -23,3 +23,8 @@ export function useMe(): MeValue {
   if (!ctx) throw new Error("useMe must be used within a MeProvider");
   return ctx;
 }
+
+/** Like `useMe`, but `null` outside a `MeProvider` (for components also rendered standalone). */
+export function useOptionalMe(): MeValue | null {
+  return useContext(MeContext);
+}

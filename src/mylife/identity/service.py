@@ -12,13 +12,18 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from mylife.core.context import new_correlation_id
 from mylife.core.events import EventBus, EventDispatchError, EventStore
 from mylife.core.events.store import _stored_utc
 from mylife.identity.models import (
     ACTIVE_STATUS,
+    ADMIN_ROLE,
+    MEMBER_ROLE,
     CredentialRow,
     Household,
     HouseholdRow,
+    RoleChanged,
+    RoleChangedPayload,
     User,
     UserRegistered,
     UserRegisteredPayload,
@@ -66,6 +71,7 @@ def _to_user(row: UserRow) -> User:
         email=row.email,
         display_name=row.display_name,
         status=row.status,
+        role=ADMIN_ROLE if row.role == ADMIN_ROLE else MEMBER_ROLE,
         household_id=row.household_id,
         created_at=_stored_utc(row.created_at),
     )
@@ -73,7 +79,10 @@ def _to_user(row: UserRow) -> User:
 
 def _to_household(row: HouseholdRow) -> Household:
     return Household(
-        household_id=row.household_id, name=row.name, created_at=_stored_utc(row.created_at)
+        household_id=row.household_id,
+        name=row.name,
+        owner_user_id=row.owner_user_id,
+        created_at=_stored_utc(row.created_at),
     )
 
 
@@ -93,8 +102,13 @@ class IdentityService:
         now: datetime,
         correlation_id: str,
         household_id: uuid.UUID | None = None,
+        admin_emails: frozenset[str] = frozenset(),
     ) -> User:
-        """Register a user (unique email) with a credential, emit ``UserRegistered``."""
+        """Register a user (unique email) with a credential, emit ``UserRegistered``.
+
+        A user whose email is in ``admin_emails`` (``MYLIFE_ADMIN_EMAILS``) is
+        created with the ``admin`` role (T2.6 bootstrap).
+        """
         normalized = _normalize_email(email)
         if household_id is not None and self._session.get(HouseholdRow, household_id) is None:
             raise UnknownHouseholdError(household_id)
@@ -107,6 +121,7 @@ class IdentityService:
             email=normalized,
             display_name=display_name,
             status=ACTIVE_STATUS,
+            role=ADMIN_ROLE if normalized in admin_emails else MEMBER_ROLE,
             household_id=household_id,
             created_at=now,
         )
@@ -137,8 +152,20 @@ class IdentityService:
 
         return _to_user(row)
 
-    def authenticate(self, email: str, password: str) -> User | None:
-        """Return the user if the email+password are valid, else ``None``."""
+    def authenticate(
+        self,
+        email: str,
+        password: str,
+        *,
+        admin_emails: frozenset[str] = frozenset(),
+        now: datetime | None = None,
+        correlation_id: str | None = None,
+    ) -> User | None:
+        """Return the user if the email+password are valid, else ``None``.
+
+        A successfully authenticated user listed in ``admin_emails`` who is not
+        yet an admin is promoted, emitting ``RoleChanged`` (T2.6 bootstrap).
+        """
         normalized = email.strip().lower()
         user_row = self._session.scalars(
             select(UserRow).where(UserRow.email == normalized)
@@ -148,7 +175,25 @@ class IdentityService:
         credential = self._session.get(CredentialRow, user_row.user_id)
         if credential is None or not verify_password(password, credential.password_hash):
             return None
+        if normalized in admin_emails and user_row.role != ADMIN_ROLE and now is not None:
+            user_row.role = ADMIN_ROLE
+            event = RoleChanged(
+                user_id=user_row.user_id,
+                occurred_at=now,
+                source=IDENTITY_SOURCE,
+                correlation_id=correlation_id or new_correlation_id(),
+                payload=RoleChangedPayload(role=ADMIN_ROLE, by_user_id=None),
+            )
+            EventStore(self._session).append(event)
+            self._session.commit()
+            self._publish(event)
         return _to_user(user_row)
+
+    def _publish(self, event: RoleChanged) -> None:
+        try:
+            self._bus.publish(event)
+        except EventDispatchError:
+            logger.exception("failed to publish %s (%s)", event.event_type, event.event_id)
 
     def get_user(self, user_id: uuid.UUID) -> User | None:
         """Return the user or ``None``."""

@@ -57,6 +57,21 @@ describe("Layout", () => {
     expect(labels).not.toContain("Registrar");
   });
 
+  it("hides the admin console entry from non-admins", async () => {
+    renderLayout();
+    expect(await screen.findByText("dashboard content")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Usuários e grupos" })).not.toBeInTheDocument();
+  });
+
+  it("shows the admin console entry to admins", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ...USER, role: "admin" }) }),
+    );
+    renderLayout();
+    expect(await screen.findByRole("link", { name: "Usuários e grupos" })).toBeInTheDocument();
+  });
+
   it("shows the current page title in the mobile top bar", async () => {
     renderLayout("/finance");
     expect(await screen.findByText("finance content")).toBeInTheDocument();

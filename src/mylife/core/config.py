@@ -89,6 +89,16 @@ class Settings(BaseSettings):
     # the base URL is overridable for tests and any future sandbox.
     pierre_finance_base_url: str = "https://www.pierre.finance"
 
+    # User groups & admin console (T2.6). Comma-separated emails that are made
+    # ``admin`` at registration and promoted at login — the bootstrap for the
+    # first admin (afterwards admins can promote others in the console).
+    admin_emails: str = ""
+
+    @property
+    def admin_email_set(self) -> frozenset[str]:
+        """``admin_emails`` normalized (trimmed, lowercased, blanks dropped)."""
+        return frozenset(e.strip().lower() for e in self.admin_emails.split(",") if e.strip())
+
     @property
     def broker_url(self) -> str:
         """Effective Celery broker URL (falls back to ``redis_url``)."""
