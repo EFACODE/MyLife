@@ -10,7 +10,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy.orm import Session
 
 from mylife.api.auth import get_current_user
@@ -28,6 +28,7 @@ from mylife.identity import (
     InvalidEmailError,
     User,
 )
+from mylife.identity.nav_preferences import NavPreferences, NavPreferenceService
 
 router = APIRouter(tags=["identity"])
 
@@ -92,6 +93,39 @@ def update_current_user(
         request.display_name,
         now=utcnow(),
         correlation_id=correlation_id,
+    )
+
+
+NavPath = Annotated[str, StringConstraints(pattern=r"^/", max_length=64)]
+
+
+class SetNavPreferencesRequest(BaseModel):
+    """The sidebar menu order and hidden items, as web-console item paths (T10.12)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    order: list[NavPath] = Field(default_factory=list, max_length=50)
+    hidden: list[NavPath] = Field(default_factory=list, max_length=50)
+
+
+@router.get("/users/me/nav-preferences", response_model=NavPreferences)
+def read_nav_preferences(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> NavPreferences:
+    """The authenticated user's menu preference (empty when never set)."""
+    return NavPreferenceService(session).get(current_user.user_id)
+
+
+@router.put("/users/me/nav-preferences", response_model=NavPreferences)
+def update_nav_preferences(
+    request: SetNavPreferencesRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)],
+) -> NavPreferences:
+    """Replace the authenticated user's menu order and hidden items."""
+    return NavPreferenceService(session).set(
+        current_user.user_id, order=request.order, hidden=request.hidden, now=utcnow()
     )
 
 

@@ -16,6 +16,13 @@ export interface User {
   created_at: string;
 }
 
+/** Sidebar menu preference (T10.12): item paths in order, and the hidden ones. */
+export interface NavPreferences {
+  order: string[];
+  hidden: string[];
+  updated_at: string | null;
+}
+
 // --- User groups & admin console (T2.6) ---
 
 export interface GroupMember {

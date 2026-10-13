@@ -31,6 +31,7 @@ from mylife.identity.audit import AuditEntry, AuditLogRow, AuditService
 from mylife.identity.consent import Consent, ConsentRow, ConsentService
 from mylife.identity.credential_vault import ThirdPartyCredentialRow
 from mylife.identity.models import CredentialRow, User, UserRow
+from mylife.identity.nav_preferences import NavPreferenceRow, NavPreferences, to_nav_preferences
 from mylife.identity.service import _to_user
 from mylife.knowledge.blob_store import BlobNotFoundError, BlobStore, FilesystemBlobStore
 from mylife.knowledge.extraction import DocumentTextRow
@@ -61,6 +62,7 @@ class ExportBundle(BaseModel):
     categories: list[Category]
     bills: list[Bill]
     notification_preference: NotificationPreference | None
+    nav_preference: NavPreferences | None = None
     goals: list[Goal]
     documents: list[Document]
 
@@ -105,6 +107,7 @@ class DataSubjectService:
             .order_by(DocumentRow.created_at)
         )
         preference_row = self._session.get(NotificationPreferenceRow, user_id)
+        nav_row = self._session.get(NavPreferenceRow, user_id)
         return ExportBundle(
             user=_to_user(user_row) if user_row is not None else None,
             consents=ConsentService(self._session, InProcessEventBus()).list_consents(user_id),
@@ -130,6 +133,7 @@ class DataSubjectService:
             notification_preference=(
                 _to_preference(preference_row) if preference_row is not None else None
             ),
+            nav_preference=to_nav_preferences(nav_row) if nav_row is not None else None,
             goals=[_to_goal(row) for row in goal_rows],
             documents=[_to_document(row) for row in document_rows],
         )
@@ -161,6 +165,10 @@ class DataSubjectService:
                 delete(NotificationPreferenceRow).where(
                     NotificationPreferenceRow.user_id == user_id
                 ),
+            ),
+            (
+                "nav_preferences",
+                delete(NavPreferenceRow).where(NavPreferenceRow.user_id == user_id),
             ),
             ("accounts", delete(AccountRow).where(AccountRow.user_id == user_id)),
             ("categories", delete(CategoryRow).where(CategoryRow.user_id == user_id)),

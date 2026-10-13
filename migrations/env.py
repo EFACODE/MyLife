@@ -28,6 +28,7 @@ from mylife.identity import audit as _identity_audit  # noqa: F401
 from mylife.identity import consent as _identity_consent  # noqa: F401
 from mylife.identity import credential_vault as _identity_credential_vault  # noqa: F401
 from mylife.identity import models as _identity_models  # noqa: F401
+from mylife.identity import nav_preferences as _identity_nav_preferences  # noqa: F401
 from mylife.knowledge import extraction as _knowledge_extraction  # noqa: F401
 from mylife.knowledge import models as _knowledge_models  # noqa: F401
 from mylife.knowledge import retrieval as _knowledge_retrieval  # noqa: F401

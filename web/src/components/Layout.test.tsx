@@ -14,14 +14,33 @@ const USER = {
   created_at: "2026-01-01T00:00:00Z",
 };
 
+const NO_PREFS = { order: [], hidden: [], updated_at: null };
+
+/** Answer `/users/me/nav-preferences` with `prefs` and every other call with `user`. */
+function stubFetch(user: object = USER, prefs: object = NO_PREFS) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => (url.includes("/nav-preferences") ? prefs : user),
+    })),
+  );
+}
+
+async function navLabels() {
+  const nav = screen.getByRole("navigation", { name: "Principal" });
+  await within(nav).findAllByRole("link");
+  return within(nav)
+    .getAllByRole("link")
+    .map((link) => link.textContent);
+}
+
 describe("Layout", () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem("mylife.token", "t");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => USER }),
-    );
+    stubFetch();
   });
 
   function renderLayout(path = "/") {
@@ -41,17 +60,14 @@ describe("Layout", () => {
 
   it("renders the sidebar nav, logout, and the routed page", async () => {
     renderLayout();
-    expect(screen.getByRole("link", { name: "Painel" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Painel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sair" })).toBeInTheDocument();
     expect(await screen.findByText("dashboard content")).toBeInTheDocument();
   });
 
-  it("lists Painel last and no longer has a separate Registrar entry", () => {
+  it("lists Painel last and no longer has a separate Registrar entry", async () => {
     renderLayout();
-    const nav = screen.getByRole("navigation", { name: "Principal" });
-    const labels = within(nav)
-      .getAllByRole("link")
-      .map((link) => link.textContent);
+    const labels = await navLabels();
     expect(labels[labels.length - 2]).toBe("Privacidade");
     expect(labels[labels.length - 1]).toBe("Painel");
     expect(labels).not.toContain("Registrar");
@@ -64,12 +80,29 @@ describe("Layout", () => {
   });
 
   it("shows the admin console entry to admins", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ...USER, role: "admin" }) }),
-    );
+    stubFetch({ ...USER, role: "admin" });
     renderLayout();
     expect(await screen.findByRole("link", { name: "Usuários e grupos" })).toBeInTheDocument();
+  });
+
+  it("applies the saved menu order and hides hidden items", async () => {
+    stubFetch(USER, { order: ["/finance"], hidden: ["/health", "/goals", "/"], updated_at: "x" });
+    renderLayout();
+    const labels = await navLabels();
+    expect(labels[0]).toBe("Finanças");
+    expect(labels).not.toContain("Saúde");
+    expect(labels).not.toContain("Painel");
+  });
+
+  it("always links to the menu customization from the sidebar footer", async () => {
+    const everything = ["/finance", "/health", "/goals", "/knowledge", "/assistant", "/forecast",
+      "/consent", "/audit", "/privacy", "/"];
+    stubFetch(USER, { order: [], hidden: everything, updated_at: "x" });
+    renderLayout();
+    expect(await screen.findByRole("link", { name: "Personalizar menu" })).toHaveAttribute(
+      "href",
+      "/settings/menu",
+    );
   });
 
   it("shows the current page title in the mobile top bar", async () => {
@@ -87,7 +120,7 @@ describe("Layout", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(document.body.style.overflow).toBe("hidden");
 
-    fireEvent.click(screen.getByRole("link", { name: "Finanças" }));
+    fireEvent.click(await screen.findByRole("link", { name: "Finanças" }));
     expect(await screen.findByText("finance content")).toBeInTheDocument();
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(document.body.style.overflow).toBe("");
