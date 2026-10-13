@@ -1,10 +1,11 @@
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { MeProvider, useMe } from "../auth/MeContext";
+import { NavPreferencesProvider, useNavPreferences } from "../auth/NavPreferencesContext";
 import { useAuth } from "../auth/AuthContext";
-import { navFor, navItemFor } from "../nav";
+import { MENU_SETTINGS_PATH, navFor, navItemFor, visibleNav } from "../nav";
 
 /**
  * App shell. On desktop (`md` and up) the navigation is a sticky sidebar; on
@@ -14,7 +15,9 @@ import { navFor, navItemFor } from "../nav";
 export function Layout() {
   return (
     <MeProvider>
-      <Shell />
+      <NavPreferencesProvider>
+        <Shell />
+      </NavPreferencesProvider>
     </MeProvider>
   );
 }
@@ -22,6 +25,9 @@ export function Layout() {
 function Shell() {
   const { logout } = useAuth();
   const { user } = useMe();
+  const { preference } = useNavPreferences();
+  // Wait for the saved preference so a customized menu doesn't flash the default one.
+  const items = preference ? visibleNav(navFor(user?.role), preference) : [];
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -67,7 +73,7 @@ function Shell() {
           <Menu className="h-6 w-6" />
         </button>
         <span className="truncate text-base font-semibold text-gray-900">
-          {current?.label ?? "My Life"}
+          {current?.label ?? (pathname === MENU_SETTINGS_PATH ? "Personalizar menu" : "My Life")}
         </span>
       </header>
 
@@ -101,7 +107,7 @@ function Shell() {
           </button>
         </div>
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-2">
-          {navFor(user?.role).map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -122,6 +128,18 @@ function Shell() {
             );
           })}
         </nav>
+        {/* Always reachable, even when every menu item is hidden (T10.12). */}
+        <NavLink
+          to={MENU_SETTINGS_PATH}
+          onClick={() => setMenuOpen(false)}
+          className={({ isActive }) =>
+            "flex items-center gap-3 border-t border-gray-200 px-5 py-4 text-base md:py-3 md:text-sm " +
+            (isActive ? "bg-blue-100 font-medium text-blue-700" : "text-gray-600 hover:bg-gray-100")
+          }
+        >
+          <SlidersHorizontal className="h-5 w-5 md:h-4 md:w-4" />
+          Personalizar menu
+        </NavLink>
         <button
           type="button"
           onClick={logout}

@@ -15,6 +15,7 @@ import { HomePage } from "./pages/HomePage";
 import { KnowledgePage } from "./pages/knowledge/KnowledgePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PrivacyPage } from "./pages/privacy/PrivacyPage";
+import { MenuSettingsPage } from "./pages/settings/MenuSettingsPage";
 import { SignupPage } from "./pages/SignupPage";
 
 export function App() {
@@ -44,6 +45,7 @@ export function App() {
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/settings/menu" element={<MenuSettingsPage />} />
             {/* Feature routes (T10.3–T10.9) are added here. */}
           </Route>
         </Routes>

@@ -42,6 +42,7 @@ import type {
   RelationshipRecord,
   Role,
   SearchHit,
+  NavPreferences,
   NetWorth,
   PayBillDetails,
   PositionInput,
@@ -164,6 +165,16 @@ export class ApiClient {
   /** Edit the signed-in user's editable profile fields (email is immutable). */
   updateCurrentUser(input: UpdateUserInput): Promise<User> {
     return this.request<User>("/users/me", { method: "PATCH", body: input });
+  }
+
+  /** The signed-in user's sidebar menu preference (empty lists when never set). */
+  getNavPreferences(): Promise<NavPreferences> {
+    return this.request<NavPreferences>("/users/me/nav-preferences");
+  }
+
+  /** Replace the signed-in user's sidebar menu order and hidden items. */
+  setNavPreferences(input: { order: string[]; hidden: string[] }): Promise<NavPreferences> {
+    return this.request<NavPreferences>("/users/me/nav-preferences", { method: "PUT", body: input });
   }
 
   // --- User groups & admin console (T2.6) ---
